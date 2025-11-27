@@ -1,0 +1,16 @@
+# Project-wide ignores
+*.pyc
+*~
+.uuid
+.idea
+.vscode
+
+# Per directory ignores
+/build
+/.waf*
+/.lock-waf*
+/example/tmp
+/example/Summary.HowToResults
+/html
+/.cache
+/.clangd

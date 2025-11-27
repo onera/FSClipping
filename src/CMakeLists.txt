@@ -1,0 +1,66 @@
+# --------------------------------------------------------------
+# src/CMakeLists.txt – builds the shared library
+# --------------------------------------------------------------
+
+# --------------------------------------------------------------
+# Shared library definition
+# --------------------------------------------------------------
+add_library(fsclipping SHARED
+    main.cpp               # your main source file
+)
+
+# Create an alias so that other targets can refer to it as fsclipping::fsclipping
+add_library(fsclipping::fsclipping ALIAS fsclipping)
+
+# --------------------------------------------------------------
+# Public include directories (project headers + FSDM + Python)
+# --------------------------------------------------------------
+target_include_directories(fsclipping
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>   # for the installed package
+        ${FSDM_INCLUDE_DIRS}
+        ${Python_INCLUDE_DIRS}
+)
+
+# --------------------------------------------------------------
+# Link against external libraries
+# --------------------------------------------------------------
+target_link_libraries(fsclipping
+    PUBLIC
+        PkgConfig::FSDM          # libfsdm.so / .dll
+        MPI::MPI_CXX
+)
+
+# --------------------------------------------------------------
+# Public headers (to be installed)
+# --------------------------------------------------------------
+set(HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/main.h
+)
+
+# Expose the list of public headers to the install command
+set_target_properties(fsclipping PROPERTIES
+    PUBLIC_HEADER "${HEADERS}"
+)
+
+# --------------------------------------------------------------
+# Installation of the library
+# --------------------------------------------------------------
+install(TARGETS fsclipping
+        EXPORT  fsclippingTargets               # (optional – for a CMake package config)
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}   # .so / .dll
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}   # .a (if you also create a static lib)
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}   # executables linked to the lib (unlikely here)
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/FSClipping
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+# --------------------------------------------------------------
+# (Optional) Export a CMake package configuration so other projects can
+# find this library with `find_package(fsclipping CONFIG)`
+# --------------------------------------------------------------
+install(EXPORT fsclippingTargets
+        FILE fsclippingTargets.cmake
+        NAMESPACE fsclipping::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/fsclipping)
