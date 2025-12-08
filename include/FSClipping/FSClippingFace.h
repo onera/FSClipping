@@ -1,49 +1,50 @@
-#ifndef FSCLIPPINGFACE_HPP
-#define FSCLIPPINGFACE_HPP
+#ifndef FSCLIPPINGFACE_H
+#define FSCLIPPINGFACE_H
 
-#include "FSBoundingBoxFace.h"
-#include "FSClac.h"
-#include "FSCommon.h"
-#include "FSConfig.h"
 #include "FSFace.h"
 #include "FSMeshFaceExtractor.h"
-#include <FSArray.h>
-#include <FSTypes.h>
 
-#include <FSVec3.h>
-#include <cassert>
-#include <vector>
+#include <atomic>
 
 _FS_BEGIN_NAMESPACE
 
-/**
- * @class FSClippingFace
- * @brief Holds the geometric description of a face that will be used for
- * clipping.
- *
- */
+struct FSBoundingBoxFace {
+  FS_floatT boxMinMax[6];
+
+  FSBoundingBoxFace()
+      : boxMinMax(+FS_FLOATT_MAX, +FS_FLOATT_MAX, +FS_FLOATT_MAX,
+                  -FS_FLOATT_MAX, -FS_FLOATT_MAX, -FS_FLOATT_MAX) {}
+
+  void ExpandToInclude(const FSVec3 &p) {
+    boxMinMax[0] = FSMin(boxMinMax[0], p[0]);
+    boxMinMax[1] = FSMin(boxMinMax[1], p[1]);
+    boxMinMax[2] = FSMin(boxMinMax[2], p[2]);
+    boxMinMax[3] = FSMax(boxMinMax[3], p[0]);
+    boxMinMax[4] = FSMax(boxMinMax[4], p[1]);
+    boxMinMax[5] = FSMax(boxMinMax[5], p[2]);
+  }
+};
+
 class FSClippingFace {
 public:
   /* --------------------------------------------------------------
      Constructors
      -------------------------------------------------------------- */
-  explicit FSClippingFace(
-      const FSFace &face,
-      const FSMeshFaceExtractor
-          &faceExtractor) // should we keep face Extractor in the class ?
-                          // should we use outFaceNodeCoordinates instead of
-                          // faceExtractor ?
-      : topo_(face) {
-    buildGeometry(faceExtractor);
-  }
+  explicit FSClippingFace(const FSFace &face, const FS_intT faceIndex,
+                          const FSFloatArrayT &faceNodeCoordinates)
+      : topo_(face), faceIndex_(faceIndex) {
+    buildGeometry(faceNodeCoordinates);
+  };
 
   /** Build the object from a raw coordinate array (3‑D only). */
-  explicit FSClippingFace(const FSFloatArrayT &coords) : topo_() {
+  explicit FSClippingFace(const FSFloatArrayT &coords)
+      : topo_(), faceIndex_(++s_nextId_) {
     setVerticesFromArray(coords); // triger computeGeometry()
   }
 
   /** Build the object from a raw std::vector of FSVec3D (3‑D only). */
-  explicit FSClippingFace(const std::vector<FSVec3> &vec) : topo_() {
+  explicit FSClippingFace(const std::vector<FSVec3> &vec)
+      : topo_(), faceIndex_(++s_nextId_) {
     setVertices(vec); // triger computeGeometry()
   }
 
@@ -51,6 +52,7 @@ public:
      Public read‑only accessors (noexcept because they never throw)
      -------------------------------------------------------------- */
   const FSFace &topo() const noexcept { return topo_; }
+  const FS_intT &faceIndex() const noexcept { return faceIndex_; }
   const FSBoundingBoxFace &boundingBox() const noexcept { return boundingBox_; }
   const std::vector<FSVec3> &vertices() const noexcept { return vertices_; }
   const std::vector<FSVec2> &projected2D() const noexcept {
@@ -86,21 +88,17 @@ public:
   /* --------------------------------------------------------------
      Public wrapper that performs the full geometry construction
      -------------------------------------------------------------- */
-  /**
-   * @brief Build all geometric data (normals, tangents, bounding box,
-   *        2‑D projection) from a mesh face.
-   *
-   * @param face          Original mesh face (only its index/ID is used).
-   * @param faceExtractor Helper object that can retrieve node coordinates.
-   */
-  void buildGeometry(const FSMeshFaceExtractor &faceExtractor);
+  void buildGeometry(const FSFloatArrayT &faceNodeCoordinates);
 
 private:
   /* --------------------------------------------------------------
      Private data members
      -------------------------------------------------------------- */
-  const FSFace topo_; // immutable wrapper to the FSDM connectivity
+  const FSFace topo_; // immutable wrapper to the FSDM connectivity, should I
+                      // keep the topology ?
+  const FS_intT faceIndex_;
   FSBoundingBoxFace boundingBox_;
+  static std::atomic<FS_intT> s_nextId_;
   std::vector<FSVec3> vertices_;    // 3‑D vertices of the face
   std::vector<FSVec2> projected2D_; // 2‑D projection in the local basis
   FSVec3 normal_;                   // unit normal
@@ -117,4 +115,4 @@ private:
 
 _FS_END_NAMESPACE
 
-#endif // FSCLIPPINGFACE_HPP
+#endif // FSCLIPPINGFACE_H

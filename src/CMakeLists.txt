@@ -5,7 +5,7 @@
 # --------------------------------------------------------------
 # Shared library definition
 # --------------------------------------------------------------
-add_library(fsclipping SHARED FSClippingFace.cpp FSFaceSeparator.cpp)
+add_library(fsclipping SHARED FSClippingFace.cpp FSFaceSeparator.cpp FSFaceMatcher.cpp)
 
 # Create an alias so that other targets can refer to it as fsclipping::fsclipping
 add_library(fsclipping::fsclipping ALIAS fsclipping)
@@ -35,11 +35,9 @@ target_link_libraries(fsclipping
 # --------------------------------------------------------------
 set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSBoundaryFace.h
-    #${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSBoundaryFaceMatch.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSBoundingBoxFace.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSFaceMatcher.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSCellAdress.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippingUtil.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippingAlgo.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSFace.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSFaceSeparator.h
 

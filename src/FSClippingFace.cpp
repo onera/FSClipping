@@ -2,45 +2,44 @@
 
 _FS_BEGIN_NAMESPACE
 
+std::atomic<FS_intT> FSClippingFace::s_nextId_{0};
 /* -----------------------------------------------------------------
    Implementation of the public wrapper `buildGeometry`.
    This function simply forwards the call to the private
    `computeGeometry` after having retrieved the vertex coordinates
    from the mesh extractor.
    ----------------------------------------------------------------- */
-void FSClippingFace::buildGeometry(const FSMeshFaceExtractor &faceExtractor) {
+void FSClippingFace::buildGeometry(const FSFloatArrayT &faceNodeCoordinates) {
   // -----------------------------------------------------------------
   // 1) Retrieve coordinates of the face nodes (identical to the legacy code)
   // -----------------------------------------------------------------
-  assert(topo_._faceFSDM); // sanity check – same as original assert
+  assert(topo_._faceFSDM);
 
-  FSFloatArrayT outFaceNodeCoordinates;
-  const bool orientation = faceExtractor.GetFaceNodeCoordinates(
-      faceExtractor.GetFaceIndex(*(topo_._faceFSDM)), outFaceNodeCoordinates);
-
-  const FS_intT size = outFaceNodeCoordinates.Size() / FS_3D;
-  vertices_.clear();
-  vertices_.reserve(static_cast<std::size_t>(size));
-
+  //  FSFloatArrayT outFaceNodeCoordinates;
+  //  const bool orientation =
+  //      faceExtractor.GetFaceNodeCoordinates(faceIndex_,
+  //      outFaceNodeCoordinates);
+  //
+  //  const FS_intT size = outFaceNodeCoordinates.Size() / FS_3D;
+  //  vertices_.clear();
+  //  vertices_.reserve(static_cast<std::size_t>(size));
+  //
+  const FS_intT size = faceNodeCoordinates.Size() / FS_3D;
   for (FS_intT i = 0; i < size; ++i)
-    vertices_.emplace_back(outFaceNodeCoordinates(i, 0),
-                           outFaceNodeCoordinates(i, 1),
-                           outFaceNodeCoordinates(i, 2));
+    vertices_.emplace_back(faceNodeCoordinates(i, 0), faceNodeCoordinates(i, 1),
+                           faceNodeCoordinates(i, 2));
 
   // -----------------------------------------------------------------
   // 2) Compute geometry (normal, tangents, bounding box, projection)
   // -----------------------------------------------------------------
-  // The private routine does everything *except* the orientation flip,
-  // which we handle here because the original code performed the flip
-  // after the normal computation.
   computeGeometry();
 
   // Apply orientation correction if the extractor reported a reversed order
-  if (!orientation) {
-    normal_ = -normal_;
-    // Re‑compute the second tangent because it depends on the normal
-    tangentVector2_ = normal_.CrossProduct(tangentVector1_);
-  }
+  // if (!orientation) {
+  //   normal_ = -normal_;
+  //   // Re‑compute the second tangent because it depends on the normal
+  //   tangentVector2_ = normal_.CrossProduct(tangentVector1_);
+  // }
 }
 
 /* -----------------------------------------------------------------

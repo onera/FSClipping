@@ -1,5 +1,5 @@
-#ifndef FACEFSDM_HPP
-#define FACEFSDM_HPP
+#ifndef FACEFSDM_H
+#define FACEFSDM_H
 
 #include "FSMesh/FSHashableFace.h"
 
