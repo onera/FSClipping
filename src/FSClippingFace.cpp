@@ -9,7 +9,8 @@ std::atomic<FS_intT> FSClippingFace::s_nextId_{0};
    `computeGeometry` after having retrieved the vertex coordinates
    from the mesh extractor.
    ----------------------------------------------------------------- */
-void FSClippingFace::buildGeometry(const FSFloatArrayT &faceNodeCoordinates) {
+void FSClippingFace::buildGeometry(const FSFloatArrayT& faceNodeCoordinates)
+{
   // -----------------------------------------------------------------
   // 1) Retrieve coordinates of the face nodes (identical to the legacy code)
   // -----------------------------------------------------------------
@@ -25,7 +26,7 @@ void FSClippingFace::buildGeometry(const FSFloatArrayT &faceNodeCoordinates) {
   //  vertices_.reserve(static_cast<std::size_t>(size));
   //
   const FS_intT size = faceNodeCoordinates.Size() / FS_3D;
-  for (FS_intT i = 0; i < size; ++i)
+  for(FS_intT i = 0; i < size; ++i)
     vertices_.emplace_back(faceNodeCoordinates(i, 0), faceNodeCoordinates(i, 1),
                            faceNodeCoordinates(i, 2));
 
@@ -46,7 +47,8 @@ void FSClippingFace::buildGeometry(const FSFloatArrayT &faceNodeCoordinates) {
    Private helper that does the heavy‑lifting.  It assumes that
    `vertices_` already contains the 3‑D points of the face.
    ----------------------------------------------------------------- */
-void FSClippingFace::computeGeometry() {
+void FSClippingFace::computeGeometry()
+{
   // -------------------------------------------------------------
   // 1) Tangent 1  (v1 - v0)  → normalized
   // -------------------------------------------------------------
@@ -69,7 +71,7 @@ void FSClippingFace::computeGeometry() {
   // 4) Bounding box
   // -------------------------------------------------------------
   boundingBox_ = {}; // reset
-  for (const auto &v : vertices_)
+  for(const auto& v : vertices_)
     boundingBox_.ExpandToInclude(v);
 
   // -------------------------------------------------------------
@@ -79,7 +81,7 @@ void FSClippingFace::computeGeometry() {
   projected2D_.reserve(vertices_.size());
 
   const FSVec3 origin = vertices_[0];
-  for (const FSVec3 &P : vertices_) {
+  for(const FSVec3& P : vertices_) {
     FSVec3 d = P - origin;
     FS_floatT u = d.InnerProduct(tangentVector1_);
     FS_floatT v = d.InnerProduct(tangentVector2_);

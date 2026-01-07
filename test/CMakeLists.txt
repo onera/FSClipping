@@ -6,7 +6,7 @@ add_library(GTest::gtest_mpi_main ALIAS gtest_mpi_parallel_main)
 # implementation of the test infrastructure
 include(GoogleTest)
 
-add_executable(FSClippingTest FSClipping/FSClippingTestGeo.cpp FSClipping/FSClippingTestFaceExtractor.cpp FSClipping/FSClippingTestMatches.cpp FSClipping/FSClippingTestHelper.cpp)
+add_executable(FSClippingTest FSClipping/FSClippingTestGeo.cpp FSClipping/FSClippingTestFaceExtractor.cpp FSClipping/FSClippingTestMatches.cpp FSClipping/FSClippingTestCell2NodeBuilder.cpp FSClipping/FSClippingTestHelper.cpp)
 target_link_libraries(FSClippingTest PUBLIC GTest::gtest_mpi_main fsclipping::fsclipping)
 set_property(TARGET FSClippingTest PROPERTY CROSSCOMPILING_EMULATOR '${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 1')
 gtest_discover_tests(FSClippingTest DISCOVERY_TIMEOUT 20 PROPERTIES LABELS "CppUnitTests")

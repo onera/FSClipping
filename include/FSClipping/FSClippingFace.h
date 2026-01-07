@@ -12,10 +12,11 @@ struct FSBoundingBoxFace {
   FS_floatT boxMinMax[6];
 
   FSBoundingBoxFace()
-      : boxMinMax(+FS_FLOATT_MAX, +FS_FLOATT_MAX, +FS_FLOATT_MAX,
-                  -FS_FLOATT_MAX, -FS_FLOATT_MAX, -FS_FLOATT_MAX) {}
+    : boxMinMax(+FS_FLOATT_MAX, +FS_FLOATT_MAX, +FS_FLOATT_MAX,
+                -FS_FLOATT_MAX, -FS_FLOATT_MAX, -FS_FLOATT_MAX) {}
 
-  void ExpandToInclude(const FSVec3 &p) {
+  void ExpandToInclude(const FSVec3& p)
+  {
     boxMinMax[0] = FSMin(boxMinMax[0], p[0]);
     boxMinMax[1] = FSMin(boxMinMax[1], p[1]);
     boxMinMax[2] = FSMin(boxMinMax[2], p[2]);
@@ -25,61 +26,68 @@ struct FSBoundingBoxFace {
   }
 };
 
-class FSClippingFace {
+class FSClippingFace
+{
 public:
   /* --------------------------------------------------------------
      Constructors
      -------------------------------------------------------------- */
-  explicit FSClippingFace(const FSFace &face, const FS_intT faceIndex,
-                          const FSFloatArrayT &faceNodeCoordinates)
-      : topo_(face), faceIndex_(faceIndex) {
+  explicit FSClippingFace(const FSFace& face, const FS_intT faceIndex,
+                          const FSFloatArrayT& faceNodeCoordinates)
+    : topo_(face), faceIndex_(faceIndex)
+  {
     buildGeometry(faceNodeCoordinates);
   };
 
   /** Build the object from a raw coordinate array (3‑D only). */
-  explicit FSClippingFace(const FSFloatArrayT &coords)
-      : topo_(), faceIndex_(++s_nextId_) {
+  explicit FSClippingFace(const FSFloatArrayT& coords)
+    : topo_(), faceIndex_(++s_nextId_)
+  {
     setVerticesFromArray(coords); // triger computeGeometry()
   }
 
   /** Build the object from a raw std::vector of FSVec3D (3‑D only). */
-  explicit FSClippingFace(const std::vector<FSVec3> &vec)
-      : topo_(), faceIndex_(++s_nextId_) {
+  explicit FSClippingFace(const std::vector<FSVec3>& vec)
+    : topo_(), faceIndex_(++s_nextId_)
+  {
     setVertices(vec); // triger computeGeometry()
   }
 
   /* --------------------------------------------------------------
      Public read‑only accessors (noexcept because they never throw)
      -------------------------------------------------------------- */
-  const FSFace &topo() const noexcept { return topo_; }
-  const FS_intT &faceIndex() const noexcept { return faceIndex_; }
-  const FSBoundingBoxFace &boundingBox() const noexcept { return boundingBox_; }
-  const std::vector<FSVec3> &vertices() const noexcept { return vertices_; }
-  const std::vector<FSVec2> &projected2D() const noexcept {
+  const FSFace& topo() const noexcept { return topo_; }
+  const FS_intT& faceIndex() const noexcept { return faceIndex_; }
+  const FSBoundingBoxFace& boundingBox() const noexcept { return boundingBox_; }
+  const std::vector<FSVec3>& vertices() const noexcept { return vertices_; }
+  const std::vector<FSVec2>& projected2D() const noexcept
+  {
     return projected2D_;
   }
-  const FSVec3 &normal() const noexcept { return normal_; }
-  const FSVec3 &tangentVector1() const noexcept { return tangentVector1_; }
-  const FSVec3 &tangentVector2() const noexcept { return tangentVector2_; }
+  const FSVec3& normal() const noexcept { return normal_; }
+  const FSVec3& tangentVector1() const noexcept { return tangentVector1_; }
+  const FSVec3& tangentVector2() const noexcept { return tangentVector2_; }
 
   /* --------------------------------------------------------------
      Public mutators – thin wrappers that keep the object in a valid state
      -------------------------------------------------------------- */
 
   /** Replace the whole vertex list (geometry will be recomputed). */
-  void setVertices(const std::vector<FSVec3> &verts) {
+  void setVertices(const std::vector<FSVec3>& verts)
+  {
     vertices_ = verts;
     // recompute everything from the new vertices
     computeGeometry();
   }
 
   /** Fill the vertex list from a raw FSFloatArrayT (expects 3‑D data). */
-  void setVerticesFromArray(const FSFloatArrayT &coords) {
+  void setVerticesFromArray(const FSFloatArrayT& coords)
+  {
     const FS_intT size = coords.Size() / FS_3D;
     vertices_.clear();
     vertices_.reserve(static_cast<std::size_t>(size));
 
-    for (FS_intT i = 0; i < size; ++i)
+    for(FS_intT i = 0; i < size; ++i)
       vertices_.emplace_back(coords(i, 0), coords(i, 1), coords(i, 2));
     // recompute geometry now that we have the vertices
     computeGeometry();
@@ -88,7 +96,7 @@ public:
   /* --------------------------------------------------------------
      Public wrapper that performs the full geometry construction
      -------------------------------------------------------------- */
-  void buildGeometry(const FSFloatArrayT &faceNodeCoordinates);
+  void buildGeometry(const FSFloatArrayT& faceNodeCoordinates);
 
 private:
   /* --------------------------------------------------------------

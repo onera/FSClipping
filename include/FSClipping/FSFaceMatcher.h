@@ -15,8 +15,11 @@ struct FSFaceMatch {
   FS_intT face2; // index in the FSClippingFace list of mesh 2
 
   // --- Ownership information (already known from FSDM / MPI) ---
-  FS_intT owner1; // rank of the owner of face 1
-  FS_intT owner2; // rank of the owner of face 2
+  FS_intT elemOwner1; // element owner of the face 1
+  FS_intT elemOwner2; // element owner of the face 2
+
+  FSMeshEnums::CellType elemOwnerType1;
+  FSMeshEnums::CellType elemOwnerType2;
 
   // --- Type of geometric relation ---
   enum MatchType : FS_intT {
@@ -37,39 +40,41 @@ struct FSFaceMatch {
   std::vector<FSVec3> clippedPoly3D;
 };
 
-class FSFaceMatcher { // does we need the faceExtractor for the parralel
-                      // computation ?
+class FSFaceMatcher
+{ // does we need the faceExtractor for the parralel
+  // computation ?
 public:
   FSFaceMatcher(
-      FSClac &clacClipped, // const FSMeshFaceExtractor &faceExtractor,
-      const std::vector<FSClippingFace> &subjectFaces,
-      const std::vector<FSClippingFace> &clippedFaces)
-      : subjectFaces_(subjectFaces),
-        clippedFaces_(clippedFaces) { //, faceExtractorClipped_(faceExtractor) {
+    FSClac& clacClipped, // const FSMeshFaceExtractor &faceExtractor,
+    const std::vector<FSClippingFace>& subjectFaces,
+    const std::vector<FSClippingFace>& clippedFaces)
+    : subjectFaces_(subjectFaces),
+      clippedFaces_(clippedFaces)
+  { //, faceExtractorClipped_(faceExtractor) {
 
     FS_sizeT size = static_cast<FS_sizeT>(clippedFaces.size());
     FSFloatArrayT boundingBoxes(size, 6);
     FSIntArrayT indices(size);
-    for (FS_sizeT i = 0; i < size; ++i) {
-      for (FS_intT j = 0; j < 6; j++)
+    for(FS_sizeT i = 0; i < size; ++i) {
+      for(FS_intT j = 0; j < 6; j++)
         boundingBoxes(i, j) = clippedFaces[i].boundingBox().boxMinMax[j];
       indices(i) = clippedFaces[i].faceIndex(); // global ID
     }
-    if (!FSBoundingBoxUtil::GatherBoundingBoxesIntoBVHTree(
-            &clacClipped, boundingBoxes, indices, bvhClipped_))
+    if(!FSBoundingBoxUtil::GatherBoundingBoxesIntoBVHTree(
+         &clacClipped, boundingBoxes, indices, bvhClipped_))
       FSError.SetAndPrintAndExit("Failed to build BVH for clipped face");
   }
 
-  void ComputeMatches(std::vector<FSFaceMatch> &outMatches);
+  void ComputeMatches(std::vector<FSFaceMatch>& outMatches);
 
 private:
-  const std::vector<FSClippingFace> &subjectFaces_;
-  const std::vector<FSClippingFace> &clippedFaces_;
+  const std::vector<FSClippingFace>& subjectFaces_;
+  const std::vector<FSClippingFace>& clippedFaces_;
   //  const FSMeshFaceExtractor &faceExtractorClipped_;
   FSBVHTree bvhClipped_;
 
-  bool ComputeMatch(const FSClippingFace &f1, const FSClippingFace &f2,
-                    FSFaceMatch &out) const;
+  bool ComputeMatch(const FSClippingFace& f1, const FSClippingFace& f2,
+                    FSFaceMatch& out) const;
 };
 
 _FS_END_NAMESPACE
