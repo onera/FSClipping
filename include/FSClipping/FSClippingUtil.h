@@ -10,81 +10,44 @@ _FS_BEGIN_NAMESPACE
 namespace FSClippingUtil {
 
 /* -----------------------------------------------------------------
-   AreFacesIdentical
+   PolygonSignedArea
    ----------------------------------------------------------------- */
-inline bool AreFacesIdentical(const FSClippingFace& f1,
-                              const FSClippingFace& f2,
-                              FS_floatT tol = static_cast<FS_floatT>(1e-12))
-{
-  // improve this algorithm to have nlog(n) cost
-
-  const auto& v1 = f1.vertices();
-  const auto& v2 = f2.vertices();
-
-  if(v1.size() != v2.size())
-    return false;
-
-  const FS_intT n = static_cast<FS_intT>(v1.size());
-  std::vector<bool> used(n, false);
-
-  for(FS_intT i = 0; i < n; ++i) {
-    const auto& p = v1[i];
-    bool matched = false;
-    for(FS_intT j = 0; j < n; ++j) {
-      if(used[j])
-        continue;
-      if((p - v2[j]).L2Norm() < tol) {
-        used[j] = true;
-        matched = true;
-        break;
-      }
-    }
-    if(!matched)
-      return false;
-  }
-  return true;
-}
-
-/* -----------------------------------------------------------------
-   IsPointInsideConvexPolygon
-   ----------------------------------------------------------------- */
-inline bool
-IsPointInsideConvexPolygon(const FSVec2& P, const std::vector<FSVec2>& poly,
-                           FS_floatT tol = static_cast<FS_floatT>(1e-12))
+inline FS_floatT PolygonSignedArea(const std::vector<FSVec2>& poly)
 {
   const FS_intT n = static_cast<FS_intT>(poly.size());
+  if(n < 3)
+    return static_cast<FS_floatT>(0);
+
+  FS_floatT area = 0;
+
   for(FS_intT i = 0; i < n; ++i) {
-    const FSVec2& A = poly[i];
-    const FSVec2& B = poly[(i + 1) % n];
-    FSVec2 edge = B - A;
-    // normale intérieure (orientation CCW)
-    FSVec2 normal(-edge[1], edge[0]);
-    FS_floatT d = (P - A).InnerProduct(normal);
-    if(d < -tol)
-      return false; // à l’extérieur
+    const FSVec2& p = poly[i];
+    const FSVec2& q = poly[(i + 1) % n];
+    area += p[0] * q[1] - q[0] * p[1];
   }
-  return true;
+
+  return static_cast<FS_floatT>(0.5) * area;
 }
 
 /* -----------------------------------------------------------------
-   IsFaceInsideTheOther
+   EnsureSameOrientation
    ----------------------------------------------------------------- */
-inline bool
-IsFaceInsideTheOther(const std::vector<FSVec2>& f1,
-                     const std::vector<FSVec2>& f2,
-                     FS_floatT tol = static_cast<FS_floatT>(1e-12))
+inline void EnsureSameOrientation(std::vector<FSVec2>& poly,
+                                  FS_floatT refSignedArea)
 {
-  for(const FSVec2& P : f1) {
-    if(!IsPointInsideConvexPolygon(P, f2, tol))
-      return false;
+  FS_floatT area = PolygonSignedArea(poly);
+
+  if(area * refSignedArea < 0.0) {
+    std::reverse(poly.begin(), poly.end());
   }
-  return true;
 }
 
 /* -----------------------------------------------------------------
    IsPointInsideEdge
    ----------------------------------------------------------------- */
-inline bool IsPointInsideEdge(const FSVec2& P, const FSVec2& A, const FSVec2& B,
+inline bool IsPointInsideEdge(const FSVec2& P,
+                              const FSVec2& A,
+                              const FSVec2& B,
                               FS_floatT tol = static_cast<FS_floatT>(1e-12))
 {
   // (B-A) × (p-A) >= 0  →  p is on the left of AB
@@ -96,8 +59,10 @@ inline bool IsPointInsideEdge(const FSVec2& P, const FSVec2& A, const FSVec2& B,
 /* -----------------------------------------------------------------
    ComputeIntersection
    ----------------------------------------------------------------- */
-inline FSVec2 ComputeIntersection(const FSVec2& P1, const FSVec2& P2,
-                                  const FSVec2& A, const FSVec2& B)
+inline FSVec2 ComputeIntersection(const FSVec2& P1,
+                                  const FSVec2& P2,
+                                  const FSVec2& A,
+                                  const FSVec2& B)
 {
   FSVec2 U = P2 - P1; // direction of subject segment
   FSVec2 V = B - A;   // direction of clipping edge
@@ -112,107 +77,34 @@ inline FSVec2 ComputeIntersection(const FSVec2& P1, const FSVec2& P2,
 }
 
 /* -----------------------------------------------------------------
-   ClipConvexPolygon
+   AreFacesIdentical
    ----------------------------------------------------------------- */
-inline bool ClipConvexPolygon(const std::vector<FSVec2>& subject,
-                              const std::vector<FSVec2>& clipper,
-                              std::vector<FSVec2>& output,
-                              FS_floatT tol = static_cast<FS_floatT>(1e-12))
-{
-  // Validate input polygons
-  if(subject.size() < 3 || clipper.size() < 3)
-    return false;
+bool AreFacesIdentical(const FSClippingFace& f1,
+                       const FSClippingFace& f2,
+                       FS_floatT tol = static_cast<FS_floatT>(1e-12));
 
-  output = subject;
-  std::vector<FSVec2> input;
-
-  // Iterate over each edge of the clipping polygon
-  for(size_t i = 0; i < clipper.size(); ++i) {
-    const FSVec2& A = clipper[i];
-    const FSVec2& B = clipper[(i + 1) % clipper.size()];
-
-    input = std::move(output);
-    output.clear();
-    output.reserve(input.size()); // reserve to avoid reallocations
-
-    if(input.empty())
-      return false;
-
-    // We control the push back by checking if the new vertice is not the same
-    // than the last
-    auto push_unique = [&](const FSVec2& pt) {
-      if(output.empty() || (pt - output.back()).Norm() > tol * tol)
-        output.push_back(pt);
-    };
-
-    // Process each edge of the current subject polygon
-    for(size_t j = 0; j < input.size(); ++j) {
-      const FSVec2& P1 = input[j];
-      const FSVec2& P2 = input[(j + 1) % input.size()];
-
-      bool P1_inside = IsPointInsideEdge(P1, A, B, tol);
-      bool P2_inside = IsPointInsideEdge(P2, A, B, tol);
-
-      if(P1_inside && P2_inside) {
-        // Both vertices inside – keep the end vertex
-        push_unique(P2);
-      } else if(P1_inside && !P2_inside) {
-        // Edge leaves the clipping region – keep intersection only
-        push_unique(ComputeIntersection(P1, P2, A, B));
-      } else if(!P1_inside && P2_inside) {
-        // Edge enters the clipping region – keep intersection and end vertex
-        push_unique(ComputeIntersection(P1, P2, A, B));
-        push_unique(P2);
-      }
-      // else both outside – nothing to add
-    }
-  }
-  return output.size() >= 3;
-}
+/* -----------------------------------------------------------------
+   ClipConvexPolygon - Sutherland-Hodgman Algorithm
+   For illustration : https://github.com/mhdadk/sutherland-hodgman
+   ----------------------------------------------------------------- */
+bool ClipConvexPolygon(const std::vector<FSVec2>& subject,
+                       const std::vector<FSVec2>& clipper,
+                       std::vector<FSVec2>& output,
+                       FS_floatT tol = static_cast<FS_floatT>(1e-12));
 
 /* -----------------------------------------------------------------
    ProjectFaceInPlane
    ----------------------------------------------------------------- */
-inline std::vector<FSVec2> ProjectFaceInPlane(const FSClippingFace& src,
-                                              const FSClippingFace& planeOwner,
-                                              FS_floatT tol = 1e-12)
-{
-  FSPlaneSurface pl;
-  pl.Init(planeOwner.vertices()[0], planeOwner.tangentVector1(),
-          planeOwner.tangentVector2());
-
-  std::vector<FSVec2> proj;
-  proj.reserve(src.vertices().size());
-
-  for(const FSVec3& P : src.vertices()) {
-    FSVec3 dummy3;
-    FSVec2 uv;
-    pl.Project(P, dummy3, uv, tol);
-    proj.emplace_back(uv);
-  }
-  return proj;
-}
+std::vector<FSVec2> ProjectFaceInPlane(const FSClippingFace& src,
+                                       const FSClippingFace& planeOwner,
+                                       FS_floatT tol = 1e-12);
 
 /* -----------------------------------------------------------------
    ProjectPoly2DTo3D
    ----------------------------------------------------------------- */
-inline std::vector<FSVec3>
+std::vector<FSVec3>
 ProjectPoly2DTo3D(const FSClippingFace& face,
-                  const std::vector<FSVec2>& poly2D)
-{
-  std::vector<FSVec3> poly3D;
-  poly3D.reserve(poly2D.size());
-
-  const FSVec3& O = face.vertices()[0];     // origine du plan
-  const FSVec3& e1 = face.tangentVector1(); // axe u
-  const FSVec3& e2 = face.tangentVector2(); // axe v
-
-  for(const FSVec2& uv : poly2D) {
-    // P = O + u·e1 + v·e2
-    poly3D.emplace_back(O + e1 * uv[0] + e2 * uv[1]);
-  }
-  return poly3D;
-}
+                  const std::vector<FSVec2>& poly2D);
 
 } // namespace FSClippingUtil
 

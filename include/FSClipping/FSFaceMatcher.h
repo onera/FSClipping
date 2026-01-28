@@ -41,16 +41,17 @@ struct FSFaceMatch {
 };
 
 class FSFaceMatcher
-{ // does we need the faceExtractor for the parralel
-  // computation ?
+{
 public:
   FSFaceMatcher(
-    FSClac& clacClipped, // const FSMeshFaceExtractor &faceExtractor,
+    FSClac& clacClipped,
     const std::vector<FSClippingFace>& subjectFaces,
-    const std::vector<FSClippingFace>& clippedFaces)
+    const std::vector<FSClippingFace>& clippedFaces,
+    FS_floatT tol = 1e-12)
     : subjectFaces_(subjectFaces),
-      clippedFaces_(clippedFaces)
-  { //, faceExtractorClipped_(faceExtractor) {
+      clippedFaces_(clippedFaces),
+      tol_(tol)
+  {
 
     FS_sizeT size = static_cast<FS_sizeT>(clippedFaces.size());
     FSFloatArrayT boundingBoxes(size, 6);
@@ -70,8 +71,9 @@ public:
 private:
   const std::vector<FSClippingFace>& subjectFaces_;
   const std::vector<FSClippingFace>& clippedFaces_;
-  //  const FSMeshFaceExtractor &faceExtractorClipped_;
+
   FSBVHTree bvhClipped_;
+  FS_floatT tol_;
 
   bool ComputeMatch(const FSClippingFace& f1, const FSClippingFace& f2,
                     FSFaceMatch& out) const;

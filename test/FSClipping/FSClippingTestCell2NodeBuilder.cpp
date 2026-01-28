@@ -44,8 +44,8 @@ TEST(FSCell2NodeBuilder, SingleCellWithClippedPolygon)
   coords(7, 1) = 1;
   coords(7, 2) = 1;
 
-  builder.addOldCellNodes(
-    0, FSMeshEnums::CellType::CT_Hexa8, cell2Node, coords);
+  builder.AddOldCellNodes(
+    0, FSMeshEnums::CellType::CT_Hexa8);
 
   // Clipped polygon on the plane z = 1
   std::vector<FSVec3> poly = {
@@ -54,20 +54,20 @@ TEST(FSCell2NodeBuilder, SingleCellWithClippedPolygon)
     FSVec3(0.5, 1.0, 1.0),
     FSVec3(0.0, 0.5, 1.0)};
 
-  builder.addClippedPolygon(0, poly);
-  builder.buildGlobalNumbering();
+  builder.AddClippedPolygon(0, poly);
+  builder.BuildGlobalNumbering();
 
-  const auto& cellData = builder.cellData();
+  const auto& cellData = builder.CellData();
   ASSERT_EQ(cellData.size(), 1);
 
   const auto& data = cellData.at(0);
-  EXPECT_EQ(data.coords.size(), 12); // 8 old nodes + 4 new nodes
-  EXPECT_EQ(data.nodeIds.size(), 12);
+  EXPECT_EQ(data.coords.size(), 4); // 4 nodes after clipping on the border
+  EXPECT_EQ(data.nodeIds.size(), 4);
 
-  const auto& globalCoords = builder.globalCoords();
-  EXPECT_EQ(globalCoords.size(), 12);
+  const auto& globalCoords = builder.GlobalCoords();
+  EXPECT_EQ(globalCoords.size(), 4);
 
-  // Vérifier unicité
+  // Check unicity
   for(size_t i = 0; i < globalCoords.size(); ++i)
     for(size_t j = i + 1; j < globalCoords.size(); ++j)
       EXPECT_GT((globalCoords[i] - globalCoords[j]).L2Norm(), 1e-12);

@@ -8,6 +8,9 @@
 
 _FS_BEGIN_NAMESPACE
 
+/* --------------------------------------------------------------
+   Bounding box of a face
+   -------------------------------------------------------------- */
 struct FSBoundingBoxFace {
   FS_floatT boxMinMax[6];
 
@@ -32,7 +35,8 @@ public:
   /* --------------------------------------------------------------
      Constructors
      -------------------------------------------------------------- */
-  explicit FSClippingFace(const FSFace& face, const FS_intT faceIndex,
+  explicit FSClippingFace(const FSFace& face,
+                          const FS_intT faceIndex,
                           const FSFloatArrayT& faceNodeCoordinates)
     : topo_(face), faceIndex_(faceIndex)
   {
@@ -54,7 +58,7 @@ public:
   }
 
   /* --------------------------------------------------------------
-     Public read‑only accessors (noexcept because they never throw)
+     Public read‑only accessors
      -------------------------------------------------------------- */
   const FSFace& topo() const noexcept { return topo_; }
   const FS_intT& faceIndex() const noexcept { return faceIndex_; }
@@ -71,8 +75,6 @@ public:
   /* --------------------------------------------------------------
      Public mutators – thin wrappers that keep the object in a valid state
      -------------------------------------------------------------- */
-
-  /** Replace the whole vertex list (geometry will be recomputed). */
   void setVertices(const std::vector<FSVec3>& verts)
   {
     vertices_ = verts;
@@ -102,16 +104,16 @@ private:
   /* --------------------------------------------------------------
      Private data members
      -------------------------------------------------------------- */
-  const FSFace topo_; // immutable wrapper to the FSDM connectivity, should I
-                      // keep the topology ?
-  const FS_intT faceIndex_;
-  FSBoundingBoxFace boundingBox_;
-  static std::atomic<FS_intT> s_nextId_;
-  std::vector<FSVec3> vertices_;    // 3‑D vertices of the face
-  std::vector<FSVec2> projected2D_; // 2‑D projection in the local basis
-  FSVec3 normal_;                   // unit normal
-  FSVec3 tangentVector1_;           // first orthonormal basis vector
-  FSVec3 tangentVector2_;           // second orthonormal basis vector
+  const FSFace topo_;                    // immutable wrapper to the FSDM connectivity
+  const FS_intT faceIndex_;              // global index of the face
+  FSBoundingBoxFace boundingBox_;        // bounding box of the face
+  static std::atomic<FS_intT> s_nextId_; // counter of the nb of faces for initializing faceIndex_
+                                         // with the coord constructor. Usefull only for unit test.
+  std::vector<FSVec3> vertices_;         // 3‑D vertices of the face
+  std::vector<FSVec2> projected2D_;      // 2‑D projection in the local basis
+  FSVec3 normal_;                        // unit normal
+  FSVec3 tangentVector1_;                // first orthonormal basis vector
+  FSVec3 tangentVector2_;                // second orthonormal basis vector
 
   /* --------------------------------------------------------------
      Private implementation details

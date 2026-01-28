@@ -1,4 +1,4 @@
-#include "FSMesh/FSMeshImportParamsTAU.h"
+#include "FSMeshImportParamsTAU.h"
 
 #include "gtest/gtest.h"
 
@@ -7,12 +7,13 @@
 
 _FS_BEGIN_NAMESPACE
 
-TEST(FSClippingTestFaceExtractor, ComputeGeometry) {
+TEST(FSClippingTestFaceExtractor, ComputeGeometry)
+{
   FSClac clac;
   FSMeshImportParamsTAU params;
   // params.mMeshFilename = "${HOME}/path/to/hexa.grid";
   params.mMeshFilename =
-      "${HOME}/code_dev/CODA_src/FSClipping/test/Mesh/hexa.grid";
+    "${HOME}/code_dev/CODA_src/FSClipping/test/Mesh/hexa.grid";
   // hexa.grid is in FSClipping/test/Mesh
   // but you can load any mesh.grid mesh file
   FSMesh mesh(&clac);
@@ -25,12 +26,12 @@ TEST(FSClippingTestFaceExtractor, ComputeGeometry) {
   ASSERT_TRUE(ex.PrepareFaceNodeCoordinates(FSQuantityDescArrayT()));
 
   auto bdryFaces =
-      FSFaceSeparator::SeparateBoundariesFaceWithMarker(mesh, ex, 1);
+    FSFaceSeparator::SeparateBoundariesFaceWithMarker(mesh, ex, 1);
   ASSERT_FALSE(bdryFaces.empty());
 
   std::vector<FSClippingFace> clipFaces;
   FSFloatArrayT faceNodeCoordinates;
-  for (const auto &f : bdryFaces) {
+  for(const auto& f : bdryFaces) {
     const FS_intT faceIndex = ex.GetFaceIndex(*(f._faceFSDM));
     ex.GetFaceNodeCoordinates(faceIndex, faceNodeCoordinates);
     clipFaces.emplace_back(f, faceIndex, faceNodeCoordinates);

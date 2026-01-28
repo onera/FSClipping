@@ -10,42 +10,37 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1,
                                  FSFaceMatch& out) const
 {
 
-  // 1. identical test
-  if(FSClippingUtil::AreFacesIdentical(f1, f2)) {
+  // 1. Identical faces
+  if(FSClippingUtil::AreFacesIdentical(f1, f2, tol_)) {
     out.type = FSFaceMatch::IDENTICAL;
-    // out.intersectedArea = f1.projectedArea; // ou f2
     return true;
   }
 
-  // 2. f2 projection in f1 plane
-  std::vector<FSVec2> proj2 = FSClippingUtil::ProjectFaceInPlane(f2, f1);
+  // 2. Clipped algorithm
+  auto poly1 = f1.projected2D();
+  auto poly2 = FSClippingUtil::ProjectFaceInPlane(f2, f1);
 
-  // 3. face inside test
-  if(FSClippingUtil::IsFaceInsideTheOther(f1.projected2D(), proj2)) {
-    out.type = FSFaceMatch::INCLUDED;
-    // out.intersectedArea = PolygonArea(proj2);
-    out.clippedPoly2D = proj2;
-    return true;
-  }
+  // We check that we have the same orientation for the two poly
+  FSClippingUtil::EnsureSameOrientation(poly2, FSClippingUtil::PolygonSignedArea(poly1));
 
-  // 4. inverse test
-  std::vector<FSVec2> proj1 = FSClippingUtil::ProjectFaceInPlane(f1, f2);
-  if(FSClippingUtil::IsFaceInsideTheOther(f2.projected2D(), proj1)) {
-    out.type = FSFaceMatch::INCLUDED;
-    // out.intersectedArea = PolygonArea(proj2);
-    out.clippedPoly2D = proj1;
-    return true;
-  }
-
-  // 4. Sutherland–Hodgman intersection
   std::vector<FSVec2> clip;
-  if(!FSClippingUtil::ClipConvexPolygon(f1.projected2D(), proj2, clip))
+  if(!FSClippingUtil::ClipConvexPolygon(poly1, poly2, clip, tol_))
     return false;
 
-  out.type = FSFaceMatch::INTERSECTING;
-  out.clippedPoly2D = std::move(clip);
-  // out.intersectedArea = PolygonArea(clip);
+  const FS_floatT areaClip = std::abs(FSClippingUtil::PolygonSignedArea(clip));
+  const FS_floatT area2 = std::abs(FSClippingUtil::PolygonSignedArea(poly2));
 
+  // We do not test anymore for inclusion before the clipping algorithm because the inclusion clause is the source
+  // of a lot of bugs (depends on orientation, the sign of the normal etc...).
+  // All inclusions can be treated by the clipping algorithm without additionnal cost.
+  // Finnaly we just add inclusion's match if the area of the poly and clipped faces are identical.
+  // This remark was written after spending lots of time debugging the inclusion case.
+  if(std::abs(areaClip - area2) < tol_)
+    out.type = FSFaceMatch::INCLUDED;
+  else
+    out.type = FSFaceMatch::INTERSECTING;
+
+  out.clippedPoly2D = std::move(clip);
   return true;
 }
 
@@ -66,8 +61,7 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
     // need to acess all of them on this proc for now we'll supose that we are
     // on sequential
     outIndicesBVHTree.Resize(n);
-    //   FSIntArrayT faceIndexClipped =
-    //       bvhClipped_.GetKeysForCells(outIndicesBVHTree);
+
 
     for(FS_intT k = 0; k < n; ++k) {
       FS_intT faceIndexClippedBVHTree = outIndicesBVHTree(k);
@@ -75,11 +69,9 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
       match.face1 = faceIndexSubject;
       match.elemOwner1 = subject.topo().GetOwnerCellFSDMIndex(); // this is why we need the topo in FSClipping
       match.elemOwnerType1 = subject.topo()._faceFSDM->mOwner.mCellType;
-      // match.face2 = faceIndexClipped[k];
       match.face2 = clippedFaces_[faceIndexClippedBVHTree].faceIndex();
       match.elemOwner2 = clippedFaces_[faceIndexClippedBVHTree].topo().GetOwnerCellFSDMIndex();
       match.elemOwnerType1 = clippedFaces_[faceIndexClippedBVHTree].topo()._faceFSDM->mOwner.mCellType;
-      // std::cout << faceIndexClipped[k] << "=?" << match.face2 << std::endl;
       if(ComputeMatch(subject, clippedFaces_[faceIndexClippedBVHTree],
                       match)) {
         match.clippedPoly3D =
