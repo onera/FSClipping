@@ -1,5 +1,7 @@
 #include "FSClipping/FSPolyFaceBuilder.h"
 
+_FS_BEGIN_NAMESPACE
+
 void FSPolyFaceBuilder::CollectFaces()
 {
   const auto& cellData = cell2NodeBuilder_.CellData();
@@ -35,13 +37,20 @@ FS_intT FSPolyFaceBuilder::FindNodeLocalElem(const FSVec3& p,
 
   auto it = cellData.localIndex.find(k); // searching in O(1), that's the reason of cell2Node.localIndex mapping
   if(it == cellData.localIndex.end()) {
-    FSString msg = "Node not found p : (";
+    FSString msg = "Node : (";
     msg += std::to_string(p[0]);
     msg += ", ";
     msg += std::to_string(p[1]);
     msg += ", ";
     msg += std::to_string(p[2]);
     msg += ")";
+    msg += " not found in the poly : \n";
+    for(const auto& v : cellData.coords) {
+      msg += "(" + std::to_string(v[0]) + ", " +
+             std::to_string(v[1]) + ", " +
+             std::to_string(v[2]) + ") ";
+    }
+    msg += "\n";
     FSError.SetAndPrintAndExit(msg.c_str());
   }
 
@@ -88,3 +97,4 @@ void FSPolyFaceBuilder::Build(FSMeshPolyFaceStorage& polyFaces)
     // std::cout << "\n";
   }
 }
+_FS_END_NAMESPACE

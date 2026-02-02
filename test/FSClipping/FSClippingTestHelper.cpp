@@ -1,3 +1,4 @@
+#include "FSClipping/FSMeshReconstruction.h"
 #include "FSMeshImportParamsTAU.h"
 #include "FSMeshExportFilterVTK.h"
 #include "FSMeshExportFilterVTK.h"
@@ -9,6 +10,9 @@
 #include "FSMeshPartitionerPARMETIS.h"
 #include "gtest/gtest.h"
 
+#include "FSClipping/FSClippingInterface.h"
+#include "FSClipping/FSBoundaryFaceProvider.h"
+#include "FSClipping/FSTopologyBuilder.h"
 #include "FSClipping/FSClippingFace.h"
 #include "FSClipping/FSFaceSeparator.h"
 #include "FSClipping/FSFaceMatcher.h"
@@ -65,13 +69,13 @@ void polyMeshExportImport(FSClac* clac, FSMeshData* meshDataPtr, const FSString 
   ASSERT_TRUE(success);
   FS_intT procID = FSCLAC_PROCID(clac);
   FSLog(clac, procID, "################## PrintInfo ###################################\n", logLevel);
-  // FSMeshPrintInfo printInfo(clac);
+  FSMeshPrintInfo printInfo(clac);
   FSMeshOpParams dummy;
-  // success = printInfo.DoOp(meshDataImpPtr, &dummy);
-  // if(!(success)) {
-  //   FSError.Print();
-  // }
-  // ASSERT_TRUE(success);
+  success = printInfo.DoOp(meshDataImpPtr, &dummy);
+  if(!(success)) {
+    FSError.Print();
+  }
+  ASSERT_TRUE(success);
 
   FSLog(clac, procID, "################## Check Mesh ###################################\n", logLevel);
   FSMeshCheck meshCheck(clac);
@@ -88,7 +92,7 @@ static void polyMeshRepartition(FSClac* clac, FSMeshData* meshDataPtr)
 {
   FSMeshOpParams dummy;
   bool success;
-  // FSMeshPrintInfo printInfo(clac);
+  FSMeshPrintInfo printInfo(clac);
   //  repartition of mesh
   FSMeshPartitionerRCB partitioner(clac);
   FSMeshPartitioningParamsRCB partitionParams;
@@ -99,11 +103,11 @@ static void polyMeshRepartition(FSClac* clac, FSMeshData* meshDataPtr)
   ASSERT_TRUE(success);
 
   // print mesh info
-  // success = printInfo.DoOp(meshDataPtr, &dummy);
-  // if(!(success)) {
-  //  FSError.Print();
-  //}
-  // ASSERT_TRUE(success);
+  success = printInfo.DoOp(meshDataPtr, &dummy);
+  if(!(success)) {
+    FSError.Print();
+  }
+  ASSERT_TRUE(success);
 
   // check mesh
   FSMeshCheck meshCheck(clac);
@@ -118,174 +122,44 @@ TEST(FSClippingTestHelper, Interface)
 {
   FSClac clac1, clac2;
   FSMeshImportParamsTAU params1, params2;
-  // params.mMeshFilename = "${HOME}/path/to/hexa.grid";
+
   params1.mMeshFilename =
-    "/stck/aleprevo/test/test_clipping/2026-01-19_slidingMeshes-boites-antonin_mc/cube_tetra.grid";
+    "/stck/aleprevo/test/test_clipping/2026-01-27_slidingMeshes-maillage-de-revolution-antonin_mc/exterior_rotate.grid";
   //"/stck/aleprevo/code_dev/CODA_src/FSClipping/test/Mesh/cube_hexa_coarse.grid";
-  // params.mMeshFilename = "${HOME}/path/to/hexa.grid";
+
   params2.mMeshFilename =
-    "/stck/aleprevo/test/test_clipping/2026-01-19_slidingMeshes-boites-antonin_mc/cube_quad.grid";
+    "/stck/aleprevo/test/test_clipping/2026-01-27_slidingMeshes-maillage-de-revolution-antonin_mc/interior.grid";
   //"/stck/aleprevo/code_dev/CODA_src/FSClipping/test/Mesh/cube_tetra_coarse.grid";
 
-  // hexa.grid is in FSClipping/test/Mesh
-  // but you can load any mesh.grid mesh file
   FSMesh mesh1(&clac1);
   FSMesh mesh2(&clac2);
   ASSERT_TRUE(mesh1.ImportMesh(&params1));
   ASSERT_TRUE(mesh2.ImportMesh(&params2));
 
-  FSMeshFaceExtractor ex1, ex2;
   mesh1.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-  ex1.PrepareFaceConnectivity(mesh1.GetMeshData()->GetUnstructCells(), true,
-                              false);
-  ex1.PrepareFaceNodeCoordinates(FSQuantityDescArrayT());
-
   mesh2.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-  ex2.PrepareFaceConnectivity(mesh2.GetMeshData()->GetUnstructCells(), true,
-                              false);
-  ex2.PrepareFaceNodeCoordinates(FSQuantityDescArrayT());
 
-  auto bdryFaces1 =
-    FSFaceSeparator::SeparateBoundariesFaceWithMarker(mesh1, ex1, 1);
-
-  auto bdryFaces2 =
-    FSFaceSeparator::SeparateBoundariesFaceWithMarker(mesh2, ex2, 2);
-
-  FSQuantityDescArrayT coordDesc;
-  FS_intT nodeDatasetOffset = 0;
-  FSFloatArrayT coords;
-
-  mesh1.GetMeshData()->GetUnstructCells().GetCoordinates3D(coordDesc, coords,
-                                                           nodeDatasetOffset);
-  std::vector<FSClippingFace> clipFaces1, clipFaces2;
-
-  FSFloatArrayT faceCoordinates1;
-  FSFloatArrayT faceCoordinates2;
-  for(const auto& f : bdryFaces1) {
-    FS_intT faceIndex = ex1.GetFaceIndex(*(f._faceFSDM));
-    ex1.GetFaceNodeCoordinates(faceIndex, faceCoordinates1);
-    clipFaces1.emplace_back(f, faceIndex, faceCoordinates1);
-  }
-  for(const auto& f : bdryFaces2) {
-    FS_intT faceIndex = ex2.GetFaceIndex(*(f._faceFSDM));
-    ex2.GetFaceNodeCoordinates(faceIndex, faceCoordinates2);
-    clipFaces2.emplace_back(f, faceIndex, faceCoordinates2);
-  }
-  FSFaceMatcher matcher(clac2, clipFaces1, clipFaces2, 1e-6);
-
-  std::vector<FSFaceMatch> matches;
-  matcher.ComputeMatches(matches);
-  // ASSERT_TRUE(matches.size() == 16);
-
-  // std::unordered_map<FS_intT, std::vector<FSVec3> > cell2NodeNew;
-  FSCell2NodeBuilder cell2NodeBuilder(1e-6);
-  // std::vector<FSVec3> newCord;
-
-
-  for(const auto& f : matches) {
-    // retrouver bdr face associe
-    auto elemIndex = f.elemOwner1; //-> indice dans FSDM
-    auto cellType = f.elemOwnerType1;
-    cell2NodeBuilder.AddOldCellNodes(elemIndex, cellType);
-
-    if(f.type != FSFaceMatch::UNKNOWN) {
-      cell2NodeBuilder.AddClippedPolygon(elemIndex, f.clippedPoly3D);
-    }
-  }
-
-  cell2NodeBuilder.BuildGlobalNumbering();
-
-  auto globalCoords = cell2NodeBuilder.GlobalCoords();
-  auto cellData = cell2NodeBuilder.CellData();
-  auto cell2Node = cell2NodeBuilder.Cell2Node();
-
-  // for(const auto& p : cellData) {
-  //   std::cout << p.first << " : ";
-  //   for(const auto& c : p.second.coords)
-  //     std::cout << "(" << c[0] << ", " << c[1] << ", " << c[2] << ")" << "; ";
-  //   std::cout << "\n";
-  // }
-
-
-
-  // for(const auto& p : cellData) {
-  //   std::cout << p.first << " : ";
-  //   for(const auto& n : p.second.nodeIds)
-  //     std::cout << n << "; ";
-  //   std::cout << "\n";
-  // }
-
-
-  // std::cout << "\n"
-  //           << "Global coords : ";
-  // for(const auto& c : globalCoords)
-  //   std::cout << "(" << c[0] << ", " << c[1] << ", " << c[2] << ")" << " ";
-
-  // std::cout << "\n";
-
-
-  FSMeshPolyFaceStorage polyFaces;
-  FSPolyFaceBuilder polyFaceBuilder(matches, cell2NodeBuilder, 1e-6);
-  polyFaceBuilder.Build(polyFaces);
-  //  auto cell2Node = cell2NodeBuilder.cell2Node();
-
+  FS_intT boundaryMarkerMesh1 = 3;
+  FS_intT boundaryMarkerMesh2 = 4;
+  FS_floatT tolerance = 1e-10;
   FSClac clac3;
-  FSMesh meshInterface = FSMesh(&clac3);
-  FSMeshData meshDataInterface = FSMeshData(&clac3);
-  // init pointer to meshdata
+
+  // compute the interface between mesh1 and mesh2
+  FSClippingInterface clippingInterface(clac1, clac2, tolerance, boundaryMarkerMesh1, boundaryMarkerMesh2);
+  auto meshDataInterface = clippingInterface.BuildInterface(mesh1, mesh2, clac3);
   FSMeshData* meshDataInterfacePtr = &meshDataInterface;
-  // init reference to unstructured mesh data
-  FSUnstructMeshData& unstructMeshData = meshDataInterface.GetUnstructCells();
-
-
-  // // begin initialization
-  meshDataInterface.BeginInitialization();
-
-  meshDataInterface.InitUnstructNodes(cell2NodeBuilder.GlobalCoords().size());
-  meshDataInterface.InitUnstructCells(FSMeshEnums::CT_Poly3D, cell2Node);
-  meshDataInterface.InitUnstructCellFaces(FSMeshEnums::CT_Poly3D, polyFaces);
-
-
-  FSQuantityDescArrayT coordsDesc(3);
-  coordsDesc[0] = FSQuantityDesc(FSDataName::Coordinates(), FSDataName::Coordinate().X());
-  coordsDesc[1] = FSQuantityDesc(FSDataName::Coordinates(), FSDataName::Coordinate().Y());
-  coordsDesc[2] = FSQuantityDesc(FSDataName::Coordinates(), FSDataName::Coordinate().Z());
-
-  FSFloatArrayT coordInterface(globalCoords.size(), 3);
-  for(std::size_t i = 0; i < globalCoords.size(); i++) {
-    coordInterface(i, 0) = globalCoords[i][0];
-    coordInterface(i, 1) = globalCoords[i][1];
-    coordInterface(i, 2) = globalCoords[i][2];
-  }
-
-  bool success = unstructMeshData.SetCoordinates3D(coordsDesc, coordInterface);
-  ASSERT_TRUE(success);
-
-
-  FS_intT currentOffset = 0;
-  FSIntArrayT cellTypeArray_2 = meshDataInterface.GetUnstructCells().GetCellTypesArray();
-  for(FSIntArrayT::ConstIterator cellType = cellTypeArray_2.BeginConst(); cellType.IsValid(); cellType.Next()) {
-    meshDataInterface.GetUnstructCells().InitGlobalCellNumber((FSMeshEnums::CellType)*cellType, currentOffset);
-    currentOffset += meshDataInterface.GetUnstructCells().GetNCells((FSMeshEnums::CellType)*cellType);
-  }
-
-  // end initialization
-  meshDataInterface.EndInitialization();
-  // check if initialization is complete
-  success = meshDataInterface.IsInitialized();
-  ASSERT_TRUE(success);
 
   // print mesh info
-  // FSMeshPrintInfo printInfo(&clac3);
+  FSMeshPrintInfo printInfo(&clac3);
   FSMeshOpParams dummy;
-  // success = printInfo.DoOp(meshDataInterfacePtr, &dummy);
-  // if(!(success)) {
-  //   FSError.Print();
-  // }
-  // ASSERT_TRUE(success);
+  bool success = printInfo.DoOp(meshDataInterfacePtr, &dummy);
+  if(!(success)) {
+    FSError.Print();
+  }
+  ASSERT_TRUE(success);
 
 
-  // // // check mesh
+  // check mesh
   FSMeshCheck meshCheck(&clac3);
   success = meshCheck.DoOp(meshDataInterfacePtr, &dummy);
   if(!(success)) {
@@ -298,7 +172,6 @@ TEST(FSClippingTestHelper, Interface)
   polyMeshRepartition(&clac3, meshDataInterfacePtr);
   polyMeshExportImport(&clac3, meshDataInterfacePtr, "/stck/aleprevo/FSTwoPolys2DGlobal", logLevel, false);
   polyMeshExportImport(&clac3, meshDataInterfacePtr, "FSTwoPolys2DGlobal_partind", logLevel, true);
-
 
   meshDataInterface.GetUnstructCells().CreateLocalNumbering();
   polyMeshRepartition(&clac3, meshDataInterfacePtr);

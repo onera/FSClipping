@@ -5,7 +5,16 @@
 # --------------------------------------------------------------
 # Shared library definition
 # --------------------------------------------------------------
-add_library(fsclipping SHARED FSClippingUtil.cpp FSClippingFace.cpp FSFaceSeparator.cpp FSFaceMatcher.cpp FSCell2NodeBuilder.cpp FSPolyFaceBuilder.cpp)
+add_library(fsclipping SHARED   FSClippingUtil.cpp 
+                                FSClippingFace.cpp 
+                                FSFaceSeparator.cpp 
+                                FSFaceMatcher.cpp 
+                                FSCell2NodeBuilder.cpp 
+                                FSPolyFaceBuilder.cpp 
+                                FSBoundaryFaceProvider.cpp 
+                                FSTopologyBuilder.cpp
+                                FSMeshReconstruction.cpp
+                                FSClippingInterface.cpp)
 
 # Create an alias so that other targets can refer to it as fsclipping::fsclipping
 add_library(fsclipping::fsclipping ALIAS fsclipping)
@@ -42,6 +51,12 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSFaceSeparator.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSCell2NodeBuilder.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSPolyFaceBuilder.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSBoundaryFaceProvider.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSTopologyBuilder.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSMeshReconstruction.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippingInterface.h
+
+
 )
 
 # Expose the list of public headers to the install command
