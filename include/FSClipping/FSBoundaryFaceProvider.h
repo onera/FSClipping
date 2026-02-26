@@ -13,6 +13,8 @@ public:
   static std::vector<FSClippingFace> Extract(FSMesh& mesh,
                                              FSMeshFaceExtractor& ex,
                                              FS_intT boundaryMarker);
+
+  static std::unordered_map<FS_intT, std::set<FS_intT> > ExtractOwnerCells(const std::vector<FSClippingFace>& faces);
 };
 
 

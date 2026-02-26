@@ -31,4 +31,22 @@ FSBoundaryFaceProvider::Extract(FSMesh& mesh,
 
   return clipFaces;
 }
+
+
+std::unordered_map<FS_intT, std::set<FS_intT> >
+FSBoundaryFaceProvider::ExtractOwnerCells(const std::vector<FSClippingFace>& faces)
+{
+  std::unordered_map<FS_intT, std::set<FS_intT> > bdryElemTypes;
+  for(const auto& f : faces) {
+    auto elemIndex = f.topo()._faceFSDM->mOwner.mCell;
+    auto elemType = f.topo()._faceFSDM->mOwner.mCellType;
+    if(bdryElemTypes.contains(elemType)) {
+      bdryElemTypes.at(elemType).insert(elemIndex);
+    } else {
+      std::set<FS_intT> index = {elemIndex};
+      bdryElemTypes.insert({elemType, index});
+    }
+  }
+  return bdryElemTypes;
+}
 _FS_BEGIN_NAMESPACE

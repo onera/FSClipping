@@ -7,7 +7,7 @@
 #include <FSVec3.h>
 #include "FSMeshEnums.h"
 
-
+_FS_BEGIN_NAMESPACE
 
 struct NodeKey {
   FS_intT ix, iy, iz;
@@ -48,7 +48,7 @@ struct Cell2NodeData {
    FSCell2NodeBuilder :
    This class reconstruct the connectivity cell2Node for all the
    cells.
-   - First the methods AddOldCellNodes and AddClippedPolygon
+   - First the methods AddVolumeCellNodes and AddClippedPolygon
    are used for add only the cell2Node.coords.
    - Second, in the BuildGlobalNumbering we store all the coords
    (without duplicate) in globalCoords_ and build the
@@ -61,11 +61,23 @@ class FSCell2NodeBuilder
 public:
   explicit FSCell2NodeBuilder(FS_floatT tol = 1e-12) : tol_(tol) {};
 
-  void AddOldCellNodes(FS_intT cellId,
-                       FSMeshEnums::CellType cellType);
+  void AddCellNodes(FS_intT cellId,
+                    FSMeshEnums::CellType cellType);
+
+  void AddVolumeCellNodesInner(FS_intT cellId,
+                               FSMeshEnums::CellType cellType, // on peut se passer du cellType car cette classe est appele pour un type
+                               const FSIntArrayT& cell2Node,
+                               const FSFloatArrayT& coords);
+
+  void AddVolumeCellNodes(FS_intT cellId,
+                          FSMeshEnums::CellType cellType,
+                          const FSIntArrayT& cell2Node,
+                          const FSFloatArrayT& coords);
 
   void AddClippedPolygon(FS_intT cellId,
                          const std::vector<FSVec3>& poly);
+
+  void UpdateNumCellsBorder() { numCellsBorder_ = cellData_.size(); }
 
   void BuildGlobalNumbering(); // reconstruct the global numbering for a new mesh
 
@@ -83,6 +95,7 @@ public:
 
 private:
   FS_floatT tol_;
+  FS_floatT numCellsBorder_;
   std::unordered_map<FS_intT, Cell2NodeData> cellData_; // the main data with the mapping IdCellInFSDM -> coords, local node Id, local node Id
   std::vector<FS_intT> cellIds_;                        // sorted containers with the cell id
   std::unordered_map<FS_intT, FS_intT> cellId2L_;       // connectivity cellIds_[i] -> i, usefull for searching in O(1)
@@ -97,5 +110,6 @@ private:
   void BuildCellIdMapping(); // build the containers cellIds and cellId2L
 };
 
+_FS_END_NAMESPACE
 
 #endif

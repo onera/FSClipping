@@ -50,10 +50,8 @@ FS_intT FSCell2NodeBuilder::GlobalCellId(FS_intT localId) const
   return cellIds_[localId];
 }
 
-void FSCell2NodeBuilder::AddOldCellNodes(FS_intT cellId,
-                                         FSMeshEnums::CellType cellType)
-// const FSIntArrayT& cell2Node,
-/// const FSFloatArrayT& coords)
+void FSCell2NodeBuilder::AddCellNodes(FS_intT cellId,
+                                      FSMeshEnums::CellType cellType)
 {
   auto [it, inserted] = cellData_.try_emplace(cellId);
 
@@ -64,22 +62,12 @@ void FSCell2NodeBuilder::AddOldCellNodes(FS_intT cellId,
 
   const FS_intT nCellNodes = FSCellInfo::cNNodes[cellType];
   nodes.reserve(nCellNodes);
-
-  // This part add the coordinates if the nodes in the element border of the previous mesh.
-  // We don't need it if we want just to reconstruct only the new faces border.
-  //  for(FS_intT node = 0; node < nCellNodes; ++node) {
-  //    FS_intT idx = cell2Node(cellId, node);
-  //    nodes.emplace_back(coords(idx, 0),
-  //                       coords(idx, 1),
-  //                       coords(idx, 2));
-  //  }
-  // Conserve it !
 }
-
 
 void FSCell2NodeBuilder::AddClippedPolygon(FS_intT cellId,
                                            const std::vector<FSVec3>& poly)
 {
+
   auto& nodes = cellData_.at(cellId).coords;
 
   for(const auto& p : poly) {
@@ -130,11 +118,80 @@ void FSCell2NodeBuilder::BuildGlobalNumbering()
   BuildCellIdMapping();
 }
 
+void FSCell2NodeBuilder::AddVolumeCellNodes(FS_intT cellId,
+                                            FSMeshEnums::CellType cellType,
+                                            const FSIntArrayT& cell2Node,
+                                            const FSFloatArrayT& coords)
+{
+  auto [it, inserted] = cellData_.try_emplace(cellId);
+
+  if(inserted)
+    FSError.SetAndPrintAndExit("FSCell2NodeBuilder::AddOldCellNodes You're trying to insert a cell which is not on the border.");
+
+  auto& nodes = it->second.coords;
+
+  if(nodes.empty())
+    FSError.SetAndPrintAndExit("FSCell2NodeBuilder::AddOldCellNodes You have an empty array of nodes. The match builder should have added some nodes.");
+
+  // std::cout << nodes.size() << " surface node already add for the cell " << cellId << " : " << "\n";
+  // for(const auto& n : nodes)
+  //   std::cout << n[0] << " " << n[1] << " " << n[2] << "\t";
+  // std::cout << "\n";
+  const FS_intT nCellNodes = FSCellInfo::cNNodes[cellType];
+  // nodes.reserve(nCellNodes);
+
+  // This part add the coordinates if the nodes in the element border of the previous mesh.
+  // We don't need it if we want just to reconstruct only the new faces border.
+  for(FS_intT node = 0; node < nCellNodes; ++node) {
+    FS_intT idx = cell2Node(cellId, node);
+    auto x = coords(idx, 0);
+    auto y = coords(idx, 1);
+    auto z = coords(idx, 2);
+    FSVec3 vecNode{x, y, z};
+    NodeKey key(vecNode, tol_);
+    if(!(it->second.localIndex.contains(key))) { // we check that the coord does not already exist
+      nodes.emplace_back(coords(idx, 0),
+                         coords(idx, 1),
+                         coords(idx, 2));
+    }
+  }
+
+  // std::cout << nodes.size() << " volume node already add for the cell " << cellId << " : " << "\n";
+  // for(const auto& n : nodes)
+  //   std::cout << n[0] << " " << n[1] << " " << n[2] << "\t";
+  // std::cout << "\n";
+}
+
+void FSCell2NodeBuilder::AddVolumeCellNodesInner(FS_intT cellId,
+                                                 FSMeshEnums::CellType cellType,
+                                                 const FSIntArrayT& cell2Node,
+                                                 const FSFloatArrayT& coords)
+{
+
+  auto [it, inserted] = cellData_.try_emplace(cellId);
+
+  if(!inserted)
+    FSError.SetAndPrintAndExit("FSCell2NodeBuilder::AddOldCellNodesInner You're trying to insert a cell which is in the border.");
+
+  auto& nodes = it->second.coords;
+
+  const FS_intT nCellNodes = FSCellInfo::cNNodes[cellType];
+  nodes.reserve(nCellNodes);
+
+  for(FS_intT node = 0; node < nCellNodes; ++node) {
+    FS_intT idx = cell2Node(cellId, node);
+    nodes.emplace_back(coords(idx, 0),
+                       coords(idx, 1),
+                       coords(idx, 2));
+  }
+}
+
 FSIntRegisterT FSCell2NodeBuilder::Cell2Node()
 {
   // Return the final cell2Node connectivity for FSDM, in particular
-  // to fit the function FSMeshData::InitUnstructCells.
+  // to fit with the parameter of FSMeshData::InitUnstructCells.
   FSIntRegisterT cell2Node;
+  // const FS_intT nCells = static_cast<FS_intT>(numCellsBorder_);
   const FS_intT nCells = static_cast<FS_intT>(cellData_.size());
   cell2Node.Init(nCells);
 

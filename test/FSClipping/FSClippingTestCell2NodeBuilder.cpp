@@ -44,7 +44,7 @@ TEST(FSCell2NodeBuilder, SingleCellWithClippedPolygon)
   coords(7, 1) = 1;
   coords(7, 2) = 1;
 
-  builder.AddOldCellNodes(
+  builder.AddCellNodes(
     0, FSMeshEnums::CellType::CT_Hexa8);
 
   // Clipped polygon on the plane z = 1

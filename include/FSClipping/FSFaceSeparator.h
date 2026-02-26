@@ -32,8 +32,9 @@ void SeparateFaces(const FSMesh& fsmesh,
 
 bool PrepareNodalData(const FSMesh& fsmesh, FSMeshFaceExtractor& faceExtractor);
 
-std::vector<FSBoundaryFace> SeparateBoundariesFaceWithMarker(
-  FSMesh& fsmesh, FSMeshFaceExtractor& faceExtractor, const FS_intT marker);
+std::vector<FSBoundaryFace> SeparateBoundariesFaceWithMarker(FSMesh& fsmesh,
+                                                             FSMeshFaceExtractor& faceExtractor,
+                                                             const FS_intT marker);
 
 } // namespace FSFaceSeparator
 _FS_END_NAMESPACE

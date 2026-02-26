@@ -71,7 +71,7 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
       match.elemOwnerType1 = subject.topo()._faceFSDM->mOwner.mCellType;
       match.face2 = clippedFaces_[faceIndexClippedBVHTree].faceIndex();
       match.elemOwner2 = clippedFaces_[faceIndexClippedBVHTree].topo().GetOwnerCellFSDMIndex();
-      match.elemOwnerType1 = clippedFaces_[faceIndexClippedBVHTree].topo()._faceFSDM->mOwner.mCellType;
+      match.elemOwnerType2 = clippedFaces_[faceIndexClippedBVHTree].topo()._faceFSDM->mOwner.mCellType;
       if(ComputeMatch(subject, clippedFaces_[faceIndexClippedBVHTree],
                       match)) {
         match.clippedPoly3D =

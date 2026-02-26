@@ -18,10 +18,12 @@ public:
 
   FSMeshData BuildInterface(FSMesh& mesh1, FSMesh& mesh2, FSClac& clacInterface);
 
+  FSMeshData BuildInterfaceTmp(FSMesh& mesh1, FSMesh& mesh2, FSClac& clacInterface);
+
 private:
-  FS_floatT tol_;
   FSClac& clac1_;
   FSClac& clac2_;
+  FS_floatT tol_;
   FS_intT boundaryMarkerMesh1_;
   FS_intT boundaryMarkerMesh2_;
 };

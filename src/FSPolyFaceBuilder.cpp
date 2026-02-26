@@ -2,7 +2,7 @@
 
 _FS_BEGIN_NAMESPACE
 
-void FSPolyFaceBuilder::CollectFaces()
+void FSPolyFaceBuilder::CollectMatchesFaces()
 {
   const auto& cellData = cell2NodeBuilder_.CellData();
   cellFaces_.resize(cellData.size());
@@ -44,7 +44,7 @@ FS_intT FSPolyFaceBuilder::FindNodeLocalElem(const FSVec3& p,
     msg += ", ";
     msg += std::to_string(p[2]);
     msg += ")";
-    msg += " not found in the poly : \n";
+    msg += " not found in the face : \n";
     for(const auto& v : cellData.coords) {
       msg += "(" + std::to_string(v[0]) + ", " +
              std::to_string(v[1]) + ", " +
@@ -57,10 +57,33 @@ FS_intT FSPolyFaceBuilder::FindNodeLocalElem(const FSVec3& p,
   return it->second;
 }
 
+void FSPolyFaceBuilder::AddInnerFaces(FSMeshEnums::CellType type,
+                                      const FSCellPool& cellPool,
+                                      FS_intT cell,
+                                      FS_intT face,
+                                      const FSFloatArrayT& oldCoords)
+{
+  if(cellFaces_.empty())
+    FSError.SetAndPrintAndExit("FSPolyFaceBuilder::AddInnerFaces cellFaces_ is empty. It's must be build during the surface topo build");
+
+  FS_intT cellId = cell2NodeBuilder_.LocalCellIndex(cell);
+  const auto& cellData = cell2NodeBuilder_.CellData();
+  // FS_intT nFacesSurfaces = cellFaces_[localCellId].size();
+  FS_intT nCorners = FSCellInfo::NFaceCorners(type, cellPool, cell, face);
+  FaceData innerFace;
+  innerFace.nodeIds.resize(nCorners);
+  for(FS_intT fc = 0; fc < nCorners; fc++) {
+    FS_intT node = FSCellInfo::GetCellFaceCorner(type, cellPool, cell, face, fc);
+    FSVec3 p(oldCoords(node, 0), oldCoords(node, 1), oldCoords(node, 2));
+    innerFace.nodeIds[fc] = FindNodeLocalElem(p, cellData.at(cell));
+    // face.nodeIds.push_back(FindNodeLocalElem(p, cellData.at(f.elemOwner1)));
+  }
+  cellFaces_[cellId].push_back(std::move(innerFace));
+}
 
 void FSPolyFaceBuilder::Build(FSMeshPolyFaceStorage& polyFaces)
 {
-  CollectFaces();
+  // CollectMatchesFaces();
 
   FS_intT nCells = cellFaces_.size();
   polyFaces.Init(nCells);

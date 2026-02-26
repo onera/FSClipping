@@ -35,7 +35,7 @@ TEST(FSPolyFaceBuilder, SingleCellSingleFace)
   coords(3, 1) = 0;
   coords(3, 2) = 1;
 
-  cellBuilder.AddOldCellNodes(
+  cellBuilder.AddCellNodes(
     cellId,
     FSMeshEnums::CellType::CT_Tetra4
     // cell2Node, coords
@@ -62,6 +62,7 @@ TEST(FSPolyFaceBuilder, SingleCellSingleFace)
   // 3. Build polyhedral faces
   // ------------------------------------------------------------
   FSPolyFaceBuilder faceBuilder(matches, cellBuilder);
+  faceBuilder.CollectMatchesFaces();
 
   FSMeshPolyFaceStorage polyFaces;
   faceBuilder.Build(reinterpret_cast<FSMeshPolyFaceStorage&>(polyFaces));
