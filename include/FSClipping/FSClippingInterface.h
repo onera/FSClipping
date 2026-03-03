@@ -14,11 +14,18 @@ public:
                       FSClac& clac2,
                       FS_floatT tol,
                       FS_intT markerMesh1,
-                      FS_intT markerMesh2) : clac1_(clac1), clac2_(clac2), tol_(tol), boundaryMarkerMesh1_(markerMesh1), boundaryMarkerMesh2_(markerMesh2) {};
+                      FS_intT markerMesh2) : clac1_(clac1),
+                                             clac2_(clac2), tol_(tol),
+                                             boundaryMarkerMesh1_(markerMesh1),
+                                             boundaryMarkerMesh2_(markerMesh2) {};
 
-  FSMeshData BuildInterface(FSMesh& mesh1, FSMesh& mesh2, FSClac& clacInterface);
+  FSMeshData BuildSurfaceInterface(FSMesh& mesh1,
+                                   FSMesh& mesh2,
+                                   FSClac& clacInterface);
 
-  FSMeshData BuildInterfaceTmp(FSMesh& mesh1, FSMesh& mesh2, FSClac& clacInterface);
+  FSMeshData BuildVolumeInterface(FSMesh& mesh1,
+                                  FSMesh& mesh2,
+                                  FSClac& clacInterface);
 
 private:
   FSClac& clac1_;

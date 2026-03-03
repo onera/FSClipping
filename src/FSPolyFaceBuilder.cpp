@@ -2,6 +2,14 @@
 
 _FS_BEGIN_NAMESPACE
 
+FS_intT FSPolyFaceBuilder::LocalCellIndex(FS_intT globalId) const
+{
+  auto it = cellId2L_.find(globalId);
+  if(it == cellId2L_.end())
+    FSError.SetAndPrintAndExit("FSCell2NodeBuilder : Unknown cellId");
+  return it->second;
+}
+
 void FSPolyFaceBuilder::CollectMatchesFaces()
 {
   const auto& cellData = cell2NodeBuilder_.CellData();
@@ -28,6 +36,7 @@ void FSPolyFaceBuilder::CollectMatchesFaces()
 
     cellFaces_[cellId].push_back(std::move(face));
   }
+  cellId2L_ = cell2NodeBuilder_.CellId2L();
 }
 
 FS_intT FSPolyFaceBuilder::FindNodeLocalElem(const FSVec3& p,
@@ -66,7 +75,8 @@ void FSPolyFaceBuilder::AddInnerFaces(FSMeshEnums::CellType type,
   if(cellFaces_.empty())
     FSError.SetAndPrintAndExit("FSPolyFaceBuilder::AddInnerFaces cellFaces_ is empty. It's must be build during the surface topo build");
 
-  FS_intT cellId = cell2NodeBuilder_.LocalCellIndex(cell);
+  // FS_intT cellId = cell2NodeBuilder_.LocalCellIndex(cell);
+  FS_intT cellId = LocalCellIndex(cell);
   const auto& cellData = cell2NodeBuilder_.CellData();
   // FS_intT nFacesSurfaces = cellFaces_[localCellId].size();
   FS_intT nCorners = FSCellInfo::NFaceCorners(type, cellPool, cell, face);
@@ -86,6 +96,7 @@ void FSPolyFaceBuilder::Build(FSMeshPolyFaceStorage& polyFaces)
   // CollectMatchesFaces();
 
   FS_intT nCells = cellFaces_.size();
+  std::cout << "nCells : " << nCells << std::endl;
   polyFaces.Init(nCells);
 
   // 1-Collect the number of faces per poly
@@ -96,28 +107,28 @@ void FSPolyFaceBuilder::Build(FSMeshPolyFaceStorage& polyFaces)
 
   // 2-Collect the number of nodes per faces
   for(FS_intT c = 0; c < nCells; ++c) {
-    // std::cout << "Element " << c << " { ";
+    std::cout << "Element " << c << " { ";
     for(std::size_t f = 0; f < cellFaces_[c].size(); ++f) {
-      // std::cout << cellFaces_[c][f].nodeIds.size() << " ";
+      std::cout << cellFaces_[c][f].nodeIds.size() << " ";
       polyFaces.SetNumNodesForFace(
         c, f, cellFaces_[c][f].nodeIds.size());
     }
-    // std::cout << "}" << std::endl;
+    std::cout << "}" << std::endl;
   }
   polyFaces.EndNumNodesSetup();
 
   // 3-Collect the local index of each coord in cell2Node.coords
   for(FS_intT c = 0; c < nCells; ++c) {
-    // std::cout << "Element " << c << " : ";
+    std::cout << "Element " << c << " : ";
     for(std::size_t f = 0; f < cellFaces_[c].size(); ++f) {
-      // std::cout << " { ";
+      std::cout << " { ";
       for(FS_intT nid : cellFaces_[c][f].nodeIds) {
         polyFaces.AddFaceNode(c, f, nid);
-        // std::cout << nid << " ";
+        std::cout << nid << " ";
       }
-      // std::cout << "}";
+      std::cout << "}";
     }
-    // std::cout << "\n";
+    std::cout << "\n";
   }
 }
 _FS_END_NAMESPACE

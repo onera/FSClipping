@@ -1,7 +1,7 @@
 #ifndef FSMESHRECONSTRUCTION_H
 #define FSMESHRECONSTRUCTION_H
 
-#include "FSClipping/FSTopologyBuilder.h"
+#include "FSClipping/FSTopologyAssembler.h"
 #include <FSMesh.h>
 
 

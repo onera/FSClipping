@@ -11,16 +11,21 @@ FSMeshData FSMeshReconstruction::Build(FSTopologyData& topologyData)
   FSUnstructMeshData& unstructMeshData = meshDataInterface.GetUnstructCells();
 
   const auto& globalCoords = topologyData.globalCoords;
-  auto& cell2Node = topologyData.cell2Node;
+  auto& cell2NodePoly = topologyData.cell2NodePoly;
+  auto& cell2NodeInner = topologyData.cell2NodeInner;
   auto& polyFaces = topologyData.polyFaces;
 
   // begin initialization
   meshDataInterface.BeginInitialization();
 
   meshDataInterface.InitUnstructNodes(globalCoords.size());
-  meshDataInterface.InitUnstructCells(FSMeshEnums::CT_Poly3D, cell2Node);
-  meshDataInterface.InitUnstructCellFaces(FSMeshEnums::CT_Poly3D, polyFaces);
+  meshDataInterface.InitUnstructCells(FSMeshEnums::CT_Poly3D, cell2NodePoly);
 
+  if(!cell2NodeInner.IsEmpty()) {
+    for(auto& [type, cell2Node] : topologyData.cell2NodeInner)
+      meshDataInterface.InitUnstructCells(type, cell2Node);
+  }
+  meshDataInterface.InitUnstructCellFaces(FSMeshEnums::CT_Poly3D, polyFaces);
 
   FSQuantityDescArrayT coordsDesc(3);
   coordsDesc[0] = FSQuantityDesc(FSDataName::Coordinates(), FSDataName::Coordinate().X());

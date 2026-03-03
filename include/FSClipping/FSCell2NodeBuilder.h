@@ -42,6 +42,8 @@ struct Cell2NodeData {
   std::vector<FSVec3> coords;                      // cell2Node with coordinates
   std::vector<FS_intT> nodeIds;                    // cell2node with local index in the globalCoords container
   std::unordered_map<NodeKey, FS_intT> localIndex; // mapping coord -> local index in coords vector. Very important later for the face2NodeBuilder
+
+  bool onTheBorder = false;
 };
 
 /* --------------------------------------------------------------
@@ -77,9 +79,9 @@ public:
   void AddClippedPolygon(FS_intT cellId,
                          const std::vector<FSVec3>& poly);
 
-  void UpdateNumCellsBorder() { numCellsBorder_ = cellData_.size(); }
-
   void BuildGlobalNumbering(); // reconstruct the global numbering for a new mesh
+
+  void SetAllCellOnTheBorder();
 
   const std::unordered_map<FS_intT, Cell2NodeData>& CellData() const noexcept { return cellData_; };
 
@@ -87,7 +89,11 @@ public:
 
   const std::unordered_map<NodeKey, FS_intT>& CoordToNode() const noexcept { return coordToNode_; };
 
-  FSIntRegisterT Cell2Node();
+  const std::unordered_map<FS_intT, FS_intT> CellId2L() const noexcept { return cellId2L_; };
+
+  FSIntRegisterT Cell2NodePoly();
+
+  FSIntArrayT Cell2NodeInner(FSMeshEnums::CellType type);
 
   FS_intT LocalCellIndex(FS_intT globalId) const;
 
@@ -95,7 +101,7 @@ public:
 
 private:
   FS_floatT tol_;
-  FS_floatT numCellsBorder_;
+  FS_intT numCellOnTheBorder_ = 0;
   std::unordered_map<FS_intT, Cell2NodeData> cellData_; // the main data with the mapping IdCellInFSDM -> coords, local node Id, local node Id
   std::vector<FS_intT> cellIds_;                        // sorted containers with the cell id
   std::unordered_map<FS_intT, FS_intT> cellId2L_;       // connectivity cellIds_[i] -> i, usefull for searching in O(1)
