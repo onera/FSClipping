@@ -86,7 +86,6 @@ void FSPolyFaceBuilder::AddInnerFaces(FSMeshEnums::CellType type,
     FS_intT node = FSCellInfo::GetCellFaceCorner(type, cellPool, cell, face, fc);
     FSVec3 p(oldCoords(node, 0), oldCoords(node, 1), oldCoords(node, 2));
     innerFace.nodeIds[fc] = FindNodeLocalElem(p, cellData.at(cell));
-    // face.nodeIds.push_back(FindNodeLocalElem(p, cellData.at(f.elemOwner1)));
   }
   cellFaces_[cellId].push_back(std::move(innerFace));
 }
@@ -96,7 +95,6 @@ void FSPolyFaceBuilder::Build(FSMeshPolyFaceStorage& polyFaces)
   // CollectMatchesFaces();
 
   FS_intT nCells = cellFaces_.size();
-  std::cout << "nCells : " << nCells << std::endl;
   polyFaces.Init(nCells);
 
   // 1-Collect the number of faces per poly
@@ -107,28 +105,29 @@ void FSPolyFaceBuilder::Build(FSMeshPolyFaceStorage& polyFaces)
 
   // 2-Collect the number of nodes per faces
   for(FS_intT c = 0; c < nCells; ++c) {
-    std::cout << "Element " << c << " { ";
+    // file << "Element " << c << " { ";
     for(std::size_t f = 0; f < cellFaces_[c].size(); ++f) {
-      std::cout << cellFaces_[c][f].nodeIds.size() << " ";
+      // file << cellFaces_[c][f].nodeIds.size() << " ";
       polyFaces.SetNumNodesForFace(
         c, f, cellFaces_[c][f].nodeIds.size());
     }
-    std::cout << "}" << std::endl;
+    // file << "}" << std::endl;
   }
   polyFaces.EndNumNodesSetup();
 
   // 3-Collect the local index of each coord in cell2Node.coords
   for(FS_intT c = 0; c < nCells; ++c) {
-    std::cout << "Element " << c << " : ";
+    // file << "Element " << c << " : ";
     for(std::size_t f = 0; f < cellFaces_[c].size(); ++f) {
-      std::cout << " { ";
+      // file << " { ";
       for(FS_intT nid : cellFaces_[c][f].nodeIds) {
         polyFaces.AddFaceNode(c, f, nid);
-        std::cout << nid << " ";
+        // file << nid << " ";
       }
-      std::cout << "}";
+      // file << "}";
     }
-    std::cout << "\n";
+    // file << "\n";
   }
+  // file.close();
 }
 _FS_END_NAMESPACE

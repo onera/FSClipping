@@ -91,6 +91,8 @@ public:
 
   const std::unordered_map<FS_intT, FS_intT> CellId2L() const noexcept { return cellId2L_; };
 
+  const FS_intT NumCellOnTheBorder() const noexcept { return numCellOnTheBorder_; };
+
   FSIntRegisterT Cell2NodePoly();
 
   FSIntArrayT Cell2NodeInner(FSMeshEnums::CellType type);
@@ -98,6 +100,8 @@ public:
   FS_intT LocalCellIndex(FS_intT globalId) const;
 
   FS_intT GlobalCellId(FS_intT localId) const;
+
+
 
 private:
   FS_floatT tol_;

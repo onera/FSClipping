@@ -42,4 +42,48 @@ TEST(FSClippingTestFaceExtractor, ComputeGeometry)
   }
 }
 
+// TEST(FSClippingTestFaceExtractor, ExtractAttribute)
+//{
+//   FSClac clac;
+//   FSMeshImportParamsTAU params;
+//   // params.mMeshFilename = "${HOME}/path/to/hexa.grid";
+//   params.mMeshFilename =
+//     "${HOME}/code_dev/CODA_src/FSClipping/test/Mesh/hexa.grid";
+//   // hexa.grid is in FSClipping/test/Mesh
+//   // but you can load any mesh.grid mesh file
+//   FSMesh mesh(&clac);
+//   ASSERT_TRUE(mesh.ImportMesh(&params));
+//
+//   FSMeshData* meshData = mesh.GetMeshData();
+//   FSUnstructMeshData& unstructCell = meshData->GetUnstructCells();
+//   FSMeshPrintInfo printInfo(&clac);
+//   FSMeshOpParams dummy;
+//   bool success = printInfo.DoOp(meshData, &dummy);
+//   if(!(success)) {
+//     FSError.Print();
+//   }
+//   ASSERT_TRUE(success);
+//
+//   const FSString attrCADGroupIDName =
+//     FSEnums::AttributeTypeToString(FSEnums::AT_CADGroupID);
+//   auto cellTypes = mesh.GetCellTypes();
+//   for(const auto& t : cellTypes) {
+//     std::cout << FSMeshEnums::CellTypeToString(t) << " : ";
+//     if(FSMeshEnums::IsUnstructSurfaceCellType(t)) {
+//       auto cellPool = unstructCell.GetCellPool(t);
+//
+//       if(cellPool->HasCellAttribute(attrCADGroupIDName)) {
+//         const auto& boundaryMarkersValue = cellPool->GetCellAttribute(attrCADGroupIDName);
+//         std::cout << boundaryMarkersValue.Size() << std::endl;
+//         std::cout << cellPool->GetNAttributes() << std::endl;
+//         std::cout << cellPool->GetNCellAttributes(attrCADGroupIDName) << std::endl;
+//
+//         for(FS_intT i = 0; i < boundaryMarkersValue.Size(); i++) {
+//           std::cout << boundaryMarkersValue[i] << "\t";
+//         }
+//       }
+//     }
+//     std::cout << std::endl;
+//   }
+// }
 _FS_END_NAMESPACE

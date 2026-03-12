@@ -30,7 +30,7 @@ FSTopologyData FSTopologyAssembler::BuildSurfaceTopo(const std::vector<FSFaceMat
   cell2NodeBuilder_.BuildGlobalNumbering();
 
   result.globalCoords = cell2NodeBuilder_.GlobalCoords();
-  result.cell2NodePoly = cell2NodeBuilder_.Cell2NodePoly();
+  result.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly();
   // -------------------------------------------------
   // 2) Build polygonal faces
   // -------------------------------------------------
@@ -53,16 +53,24 @@ FSTopologyData FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node
                                                     const FSCellPool& cellPool,
                                                     const FSFloatArrayT& oldCoords)
 {
+
   CheckSurfaceWasBuilt();
 
   FSTopologyData volumeResult;
 
   auto type = cellPool.GetCellType();
-  for(const auto& c : bdryCellPool)
-    cell2NodeBuilder_.AddVolumeCellNodes(c, type, cell2Node, oldCoords);
 
+  auto offSet = cellPool.GetOffset();
+  auto numCell = cellPool.GetNCells();
+  for(FS_intT c = offSet; c < numCell + offSet; c++) {
+    cell2NodeBuilder_.AddVolumeCellNodes(c, type, cell2Node, oldCoords);
+  }
   cell2NodeBuilder_.BuildGlobalNumbering();
-  volumeResult.cell2NodePoly = cell2NodeBuilder_.Cell2NodePoly();
+
+  volumeResult.globalCoords = cell2NodeBuilder_.GlobalCoords();
+  volumeResult.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly();
+  auto [it, inserted] = volumeResult.cell2NodeInner.try_emplace(type);
+  it->second = cell2NodeBuilder_.Cell2NodeInner(type);
 
   for(const auto& c : bdryCellPool) {
     FS_intT nFaces = FSCellInfo::NFaces(type);
@@ -72,17 +80,6 @@ FSTopologyData FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node
   }
   polyFaceBuilder_->Build(volumeResult.polyFaces);
 
-  auto offSet = cellPool.GetOffset();
-  auto numCell = cellPool.GetNCells();
-  for(FS_intT c = offSet; c < numCell + offSet; c++) {
-    if(!bdryCellPool.contains(c))
-      cell2NodeBuilder_.AddVolumeCellNodes(c, type, cell2Node, oldCoords);
-  }
-
-  cell2NodeBuilder_.BuildGlobalNumbering();
-  volumeResult.globalCoords = cell2NodeBuilder_.GlobalCoords();
-  auto [it, inserted] = volumeResult.cell2NodeInner.try_emplace(type);
-  it->second = cell2NodeBuilder_.Cell2NodeInner(type);
 
   return volumeResult;
 }
@@ -92,24 +89,16 @@ FSTopologyData FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node
 //                                                     const FSCellPool& cellPool,
 //                                                     const FSFloatArrayT& oldCoords)
 //{
-//
 //   CheckSurfaceWasBuilt();
 //
 //   FSTopologyData volumeResult;
 //
 //   auto type = cellPool.GetCellType();
-//
-//   auto offSet = cellPool.GetOffset();
-//   auto numCell = cellPool.GetNCells();
-//   for(FS_intT c = offSet; c < numCell + offSet; c++) {
+//   for(const auto& c : bdryCellPool)
 //     cell2NodeBuilder_.AddVolumeCellNodes(c, type, cell2Node, oldCoords);
-//   }
-//   cell2NodeBuilder_.BuildGlobalNumbering();
 //
-//   volumeResult.globalCoords = cell2NodeBuilder_.GlobalCoords();
-//   volumeResult.cell2NodePoly = cell2NodeBuilder_.Cell2NodePoly();
-//   auto [it, inserted] = volumeResult.cell2NodeInner.try_emplace(type);
-//   it->second = cell2NodeBuilder_.Cell2NodeInner(type);
+//   cell2NodeBuilder_.BuildGlobalNumbering();
+//   volumeResult.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly();
 //
 //   for(const auto& c : bdryCellPool) {
 //     FS_intT nFaces = FSCellInfo::NFaces(type);
@@ -119,8 +108,21 @@ FSTopologyData FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node
 //   }
 //   polyFaceBuilder_->Build(volumeResult.polyFaces);
 //
+//   auto offSet = cellPool.GetOffset();
+//   auto numCell = cellPool.GetNCells();
+//   for(FS_intT c = offSet; c < numCell + offSet; c++) {
+//     if(!bdryCellPool.contains(c))
+//       cell2NodeBuilder_.AddVolumeCellNodes(c, type, cell2Node, oldCoords);
+//   }
+//
+//   cell2NodeBuilder_.BuildGlobalNumbering();
+//   volumeResult.globalCoords = cell2NodeBuilder_.GlobalCoords();
+//   auto [it, inserted] = volumeResult.cell2NodeInner.try_emplace(type);
+//   it->second = cell2NodeBuilder_.Cell2NodeInner(type);
 //
 //   return volumeResult;
 // }
+
+
 
 _FS_BEGIN_NAMESPACE

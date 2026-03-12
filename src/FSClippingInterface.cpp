@@ -69,6 +69,7 @@ FSMeshData FSClippingInterface::BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh
       const auto& bdryCellPool1 = bdryCells1.at(t);
 
       volumeTopology = topologyBuilder.BuildVolumeTopo(cell2Node1, bdryCellPool1, *cellPool1, oldCoords);
+      // volumeTopology = topolyBuilder.BuildVolumeTopo(surfaceTopology);
     }
   }
 

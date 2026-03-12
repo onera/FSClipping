@@ -132,11 +132,6 @@ void FSCell2NodeBuilder::AddVolumeCellNodes(FS_intT cellId,
 {
   auto [it, inserted] = cellData_.try_emplace(cellId);
 
-  if(!inserted)
-    std::cout << "You're inserting the cell" << cellId << "on the border of the mesh" << "\n";
-  else
-    std::cout << "You're inserting the cell" << cellId << "in the inner mesh" << "\n";
-
   auto& nodes = it->second.coords;
 
   if(nodes.empty() && !inserted)
@@ -191,28 +186,32 @@ FSIntRegisterT FSCell2NodeBuilder::Cell2NodePoly()
   // Return the final cell2Node connectivity for FSDM, in particular
   // to fit with the parameter of FSMeshData::InitUnstructCells.
   FSIntRegisterT cell2Node;
-  const FS_intT nCells = static_cast<FS_intT>(numCellOnTheBorder_);
-  // const FS_intT nCells = static_cast<FS_intT>(cellData_.size());
-  std::cout << "Nb cell2Node poly : " << numCellOnTheBorder_ << std::endl;
-  cell2Node.Init(nCells);
-
+  // const FS_intT nCells = static_cast<FS_intT>(numCellOnTheBorder_);
+  const FS_intT nCells = static_cast<FS_intT>(cellData_.size());
+  cell2Node.Init(numCellOnTheBorder_);
+  FS_intT iterCellBorder = 0;
   // --- PASS 1 : Count ---
   for(FS_intT localIdx = 0; localIdx < nCells; ++localIdx) {
     const auto& data = cellData_.at(GlobalCellId(localIdx));
-    if(data.onTheBorder)
-      cell2Node.Count(localIdx,
+    if(data.onTheBorder) {
+      cell2Node.Count(iterCellBorder,
                       static_cast<FS_intT>(data.nodeIds.size()));
+      iterCellBorder++;
+    }
   }
   cell2Node.Prepare();
-
+  iterCellBorder = 0;
   // --- PASS 2 : Add ---
   for(FS_intT localIdx = 0; localIdx < nCells; ++localIdx) {
-    const auto& data = cellData_.at(GlobalCellId(localIdx));
-    if(data.onTheBorder)
-      for(FS_intT nodeId : data.nodeIds)
-        cell2Node.Add(localIdx, nodeId);
-  }
 
+    const auto& data = cellData_.at(GlobalCellId(localIdx));
+    if(data.onTheBorder) {
+      for(FS_intT nodeId : data.nodeIds) {
+        cell2Node.Add(iterCellBorder, nodeId);
+      }
+      iterCellBorder++;
+    }
+  }
   return cell2Node;
 }
 
