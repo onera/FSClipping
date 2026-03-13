@@ -28,11 +28,12 @@ public:
                                                 cell2NodeBuilder_(FSCell2NodeBuilder(tol)) {};
 
   FSTopologyData BuildSurfaceTopo(const std::vector<FSFaceMatch>& matches);
-  FSTopologyData BuildVolumeTopo(const FSIntArrayT& cell2Node,
-                                 const std::set<FS_intT>& bdryCells,
-                                 const FSCellPool& cellPool,
-                                 const FSFloatArrayT& oldCoords);
-  //  FSTopologyData Add
+
+  void BuildVolumeTopo(const FSIntArrayT& cell2Node,
+                       const std::set<FS_intT>& bdryCells,
+                       const FSCellPool& cellPool,
+                       const FSFloatArrayT& oldCoords,
+                       FSTopologyData& topology);
 
 private:
   void CheckSurfaceWasBuilt() const;

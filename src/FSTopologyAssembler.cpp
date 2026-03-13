@@ -51,40 +51,51 @@ void FSTopologyAssembler::CheckSurfaceWasBuilt() const
     FSError.SetAndPrintAndExit("Surface topology must be built before volume topology.");
 }
 
-FSTopologyData FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node,
-                                                    const std::set<FS_intT>& bdryCellPool,
-                                                    const FSCellPool& cellPool,
-                                                    const FSFloatArrayT& oldCoords)
+void FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node,
+                                          const std::set<FS_intT>& bdryCellPool,
+                                          const FSCellPool& cellPool,
+                                          const FSFloatArrayT& oldCoords,
+                                          FSTopologyData& volumeResult)
 {
-
   CheckSurfaceWasBuilt();
-
-  FSTopologyData volumeResult;
 
   auto type = cellPool.GetCellType();
 
   auto offSet = cellPool.GetOffset();
   auto numCell = cellPool.GetNCells();
-  for(FS_intT c = offSet; c < numCell + offSet; c++) {
+
+  // -------------------------------------------------
+  // 1. Add volume cells
+  // -------------------------------------------------
+
+  for(FS_intT c = offSet; c < numCell + offSet; c++)
     cell2NodeBuilder_.AddVolumeCellNodes(c, type, cell2Node, oldCoords);
-  }
+
   cell2NodeBuilder_.BuildGlobalNumbering();
+
+  // -------------------------------------------------
+  // 2. Update topology data
+  // -------------------------------------------------
 
   volumeResult.globalCoords = cell2NodeBuilder_.GlobalCoords();
   volumeResult.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly3D();
-  auto [it, inserted] = volumeResult.cell2NodeInner.try_emplace(type);
-  it->second = cell2NodeBuilder_.Cell2NodeInner(type);
+
+  auto& inner = volumeResult.cell2NodeInner[type];
+  inner = cell2NodeBuilder_.Cell2NodeInner(type);
+
+  // -------------------------------------------------
+  // 3. Build internal faces for clipped cells
+  // -------------------------------------------------
 
   for(const auto& c : bdryCellPool) {
     FS_intT nFaces = FSCellInfo::NFaces(type);
-    for(FS_intT f = 0; f < nFaces; f++) {
+
+    for(FS_intT f = 0; f < nFaces; f++)
       polyFaceBuilder_->AddInnerFaces(type, cellPool, c, f, oldCoords);
-    }
   }
+
   polyFaceBuilder_->Build(volumeResult.polyFaces);
   volumeResult.cell2NodePoly2D = polyFaceBuilder_->Cell2NodePoly2D();
-
-  return volumeResult;
 }
 
 // FSTopologyData FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node,
