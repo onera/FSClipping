@@ -11,7 +11,7 @@ FSMeshData FSMeshReconstruction::Build(FSTopologyData& topologyData)
   FSUnstructMeshData& unstructMeshData = meshDataInterface.GetUnstructCells();
 
   const auto& globalCoords = topologyData.globalCoords;
-  // auto& cell2NodePoly2D = topologyData.cell2NodePoly2D;
+  auto& cell2NodePoly2D = topologyData.cell2NodePoly2D;
   auto& cell2NodePoly3D = topologyData.cell2NodePoly3D;
   auto& cell2NodeInner = topologyData.cell2NodeInner;
   auto& polyFaces = topologyData.polyFaces;
@@ -21,7 +21,7 @@ FSMeshData FSMeshReconstruction::Build(FSTopologyData& topologyData)
 
   meshDataInterface.InitUnstructNodes(globalCoords.size());
   meshDataInterface.InitUnstructCells(FSMeshEnums::CT_Poly3D, cell2NodePoly3D);
-  // meshDataInterface.InitUnstructCells(FSMeshEnums::CT_Poly2D, cell2NodePoly2D);
+  meshDataInterface.InitUnstructCells(FSMeshEnums::CT_Poly2D, cell2NodePoly2D);
 
   if(!cell2NodeInner.IsEmpty()) {
     for(auto& [type, cell2Node] : topologyData.cell2NodeInner)

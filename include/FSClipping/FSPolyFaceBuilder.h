@@ -34,6 +34,8 @@ public:
 
   const std::vector<std::vector<FaceData> >& CellFaces() const noexcept { return cellFaces_; };
 
+  FSIntRegisterT Cell2NodePoly2D();
+
 private:
   std::vector<std::vector<FaceData> > cellFaces_; // the final container (cellId -> faceId -> nodeId) for recosntruct a new mesh with FSDM
   const std::vector<FSFaceMatch>& matches_;

@@ -90,6 +90,29 @@ void FSPolyFaceBuilder::AddInnerFaces(FSMeshEnums::CellType type,
   cellFaces_[cellId].push_back(std::move(innerFace));
 }
 
+FSIntRegisterT FSPolyFaceBuilder::Cell2NodePoly2D()
+{
+  FSIntRegisterT cell2Node;
+  const FS_intT nFaces = static_cast<FS_intT>(matches_.size());
+  cell2Node.Init(nFaces);
+
+  // 1-Collect the number of nodes per faces
+  for(FS_intT f = 0; f < nFaces; ++f)
+    cell2Node.Count(f, matches_[f].clippedPoly3D.size());
+
+  cell2Node.Prepare();
+  const auto& coordToNode = cell2NodeBuilder_.CoordToNode();
+
+  // 2-Collect the number of nodes per faces
+  for(FS_intT f = 0; f < nFaces; ++f) {
+    for(const auto& p : matches_[f].clippedPoly3D) {
+      NodeKey k(p, tol_);
+      cell2Node.Add(f, coordToNode.at(k));
+    }
+  }
+  return cell2Node;
+}
+
 void FSPolyFaceBuilder::Build(FSMeshPolyFaceStorage& polyFaces)
 {
   // CollectMatchesFaces();

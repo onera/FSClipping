@@ -181,7 +181,7 @@ void FSCell2NodeBuilder::AddVolumeCellNodesInner(FS_intT cellId,
   }
 }
 
-FSIntRegisterT FSCell2NodeBuilder::Cell2NodePoly()
+FSIntRegisterT FSCell2NodeBuilder::Cell2NodePoly3D()
 {
   // Return the final cell2Node connectivity for FSDM, in particular
   // to fit with the parameter of FSMeshData::InitUnstructCells.

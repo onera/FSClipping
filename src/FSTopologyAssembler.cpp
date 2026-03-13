@@ -30,13 +30,16 @@ FSTopologyData FSTopologyAssembler::BuildSurfaceTopo(const std::vector<FSFaceMat
   cell2NodeBuilder_.BuildGlobalNumbering();
 
   result.globalCoords = cell2NodeBuilder_.GlobalCoords();
-  result.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly();
+  result.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly3D();
+
   // -------------------------------------------------
   // 2) Build polygonal faces
   // -------------------------------------------------
   polyFaceBuilder_ = std::make_unique<FSPolyFaceBuilder>(FSPolyFaceBuilder(matches, cell2NodeBuilder_, tol_));
   polyFaceBuilder_->CollectMatchesFaces();
   polyFaceBuilder_->Build(result.polyFaces);
+
+  result.cell2NodePoly2D = polyFaceBuilder_->Cell2NodePoly2D();
   surfaceBuilt_ = true;
 
   return result;
@@ -68,7 +71,7 @@ FSTopologyData FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node
   cell2NodeBuilder_.BuildGlobalNumbering();
 
   volumeResult.globalCoords = cell2NodeBuilder_.GlobalCoords();
-  volumeResult.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly();
+  volumeResult.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly3D();
   auto [it, inserted] = volumeResult.cell2NodeInner.try_emplace(type);
   it->second = cell2NodeBuilder_.Cell2NodeInner(type);
 
@@ -79,7 +82,7 @@ FSTopologyData FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node
     }
   }
   polyFaceBuilder_->Build(volumeResult.polyFaces);
-
+  volumeResult.cell2NodePoly2D = polyFaceBuilder_->Cell2NodePoly2D();
 
   return volumeResult;
 }
@@ -98,7 +101,7 @@ FSTopologyData FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node
 //     cell2NodeBuilder_.AddVolumeCellNodes(c, type, cell2Node, oldCoords);
 //
 //   cell2NodeBuilder_.BuildGlobalNumbering();
-//   volumeResult.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly();
+//   volumeResult.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly3D();
 //
 //   for(const auto& c : bdryCellPool) {
 //     FS_intT nFaces = FSCellInfo::NFaces(type);

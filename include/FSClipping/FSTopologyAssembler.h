@@ -15,7 +15,7 @@ _FS_BEGIN_NAMESPACE
 struct FSTopologyData {
   std::vector<FSVec3> globalCoords;
   FSIntRegisterT cell2NodePoly3D;
-  // FSIntRegisterT cell2NodePoly2D;
+  FSIntRegisterT cell2NodePoly2D;
   FSCellType2IntArrayT cell2NodeInner;
   FSMeshPolyFaceStorage polyFaces;
 };

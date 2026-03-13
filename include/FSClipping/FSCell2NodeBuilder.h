@@ -93,7 +93,7 @@ public:
 
   const FS_intT NumCellOnTheBorder() const noexcept { return numCellOnTheBorder_; };
 
-  FSIntRegisterT Cell2NodePoly();
+  FSIntRegisterT Cell2NodePoly3D();
 
   FSIntArrayT Cell2NodeInner(FSMeshEnums::CellType type);
 
