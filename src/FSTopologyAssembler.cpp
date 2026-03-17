@@ -98,6 +98,31 @@ void FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node,
   volumeResult.cell2NodePoly2D = polyFaceBuilder_->Cell2NodePoly2D();
 }
 
+
+FSIntArrayT FSTopologyAssembler::UpdateOldCell2Node(const FSIntArrayT& oldCell2Node,
+                                                    const FSFloatArrayT& oldCoords)
+{
+  FS_intT nCell = oldCell2Node.Size(0);
+  FS_intT nCellNodes = oldCell2Node.Size(1);
+
+  FSIntArrayT cell2Node(nCell, nCellNodes);
+  const auto& coord2Node = cell2NodeBuilder_.CoordToNode();
+  FS_intT offset = oldCell2Node.Offset();
+
+  for(FS_intT c = 0; c < nCell; c++) {
+    for(FS_intT node = 0; node < nCellNodes; ++node) {
+      FS_intT idx = oldCell2Node(offset, node);
+      auto x = oldCoords(idx, 0);
+      auto y = oldCoords(idx, 1);
+      auto z = oldCoords(idx, 2);
+      FSVec3 vecNode{x, y, z};
+      NodeKey key(vecNode, tol_);
+      cell2Node(c, node) = coord2Node.at(key);
+    }
+    offset++;
+  }
+  return cell2Node;
+}
 // FSTopologyData FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node,
 //                                                     const std::set<FS_intT>& bdryCellPool,
 //                                                     const FSCellPool& cellPool,

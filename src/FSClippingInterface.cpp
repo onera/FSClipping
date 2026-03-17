@@ -68,9 +68,18 @@ FSMeshData FSClippingInterface::BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh
       const auto& cellPool1 = mesh1.GetMeshData()->GetUnstructCells().GetCellPool(t);
       const auto& bdryCellPool1 = bdryCells1.at(t);
 
-      //      volumeTopology = topologyBuilder.BuildVolumeTopo(cell2Node1, bdryCellPool1, *cellPool1, oldCoords);//pas supporter pas plusieurs type -> faut incrementer
       topologyBuilder.BuildVolumeTopo(cell2Node1, bdryCellPool1, *cellPool1, oldCoords, volumeTopology);
       // volumeTopology = topolyBuilder.BuildVolumeTopo(cell2Node, surfaceTopology); <- idelamenent
+    }
+  }
+
+  for(const auto& t : cellType) {
+    if(FSMeshEnums::IsUnstructSurfaceCellType(t)) {
+      // UPDATE CELL2NODE
+      const auto& cell2NodeOld1 = mesh1.GetCell2Node(t);
+
+      auto cell2Node = topologyBuilder.UpdateOldCell2Node(cell2NodeOld1, oldCoords);
+      volumeTopology.cell2NodeInner.insert({t, cell2Node});
     }
   }
   // 5- Reconstruct the entire new mesh

@@ -49,7 +49,7 @@ FSMeshData FSMeshReconstruction::Build(FSTopologyData& topologyData)
   FS_intT currentOffset = 0;
   FSIntArrayT cellTypeArray_2 = meshDataInterface.GetUnstructCells().GetCellTypesArray();
   for(FSIntArrayT::ConstIterator cellType = cellTypeArray_2.BeginConst(); cellType.IsValid(); cellType.Next()) {
-    meshDataInterface.GetUnstructCells().InitGlobalCellNumber((FSMeshEnums::CellType)*cellType, currentOffset);
+    // meshDataInterface.GetUnstructCells().InitGlobalCellNumber((FSMeshEnums::CellType)*cellType, currentOffset);
     currentOffset += meshDataInterface.GetUnstructCells().GetNCells((FSMeshEnums::CellType)*cellType);
   }
 

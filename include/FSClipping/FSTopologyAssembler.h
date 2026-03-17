@@ -35,6 +35,9 @@ public:
                        const FSFloatArrayT& oldCoords,
                        FSTopologyData& topology);
 
+  FSIntArrayT UpdateOldCell2Node(const FSIntArrayT& oldCell2Node,
+                                 const FSFloatArrayT& oldCoords);
+
 private:
   void CheckSurfaceWasBuilt() const;
 

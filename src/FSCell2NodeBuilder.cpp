@@ -157,29 +157,7 @@ void FSCell2NodeBuilder::AddVolumeCellNodes(FS_intT cellId,
   }
 }
 
-void FSCell2NodeBuilder::AddVolumeCellNodesInner(FS_intT cellId,
-                                                 FSMeshEnums::CellType cellType,
-                                                 const FSIntArrayT& cell2Node,
-                                                 const FSFloatArrayT& coords)
-{
 
-  auto [it, inserted] = cellData_.try_emplace(cellId);
-
-  if(!inserted)
-    FSError.SetAndPrintAndExit("FSCell2NodeBuilder::AddOldCellNodesInner You're trying to insert a cell which is in the border.");
-
-  auto& nodes = it->second.coords;
-
-  const FS_intT nCellNodes = FSCellInfo::cNNodes[cellType];
-  nodes.reserve(nCellNodes);
-
-  for(FS_intT node = 0; node < nCellNodes; ++node) {
-    FS_intT idx = cell2Node(cellId, node);
-    nodes.emplace_back(coords(idx, 0),
-                       coords(idx, 1),
-                       coords(idx, 2));
-  }
-}
 
 FSIntRegisterT FSCell2NodeBuilder::Cell2NodePoly3D()
 {

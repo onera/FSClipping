@@ -68,22 +68,36 @@ TEST(FSClippingTestFaceExtractor, ComputeGeometry)
 //     FSEnums::AttributeTypeToString(FSEnums::AT_CADGroupID);
 //   auto cellTypes = mesh.GetCellTypes();
 //   for(const auto& t : cellTypes) {
-//     std::cout << FSMeshEnums::CellTypeToString(t) << " : ";
-//     if(FSMeshEnums::IsUnstructSurfaceCellType(t)) {
-//       auto cellPool = unstructCell.GetCellPool(t);
+//     const auto& cellAttribNames = unstructCell.GetCellAttributes(t);
 //
-//       if(cellPool->HasCellAttribute(attrCADGroupIDName)) {
-//         const auto& boundaryMarkersValue = cellPool->GetCellAttribute(attrCADGroupIDName);
-//         std::cout << boundaryMarkersValue.Size() << std::endl;
-//         std::cout << cellPool->GetNAttributes() << std::endl;
-//         std::cout << cellPool->GetNCellAttributes(attrCADGroupIDName) << std::endl;
-//
-//         for(FS_intT i = 0; i < boundaryMarkersValue.Size(); i++) {
-//           std::cout << boundaryMarkersValue[i] << "\t";
-//         }
+//     for(FSStringArrayT::ConstIterator AI = cellAttribNames.BeginConst(); AI.IsValid(); ++AI) {
+//       const FSIntArrayT& valuesOrig = unstructCell.GetCellAttribute(*AI, t);
+//       std::cout << *AI << " : " << valuesOrig.Size(0) << std::endl;
+//       for(FS_intT i = 0; i < valuesOrig.Size(); i++) {
+//         std::cout << valuesOrig[i] << " " << "\t";
 //       }
+//       std::cout << "\n";
 //     }
-//     std::cout << std::endl;
 //   }
-// }
+//  for(FSStringArrayT::ConstIterator AI = )
+
+/* for(const auto& t : cellTypes) {
+   std::cout << FSMeshEnums::CellTypeToString(t) << " : ";
+   if(FSMeshEnums::IsUnstructSurfaceCellType(t)) {
+     auto cellPool = unstructCell.GetCellPool(t);
+
+     if(cellPool->HasCellAttribute(attrCADGroupIDName)) {
+       const auto& boundaryMarkersValue = cellPool->GetCellAttribute(attrCADGroupIDName);
+       std::cout << boundaryMarkersValue.Size() << std::endl;
+       std::cout << cellPool->GetNAttributes() << std::endl;
+       std::cout << cellPool->GetNCellAttributes(attrCADGroupIDName) << std::endl;
+
+       for(FS_intT i = 0; i < boundaryMarkersValue.Size(); i++) {
+         std::cout << boundaryMarkersValue[i] << "\t";
+       }
+     }
+   }
+   std::cout << std::endl;
+ }
+}*/
 _FS_END_NAMESPACE
