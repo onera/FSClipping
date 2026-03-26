@@ -138,10 +138,7 @@ void FSCell2NodeBuilder::AddVolumeCellNodes(FS_intT cellId,
     FSError.SetAndPrintAndExit("FSCell2NodeBuilder::AddOldCellNodes You have an empty array of nodes. The match builder should have added some nodes.");
 
   const FS_intT nCellNodes = FSCellInfo::cNNodes[cellType];
-  // nodes.reserve(nCellNodes);
 
-  // This part add the coordinates if the nodes in the element border of the previous mesh.
-  // We don't need it if we want just to reconstruct only the new faces border.
   for(FS_intT node = 0; node < nCellNodes; ++node) {
     FS_intT idx = cell2Node(cellId, node);
     auto x = coords(idx, 0);

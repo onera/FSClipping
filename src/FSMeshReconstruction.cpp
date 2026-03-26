@@ -1,7 +1,7 @@
 #include "FSClipping/FSMeshReconstruction.h"
 #include <FSMeshData.h>
 
-FSMeshData FSMeshReconstruction::Build(FSTopologyData& topologyData)
+FSMeshData FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData)
 {
 
   FSMeshData meshDataInterface = FSMeshData(&clac_);
@@ -28,7 +28,6 @@ FSMeshData FSMeshReconstruction::Build(FSTopologyData& topologyData)
       meshDataInterface.InitUnstructCells(type, cell2Node);
   }
   meshDataInterface.InitUnstructCellFaces(FSMeshEnums::CT_Poly3D, polyFaces);
-
   FSQuantityDescArrayT coordsDesc(3);
   coordsDesc[0] = FSQuantityDesc(FSDataName::Coordinates(), FSDataName::Coordinate().X());
   coordsDesc[1] = FSQuantityDesc(FSDataName::Coordinates(), FSDataName::Coordinate().Y());
@@ -46,14 +45,8 @@ FSMeshData FSMeshReconstruction::Build(FSTopologyData& topologyData)
   if(!success)
     FSError.SetAndPrintAndExit("FSMeshReconstruction : Error while set coordinates");
 
-  FS_intT currentOffset = 0;
-  FSIntArrayT cellTypeArray_2 = meshDataInterface.GetUnstructCells().GetCellTypesArray();
-  for(FSIntArrayT::ConstIterator cellType = cellTypeArray_2.BeginConst(); cellType.IsValid(); cellType.Next()) {
-    // meshDataInterface.GetUnstructCells().InitGlobalCellNumber((FSMeshEnums::CellType)*cellType, currentOffset);
-    currentOffset += meshDataInterface.GetUnstructCells().GetNCells((FSMeshEnums::CellType)*cellType);
-  }
-
-  // end initialization
+  CopyCellAttributes(meshDataOriginal, topologyData, unstructMeshData);
+  //  end initialization
   meshDataInterface.EndInitialization();
   // check if initialization is complete
   success = meshDataInterface.IsInitialized();
@@ -62,4 +55,100 @@ FSMeshData FSMeshReconstruction::Build(FSTopologyData& topologyData)
     FSError.SetAndPrintAndExit("FSMeshReconstruction : Error while initialization the new mesh");
 
   return meshDataInterface;
+}
+
+
+// void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshDataOriginal,
+//                                               const FSTopologyData& topo,
+//                                               FSUnstructMeshData& meshDataNew)
+//{
+//   for(const auto& [cellType, parentArray] : topo.cellParent) {
+//     const FS_intT numCells = parentArray.Size();
+//     FS_intT parentCellType = cellType;
+//     if(FSMeshEnums::IsPolyCellType(cellType)) {
+//       auto intArrayT = topo.cellParentType.at(cellType);
+//       parentCellType = intArrayT[0];
+//     }
+//     const auto& attribNames = meshDataOriginal.GetCellAttributes(FSMeshEnums::Int2CellType(parentCellType));
+//     FS_intT offSet = meshDataOriginal.GetCellPool(FSMeshEnums::Int2CellType(parentCellType))->GetOffset();
+//
+//     for(FSStringArrayT::ConstIterator AI = attribNames.BeginConst(); AI.IsValid(); ++AI) {
+//       const auto& valuesOrig = meshDataOriginal.GetCellAttribute(*AI, FSMeshEnums::Int2CellType(parentCellType));
+//       FSIntArrayT valuesNew(numCells);
+//
+//       for(FS_intT i = 0; i < numCells; ++i) {
+//         FS_intT parent = parentArray[i] - offSet;
+//         valuesNew[i] = valuesOrig[parent];
+//       }
+//
+//       meshDataNew.InitCellAttribute(*AI, cellType, valuesNew);
+//
+//       if(meshDataOriginal.HasCellAttributeValueNames(*AI)) {
+//         meshDataNew.SetCellAttributeValueNames(
+//           *AI,
+//           meshDataOriginal.GetCellAttributeValueNames(*AI));
+//       }
+//     }
+//   }
+// }
+
+void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshDataOriginal,
+                                              const FSTopologyData& topo,
+                                              FSUnstructMeshData& meshDataNew)
+{
+  for(const auto& [cellType, parentArray] : topo.cellParent) {
+    const FS_intT numCells = parentArray.Size();
+
+    // -----------------------------
+    // Resolve parent cell type
+    // -----------------------------
+    FSMeshEnums::CellType parentCellType = cellType;
+
+    if(FSMeshEnums::IsPolyCellType(cellType)) {
+      const auto& parentTypes = topo.cellParentType.at(cellType);
+
+      parentCellType = FSMeshEnums::Int2CellType(parentTypes[0]);
+
+#ifndef NDEBUG
+      for(FS_intT i = 1; i < parentTypes.Size(); ++i) {
+        if(parentTypes[i] != parentTypes[0]) {
+          FSError.SetAndPrintAndExit(
+            "CopyCellAttributes: heterogeneous parent types detected");
+        }
+      }
+#endif
+    }
+
+    // -----------------------------
+    // Access original data
+    // -----------------------------
+    const auto& attribNames =
+      meshDataOriginal.GetCellAttributes(parentCellType);
+
+    const FS_intT offset =
+      meshDataOriginal.GetCellPool(parentCellType)->GetOffset();
+
+    // -----------------------------
+    // Copy attributes
+    // -----------------------------
+    for(FSStringArrayT::ConstIterator AI = attribNames.BeginConst(); AI.IsValid(); ++AI) {
+      const auto& valuesOrig =
+        meshDataOriginal.GetCellAttribute(*AI, parentCellType);
+
+      FSIntArrayT valuesNew(numCells);
+
+      for(FS_intT i = 0; i < numCells; ++i) {
+        const FS_intT parentId = parentArray[i];
+        valuesNew[i] = valuesOrig[parentId - offset];
+      }
+
+      meshDataNew.InitCellAttribute(*AI, cellType, valuesNew);
+
+      if(meshDataOriginal.HasCellAttributeValueNames(*AI)) {
+        meshDataNew.SetCellAttributeValueNames(
+          *AI,
+          meshDataOriginal.GetCellAttributeValueNames(*AI));
+      }
+    }
+  }
 }

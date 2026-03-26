@@ -14,7 +14,9 @@ public:
                                              FSMeshFaceExtractor& ex,
                                              FS_intT boundaryMarker);
 
-  static std::unordered_map<FS_intT, std::set<FS_intT> > ExtractOwnerCells(const std::vector<FSClippingFace>& faces);
+  static std::unordered_map<FS_intT, std::set<FS_intT> > ExtractOwner3DCells(const std::vector<FSClippingFace>& faces);
+
+  static std::unordered_map<FS_intT, std::set<FS_intT> > Extract2DCells(const std::vector<FSClippingFace>& faces);
 };
 
 

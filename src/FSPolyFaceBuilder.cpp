@@ -103,7 +103,7 @@ FSIntRegisterT FSPolyFaceBuilder::Cell2NodePoly2D()
   cell2Node.Prepare();
   const auto& coordToNode = cell2NodeBuilder_.CoordToNode();
 
-  // 2-Collect the number of nodes per faces
+  // 2-Collect the nodes
   for(FS_intT f = 0; f < nFaces; ++f) {
     for(const auto& p : matches_[f].clippedPoly3D) {
       NodeKey k(p, tol_);

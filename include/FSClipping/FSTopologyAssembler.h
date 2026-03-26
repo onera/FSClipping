@@ -12,13 +12,23 @@
 
 _FS_BEGIN_NAMESPACE
 
+struct CellParentInfo {
+  FSMeshEnums::CellType parentType;
+  FS_intT parentId;
+};
+
 struct FSTopologyData {
   std::vector<FSVec3> globalCoords;
   FSIntRegisterT cell2NodePoly3D;
   FSIntRegisterT cell2NodePoly2D;
   FSCellType2IntArrayT cell2NodeInner;
   FSMeshPolyFaceStorage polyFaces;
+
+  FSCellType2IntArrayT cellParent;
+  FSCellType2IntArrayT cellParentType;
 };
+
+
 
 class FSTopologyAssembler
 {
@@ -30,13 +40,20 @@ public:
   FSTopologyData BuildSurfaceTopo(const std::vector<FSFaceMatch>& matches);
 
   void BuildVolumeTopo(const FSIntArrayT& cell2Node,
-                       const std::set<FS_intT>& bdryCells,
+                       const std::set<FS_intT>& bdry3DCells,
                        const FSCellPool& cellPool,
                        const FSFloatArrayT& oldCoords,
                        FSTopologyData& topology);
 
+  void AppendUnclippedSurfaces(FSMesh& mesh,
+                               const std::unordered_map<FS_intT, std::set<FS_intT> >& bdry2DCells,
+                               const FSFloatArrayT& oldCoords,
+                               FSTopologyData& topo);
+
   FSIntArrayT UpdateOldCell2Node(const FSIntArrayT& oldCell2Node,
-                                 const FSFloatArrayT& oldCoords);
+                                 const FSFloatArrayT& oldCoords,
+                                 const std::set<FS_intT>& bdry2DCells,
+                                 FSIntArrayT& cellParent);
 
 private:
   void CheckSurfaceWasBuilt() const;

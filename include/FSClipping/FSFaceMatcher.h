@@ -18,8 +18,14 @@ struct FSFaceMatch {
   FS_intT elemOwner1; // element owner of the face 1
   FS_intT elemOwner2; // element owner of the face 2
 
+  FS_intT faceOwner1; // face owner of the face 1
+  FS_intT faceOwner2; // face owner of the face 2
+
   FSMeshEnums::CellType elemOwnerType1;
   FSMeshEnums::CellType elemOwnerType2;
+
+  FSMeshEnums::CellType faceOwnerType1;
+  FSMeshEnums::CellType faceOwnerType2;
 
   // --- Type of geometric relation ---
   enum MatchType : FS_intT {
