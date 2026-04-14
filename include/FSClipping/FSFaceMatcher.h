@@ -36,7 +36,7 @@ struct FSFaceMatch {
   } type = UNKNOWN;
 
   // --- Geometric measure ---
-  // double FS_IntTersectedArea = 0.0;
+  FS_floatT intersectedArea = 0.0;
 
   // --- clippedPoly2D polygon in the local plane of face1 ---
   // stored in 2D because polygon clipping is performed in 2D

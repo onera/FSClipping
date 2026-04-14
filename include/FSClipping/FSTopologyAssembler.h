@@ -1,6 +1,7 @@
 #ifndef FSTOPOLOGYBUILDER_H
 #define FSTOPOLOGYBUILDER_H
 
+#include "FSClipping/FSBoundaryFaceProvider.h"
 #include "FSClipping/FSCell2NodeBuilder.h"
 #include "FSClipping/FSFaceMatcher.h"
 #include "FSClipping/FSPolyFaceBuilder.h"
@@ -37,7 +38,8 @@ public:
   explicit FSTopologyAssembler(FS_floatT tol) : tol_(tol),
                                                 cell2NodeBuilder_(FSCell2NodeBuilder(tol)) {};
 
-  FSTopologyData BuildSurfaceTopo(const std::vector<FSFaceMatch>& matches);
+  FSTopologyData BuildSurfaceTopo(const std::vector<FSFaceMatch>& matches,
+                                  const std::unordered_set<GeomFaceKey, GeomFaceKeyHash>& faceKeys);
 
   void BuildVolumeTopo(const FSIntArrayT& cell2Node,
                        const std::set<FS_intT>& bdry3DCells,

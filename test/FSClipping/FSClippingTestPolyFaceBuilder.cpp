@@ -54,6 +54,7 @@ TEST(FSPolyFaceBuilder, SingleCellSingleFace)
     FSVec3(0, 1, 0)};
 
   std::vector<FSFaceMatch> matches = {match};
+  std::unordered_set<GeomFaceKey, GeomFaceKeyHash> faceKeys;
 
   cellBuilder.AddClippedPolygon(match.elemOwner1, match.clippedPoly3D);
   cellBuilder.BuildGlobalNumbering();
@@ -61,7 +62,7 @@ TEST(FSPolyFaceBuilder, SingleCellSingleFace)
   // ------------------------------------------------------------
   // 3. Build polyhedral faces
   // ------------------------------------------------------------
-  FSPolyFaceBuilder faceBuilder(matches, cellBuilder);
+  FSPolyFaceBuilder faceBuilder(matches, cellBuilder, faceKeys);
   faceBuilder.CollectMatchesFaces();
 
   FSMeshPolyFaceStorage polyFaces;

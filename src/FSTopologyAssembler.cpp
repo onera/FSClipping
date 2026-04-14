@@ -1,10 +1,12 @@
 #include "FSClipping/FSTopologyAssembler.h"
+#include "FSClipping/FSBoundaryFaceProvider.h"
 #include "FSClipping/FSCell2NodeBuilder.h"
 #include "FSClipping/FSPolyFaceBuilder.h"
 
 _FS_BEGIN_NAMESPACE
 
-FSTopologyData FSTopologyAssembler::BuildSurfaceTopo(const std::vector<FSFaceMatch>& matches)
+FSTopologyData FSTopologyAssembler::BuildSurfaceTopo(const std::vector<FSFaceMatch>& matches,
+                                                     const std::unordered_set<GeomFaceKey, GeomFaceKeyHash>& faceKeys)
 {
   if(matches.empty())
     FSError.SetAndPrintAndExit("There was an error with the clipping algorithm. No matches were found. Look at the boundary marker for each mesh.");
@@ -35,7 +37,7 @@ FSTopologyData FSTopologyAssembler::BuildSurfaceTopo(const std::vector<FSFaceMat
   // -------------------------------------------------
   // 2) Build polygonal faces
   // -------------------------------------------------
-  polyFaceBuilder_ = std::make_unique<FSPolyFaceBuilder>(FSPolyFaceBuilder(matches, cell2NodeBuilder_, tol_));
+  polyFaceBuilder_ = std::make_unique<FSPolyFaceBuilder>(FSPolyFaceBuilder(matches, cell2NodeBuilder_, faceKeys, tol_));
   polyFaceBuilder_->CollectMatchesFaces();
   polyFaceBuilder_->Build(result.polyFaces);
 
@@ -121,7 +123,7 @@ void FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node,
     for(FS_intT f = 0; f < nFaces; f++)
       polyFaceBuilder_->AddInnerFaces(type, cellPool, c, f, oldCoords);
   }
-
+  polyFaceBuilder_->Reorienting();
   polyFaceBuilder_->Build(volumeResult.polyFaces);
   volumeResult.cell2NodePoly2D = polyFaceBuilder_->Cell2NodePoly2D();
 }

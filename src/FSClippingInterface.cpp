@@ -12,9 +12,14 @@ FSMeshData FSClippingInterface::BuildSurfaceInterface(FSMesh& mesh1, FSMesh& mes
   // 1. Extract boundary faces
   FSMeshFaceExtractor extractor1, extractor2;
 
-  auto clipFaces1 = FSBoundaryFaceProvider::Extract(mesh1, extractor1, boundaryMarkerMesh1_);
+  // auto clipFaces1 = FSBoundaryFaceProvider::Extract(mesh1, extractor1, boundaryMarkerMesh1_);
+  // auto clipFaces2 = FSBoundaryFaceProvider::Extract(mesh2, extractor2, boundaryMarkerMesh2_);
+  auto boundaryExtraction1 = FSBoundaryFaceProvider::Extract(mesh1, extractor1, boundaryMarkerMesh1_, tol_);
+  auto boundaryExtraction2 = FSBoundaryFaceProvider::Extract(mesh2, extractor2, boundaryMarkerMesh2_, tol_);
 
-  auto clipFaces2 = FSBoundaryFaceProvider::Extract(mesh2, extractor2, boundaryMarkerMesh2_);
+  auto clipFaces1 = boundaryExtraction1.faces;
+  auto clipFaces2 = boundaryExtraction2.faces;
+
 
   // 2. Compute geometric matches between boundary faces
   FSFaceMatcher matcher(clac2_, clipFaces1, clipFaces2, tol_);
@@ -24,7 +29,7 @@ FSMeshData FSClippingInterface::BuildSurfaceInterface(FSMesh& mesh1, FSMesh& mes
   // 3. Build surface topology from matches
   FSTopologyAssembler topologyBuilder(tol_);
   FSTopologyData surfaceTopology =
-    topologyBuilder.BuildSurfaceTopo(matches);
+    topologyBuilder.BuildSurfaceTopo(matches, boundaryExtraction1.faceKeys);
 
   // 4. Reconstruct surface mesh
   FSMeshReconstruction meshReconstruction(clacInterface);
@@ -38,8 +43,14 @@ FSMeshData FSClippingInterface::BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh
   FSMeshFaceExtractor ex1, ex2;
   FSTopologyData volumeTopology;
 
-  auto clipFaces1 = FSBoundaryFaceProvider::Extract(mesh1, ex1, boundaryMarkerMesh1_);
-  auto clipFaces2 = FSBoundaryFaceProvider::Extract(mesh2, ex2, boundaryMarkerMesh2_);
+  // auto clipFaces1 = FSBoundaryFaceProvider::Extract(mesh1, ex1, boundaryMarkerMesh1_);
+  // auto clipFaces2 = FSBoundaryFaceProvider::Extract(mesh2, ex2, boundaryMarkerMesh2_);
+
+  auto boundaryExtraction1 = FSBoundaryFaceProvider::Extract(mesh1, ex1, boundaryMarkerMesh1_, tol_);
+  auto boundaryExtraction2 = FSBoundaryFaceProvider::Extract(mesh2, ex2, boundaryMarkerMesh2_, tol_);
+
+  auto clipFaces1 = boundaryExtraction1.faces;
+  auto clipFaces2 = boundaryExtraction2.faces;
 
   std::unordered_map<FS_intT, std::set<FS_intT> > bdry3DCellsType1 = FSBoundaryFaceProvider::ExtractOwner3DCells(clipFaces1);
   std::unordered_map<FS_intT, std::set<FS_intT> > bdry3DCellsType2 = FSBoundaryFaceProvider::ExtractOwner3DCells(clipFaces2);
@@ -59,7 +70,7 @@ FSMeshData FSClippingInterface::BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh
 
   /// 3- Compute the new surface topology of the border
   FSTopologyAssembler topologyBuilder(tol_);
-  FSTopologyData surfaceTopology = topologyBuilder.BuildSurfaceTopo(matches);
+  FSTopologyData surfaceTopology = topologyBuilder.BuildSurfaceTopo(matches, boundaryExtraction1.faceKeys);
 
   /// 4- Then compute the topology of all the meshes
   const auto& cellType = mesh1.GetCellTypes();

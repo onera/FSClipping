@@ -1,8 +1,10 @@
 #ifndef FSPOLYFACEBUILDER_H
 #define FSPOLYFACEBUILDER_H
 
+#include "FSClipping/FSBoundaryFaceProvider.h"
 #include "FSClipping/FSFaceMatcher.h"
 #include "FSClipping/FSCell2NodeBuilder.h"
+#include <unordered_set>
 
 _FS_BEGIN_NAMESPACE
 
@@ -16,8 +18,10 @@ class FSPolyFaceBuilder
 public:
   FSPolyFaceBuilder(const std::vector<FSFaceMatch>& matches,
                     const FSCell2NodeBuilder& cell2NodeBuilder,
+                    const std::unordered_set<GeomFaceKey, GeomFaceKeyHash>& faceKeys,
                     FS_floatT tol = 1e-12) : matches_(matches),
                                              cell2NodeBuilder_(cell2NodeBuilder),
+                                             boundaryFaceKeys_(faceKeys),
                                              tol_(tol) {};
 
   void AddInnerFaces(FSMeshEnums::CellType,
@@ -30,6 +34,8 @@ public:
 
   void CollectMatchesFaces(); // main function, construct the cellFaces containers with the matches
 
+  void Reorienting();
+
   FS_intT LocalCellIndex(FS_intT globalId) const;
 
   const std::vector<std::vector<FaceData> >& CellFaces() const noexcept { return cellFaces_; };
@@ -40,14 +46,17 @@ private:
   std::vector<std::vector<FaceData> > cellFaces_; // the final container (cellId -> faceId -> nodeId) for recosntruct a new mesh with FSDM
   const std::vector<FSFaceMatch>& matches_;
   const FSCell2NodeBuilder& cell2NodeBuilder_;
+  const std::unordered_set<GeomFaceKey, GeomFaceKeyHash>& boundaryFaceKeys_;
 
   std::unordered_map<FS_intT, FS_intT> cellId2L_; // connectivity i -> i, usefull for searching in O(1)
   FS_floatT tol_;
 
-
-
   FS_intT FindNodeLocalElem(const FSVec3& p,
                             const Cell2NodeData& cell2Node) const;
+
+  FSVec3 ComputeFaceCenter(const FaceData&, const std::vector<FSVec3>&) const;
+  FSVec3 ComputeFaceNormal(const FaceData& face, const std::vector<FSVec3>& coords) const;
+  FSVec3 ComputeCellCenter(const Cell2NodeData&) const;
 };
 
 _FS_END_NAMESPACE

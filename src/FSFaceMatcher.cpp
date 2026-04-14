@@ -29,6 +29,8 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1,
 
   const FS_floatT areaClip = std::abs(FSClippingUtil::PolygonSignedArea(clip));
   const FS_floatT area2 = std::abs(FSClippingUtil::PolygonSignedArea(poly2));
+  if(areaClip < tol_)
+    return false;
 
   // We do not test anymore for inclusion before the clipping algorithm because the inclusion clause is the source
   // of a lot of bugs (depends on orientation, the sign of the normal etc...).
@@ -39,8 +41,9 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1,
     out.type = FSFaceMatch::INCLUDED;
   else
     out.type = FSFaceMatch::INTERSECTING;
-
+  out.intersectedArea = areaClip;
   out.clippedPoly2D = std::move(clip);
+
   return true;
 }
 

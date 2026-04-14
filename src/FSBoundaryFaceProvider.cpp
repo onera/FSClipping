@@ -3,11 +3,11 @@
 
 _FS_BEGIN_NAMESPACE
 
-
-std::vector<FSClippingFace>
+BoundaryExtraction
 FSBoundaryFaceProvider::Extract(FSMesh& mesh,
                                 FSMeshFaceExtractor& ex,
-                                FS_intT boundaryMarker)
+                                FS_intT boundaryMarker,
+                                FS_floatT tol)
 {
 
   // mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
@@ -15,21 +15,25 @@ FSBoundaryFaceProvider::Extract(FSMesh& mesh,
                              false);
   ex.PrepareFaceNodeCoordinates(FSQuantityDescArrayT());
 
-
   auto bdryFaces =
     FSFaceSeparator::SeparateBoundariesFaceWithMarker(mesh, ex, boundaryMarker);
 
   std::vector<FSClippingFace> clipFaces;
   // clipFaces.reserve(bdryFaces.size());
 
+  BoundaryExtraction result;
   FSFloatArrayT faceCoordinates;
   for(const auto& f : bdryFaces) {
     FS_intT faceIndex = ex.GetFaceIndex(*(f._faceFSDM));
     ex.GetFaceNodeCoordinates(faceIndex, faceCoordinates);
-    clipFaces.emplace_back(f, faceIndex, faceCoordinates);
+
+    GeomFaceKey key(faceCoordinates, tol);
+
+    result.faceKeys.insert(key);
+    result.faces.emplace_back(f, faceIndex, faceCoordinates);
   }
 
-  return clipFaces;
+  return result;
 }
 
 

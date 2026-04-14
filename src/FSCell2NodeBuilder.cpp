@@ -135,7 +135,7 @@ void FSCell2NodeBuilder::AddVolumeCellNodes(FS_intT cellId,
   auto& nodes = it->second.coords;
 
   if(nodes.empty() && !inserted)
-    FSError.SetAndPrintAndExit("FSCell2NodeBuilder::AddOldCellNodes You have an empty array of nodes. The match builder should have added some nodes.");
+    FSError.SetAndPrintAndExit("FSCell2NodeBuilder::AddVolumeCellNodes You have an empty array of nodes. The match builder should have added some nodes.");
 
   const FS_intT nCellNodes = FSCellInfo::cNNodes[cellType];
 
