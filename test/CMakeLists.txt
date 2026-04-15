@@ -3,6 +3,7 @@ target_sources(gtest_mpi_parallel_main PRIVATE gtest_mpi_parallel_main.cpp)
 target_link_libraries(gtest_mpi_parallel_main PUBLIC GTest::gtest_mpi)
 add_library(GTest::gtest_mpi_main ALIAS gtest_mpi_parallel_main)
 
+add_compile_definitions(FS_TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/test/Mesh")
 # implementation of the test infrastructure
 include(GoogleTest)
 

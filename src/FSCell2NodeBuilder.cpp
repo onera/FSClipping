@@ -74,9 +74,12 @@ void FSCell2NodeBuilder::AddCellNodes(FS_intT cellId,
 void FSCell2NodeBuilder::AddClippedPolygon(FS_intT cellId,
                                            const std::vector<FSVec3>& poly)
 {
-
-  auto& nodes = cellData_.at(cellId).coords;
-
+  auto it = cellData_.find(cellId);
+  if(it == cellData_.end()) {
+    FSError.SetAndPrintAndExit("FSCell2NodeBuilder::AddClippedPolygon You are trying to add a clipped polygon to an inexistent cell.");
+  }
+  auto& nodes = it->second.coords;
+  // rajouter un msg d'erreur si rien n a etait trouve
   for(const auto& p : poly) {
     if(!exists(nodes, p)) // we need to check if the nodes is not already in cellData_
       nodes.push_back(p);

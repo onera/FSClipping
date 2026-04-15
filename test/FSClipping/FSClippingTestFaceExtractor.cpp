@@ -5,19 +5,28 @@
 #include "FSClipping/FSClippingFace.h"
 #include "FSClipping/FSFaceSeparator.h"
 
+#include "TestUtils.hpp"
+
+
 _FS_BEGIN_NAMESPACE
+
+
+FSMesh LoadMesh(FSClac& clac, const std::string& filename)
+{
+  FSMeshImportParamsTAU params;
+  params.mMeshFilename = filename;
+
+  FSMesh mesh(&clac);
+  EXPECT_TRUE(mesh.ImportMesh(&params));
+
+  mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+  return mesh;
+}
 
 TEST(FSClippingTestFaceExtractor, ComputeGeometry)
 {
   FSClac clac;
-  FSMeshImportParamsTAU params;
-  // params.mMeshFilename = "${HOME}/path/to/hexa.grid";
-  params.mMeshFilename =
-    "${HOME}/code_dev/CODA_src/FSClipping/test/Mesh/hexa.grid";
-  // hexa.grid is in FSClipping/test/Mesh
-  // but you can load any mesh.grid mesh file
-  FSMesh mesh(&clac);
-  ASSERT_TRUE(mesh.ImportMesh(&params));
+  auto mesh = LoadMesh(clac, MeshPath("input/cube_hexa_coarse.grid"));
 
   FSMeshFaceExtractor ex;
   mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();

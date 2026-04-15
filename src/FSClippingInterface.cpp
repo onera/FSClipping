@@ -7,19 +7,16 @@
 
 _FS_BEGIN_NAMESPACE
 
-FSMeshData FSClippingInterface::BuildSurfaceInterface(FSMesh& mesh1, FSMesh& mesh2, FSClac& clacInterface)
+FSMeshData FSClippingInterface::BuildSurfaceInterface(FSMesh& mesh1, FSMesh& mesh2)
 {
   // 1. Extract boundary faces
   FSMeshFaceExtractor extractor1, extractor2;
 
-  // auto clipFaces1 = FSBoundaryFaceProvider::Extract(mesh1, extractor1, boundaryMarkerMesh1_);
-  // auto clipFaces2 = FSBoundaryFaceProvider::Extract(mesh2, extractor2, boundaryMarkerMesh2_);
   auto boundaryExtraction1 = FSBoundaryFaceProvider::Extract(mesh1, extractor1, boundaryMarkerMesh1_, tol_);
   auto boundaryExtraction2 = FSBoundaryFaceProvider::Extract(mesh2, extractor2, boundaryMarkerMesh2_, tol_);
 
   auto clipFaces1 = boundaryExtraction1.faces;
   auto clipFaces2 = boundaryExtraction2.faces;
-
 
   // 2. Compute geometric matches between boundary faces
   FSFaceMatcher matcher(clac2_, clipFaces1, clipFaces2, tol_);
@@ -32,19 +29,15 @@ FSMeshData FSClippingInterface::BuildSurfaceInterface(FSMesh& mesh1, FSMesh& mes
     topologyBuilder.BuildSurfaceTopo(matches, boundaryExtraction1.faceKeys);
 
   // 4. Reconstruct surface mesh
-  FSMeshReconstruction meshReconstruction(clacInterface);
+  FSMeshReconstruction meshReconstruction(clac1_);
   return meshReconstruction.Build(mesh1.GetMeshData()->GetUnstructCells(), surfaceTopology);
 }
 
-FSMeshData FSClippingInterface::BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh2, FSClac& clacInterface)
+FSMeshData FSClippingInterface::BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh2)
 {
-
   /// 1- Boundary extraction
   FSMeshFaceExtractor ex1, ex2;
   FSTopologyData volumeTopology;
-
-  // auto clipFaces1 = FSBoundaryFaceProvider::Extract(mesh1, ex1, boundaryMarkerMesh1_);
-  // auto clipFaces2 = FSBoundaryFaceProvider::Extract(mesh2, ex2, boundaryMarkerMesh2_);
 
   auto boundaryExtraction1 = FSBoundaryFaceProvider::Extract(mesh1, ex1, boundaryMarkerMesh1_, tol_);
   auto boundaryExtraction2 = FSBoundaryFaceProvider::Extract(mesh2, ex2, boundaryMarkerMesh2_, tol_);
@@ -90,16 +83,8 @@ FSMeshData FSClippingInterface::BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh
   volumeTopology.cellParent[FSMeshEnums::CellType::CT_Poly2D] = surfaceTopology.cellParent[FSMeshEnums::CellType::CT_Poly2D];
   volumeTopology.cellParentType[FSMeshEnums::CellType::CT_Poly2D] = surfaceTopology.cellParentType[FSMeshEnums::CellType::CT_Poly2D];
 
-  // for(const auto& [key, value] : volumeTopology.cellParent) {
-  //   std::cout << FSMeshEnums::CellTypeToString(key) << " " << value.Size() << std::endl;
-  //   for(FS_intT i = 0; i < value.Size(); i++) {
-  //     std::cout << value[i] << " ";
-  //   }
-  //   std::cout << std::endl;
-  // }
-
   // 5- Reconstruct the entire new mesh
-  FSMeshReconstruction FSMeshReconstruction(clacInterface);
+  FSMeshReconstruction FSMeshReconstruction(clac1_);
   auto meshDataInterface = FSMeshReconstruction.Build(mesh1.GetMeshData()->GetUnstructCells(), volumeTopology);
 
   return meshDataInterface;

@@ -18,6 +18,7 @@
 #include "FSClipping/FSFaceMatcher.h"
 #include "FSClipping/FSCell2NodeBuilder.h"
 #include "FSClipping/FSPolyFaceBuilder.h"
+#include "TestUtils.hpp"
 
 _FS_BEGIN_NAMESPACE
 
@@ -154,139 +155,117 @@ polyMeshExtractFaces(FSUnstructMeshData& unstructMeshData)
   }
 }
 
-TEST(FSClippingTestInterface, BuildSurfaceInterface)
+namespace {
+FSMesh LoadMesh(FSClac& clac, const std::string& filename)
 {
-  FSClac clac1, clac2;
-  FSMeshImportParamsTAU params1, params2;
+  FSMeshImportParamsTAU params;
+  params.mMeshFilename = filename;
 
-  params1.mMeshFilename =
-    //  "/stck/aleprevo/test/test_clipping/hexa_tetra/GRID/cube_hexa.grid";
-    //"/stck/aleprevo/code_dev/CODA_src/FSClipping/test/Mesh/cube_tetra_coarse.grid";
-    "/stck/aleprevo/test/test_clipping/2026-01-27_slidingMeshes-maillage-de-revolution-antonin_mc/interior.grid";
-  params2.mMeshFilename =
-    //  "/stck/aleprevo/test/test_clipping/hexa_tetra/GRID/cube_hexa_fine.grid";
-    //"/stck/aleprevo/code_dev/CODA_src/FSClipping/test/Mesh/cube_hexa_coarse.grid";
-    "/stck/aleprevo/test/test_clipping/2026-01-27_slidingMeshes-maillage-de-revolution-antonin_mc/exterior_rotate.grid";
+  FSMesh mesh(&clac);
+  EXPECT_TRUE(mesh.ImportMesh(&params));
 
-  FSMesh mesh1(&clac1);
-  FSMesh mesh2(&clac2);
-  ASSERT_TRUE(mesh1.ImportMesh(&params1));
-  ASSERT_TRUE(mesh2.ImportMesh(&params2));
-
-  mesh1.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-  mesh2.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-
-  FS_intT boundaryMarkerMesh1 = 4;
-  FS_intT boundaryMarkerMesh2 = 3;
-  FS_floatT tolerance = 1e-10;
-  FSClac clac3;
-
-  // compute the interface between mesh1 and mesh2
-  FSClippingInterface clippingInterface(clac1, clac2, tolerance, boundaryMarkerMesh1, boundaryMarkerMesh2);
-  auto meshDataInterface = clippingInterface.BuildSurfaceInterface(mesh1, mesh2, clac3);
-  FSMeshData* meshDataInterfacePtr = &meshDataInterface;
-
-  // print mesh info
-  FSMeshPrintInfo printInfo(&clac3);
-  FSMeshOpParams dummy;
-  bool success = printInfo.DoOp(meshDataInterfacePtr, &dummy);
-  if(!(success)) {
-    FSError.Print();
-  }
-  ASSERT_TRUE(success);
-
-
-  // check mesh
-  FSMeshCheck meshCheck(&clac3);
-  success = meshCheck.DoOp(meshDataInterfacePtr, &dummy);
-  if(!(success)) {
-    FSError.Print();
-  }
-  ASSERT_TRUE(success);
-
-  FS_intT logLevel = 1;
-
-  polyMeshRepartition(&clac3, meshDataInterfacePtr);
-  polyMeshExportImport(&clac3, meshDataInterfacePtr,
-                       "/stck/aleprevo/code_dev/CODA_src/FSClipping/test/Mesh/Output/rotate_2D", logLevel, false);
-
-  // meshDataInterface.GetUnstructCells().CreateLocalNumbering();
-  // polyMeshRepartition(&clac3, meshDataInterfacePtr);
-  // polyMeshExportImport(&clac3, meshDataInterfacePtr,
-  //                      "/stck/aleprevo/code_dev/CODA_src/FSClipping/test/Mesh/Output/cube_hexa_clipped_2D_local", logLevel, false);
-
-  polyMeshExtractFaces(meshDataInterfacePtr->GetUnstructCells());
+  mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+  return mesh;
 }
 
-
-TEST(FSClippingTestInterface, BuildVolumeInterface)
+void CheckMesh(FSClac& clac, FSMeshData* meshData)
 {
-  FSClac clac1, clac2;
-  FSMeshImportParamsTAU params1, params2;
-
-  params1.mMeshFilename =
-    "/stck/aleprevo/test/test_clipping/hexa_tetra/GRID/cube_hexa.grid";
-  //"/stck/aleprevo/code_dev/CODA_src/FSClipping/test/Mesh/cube_tetra_coarse.grid";
-  //"/stck/aleprevo/test/test_clipping/2026-01-27_slidingMeshes-maillage-de-revolution-antonin_mc/interior.grid";
-  params2.mMeshFilename =
-    "/stck/aleprevo/test/test_clipping/hexa_tetra/GRID/cube_hexa_fine.grid";
-  //"/stck/aleprevo/code_dev/CODA_src/FSClipping/test/Mesh/cube_hexa_coarse.grid";
-  //"/stck/aleprevo/test/test_clipping/2026-01-27_slidingMeshes-maillage-de-revolution-antonin_mc/exterior_rotate.grid";
-
-
-  FSMesh mesh1(&clac1);
-  FSMesh mesh2(&clac2);
-  ASSERT_TRUE(mesh1.ImportMesh(&params1));
-  ASSERT_TRUE(mesh2.ImportMesh(&params2));
-
-  FSMeshData* meshData1 = mesh1.GetMeshData();
-  FSMeshPrintInfo printInfo(&clac1);
   FSMeshOpParams dummy;
-  bool success = printInfo.DoOp(meshData1, &dummy);
-  if(!(success)) {
-    FSError.Print();
-  }
-  ASSERT_TRUE(success);
 
-  mesh1.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-  mesh2.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+  FSMeshPrintInfo printInfo(&clac);
+  ASSERT_TRUE(printInfo.DoOp(meshData, &dummy)) << "Print failed";
 
-  FS_intT boundaryMarkerMesh1 = 2; // 2
-  FS_intT boundaryMarkerMesh2 = 1; // 1
-  FS_floatT tolerance = 1e-8;
-  FSClac clac3;
+  FSMeshCheck meshCheck(&clac);
+  ASSERT_TRUE(meshCheck.DoOp(meshData, &dummy)) << "Check failed";
+}
+} // namespace
 
-  // compute the interface between mesh1 and mesh2
-  FSClippingInterface clippingInterface(clac1, clac2, tolerance, boundaryMarkerMesh1, boundaryMarkerMesh2);
-  auto meshDataInterface = clippingInterface.BuildVolumeInterface(mesh1, mesh2, clac3);
-  FSMeshData* meshDataInterfacePtr = &meshDataInterface;
+TEST(FSClippingTestInterface, BuildSurfaceInterfaceHexaHexa)
+{
+  FSClac clac1, clac2, clac3;
 
-  // print mesh info
-  success = printInfo.DoOp(meshDataInterfacePtr, &dummy);
-  if(!(success)) {
-    FSError.Print();
-  }
-  ASSERT_TRUE(success);
+  auto mesh1 = LoadMesh(clac1, MeshPath("input/cube_hexa_coarse.grid"));
+  auto mesh2 = LoadMesh(clac2, MeshPath("input/cube_hexa_fine.grid"));
 
+  const FS_intT marker1 = 2;
+  const FS_intT marker2 = 1;
+  const FS_floatT tol = 1e-8;
 
-  // check mesh
-  FSMeshCheck meshCheck(&clac3);
-  success = meshCheck.DoOp(meshDataInterfacePtr, &dummy);
-  if(!(success)) {
-    FSError.Print();
-  }
-  ASSERT_TRUE(success);
+  FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
 
-  FS_intT logLevel = 1;
+  auto meshInterface = clip.BuildSurfaceInterface(mesh1, mesh2);
+  FSMeshData* ptr = &meshInterface;
 
-  polyMeshRepartition(&clac3, meshDataInterfacePtr);
-  polyMeshExportImport(&clac3, meshDataInterfacePtr,
-                       "/stck/aleprevo/code_dev/CODA_src/FSClipping/test/Mesh/Output/hexa_clipped", logLevel, false);
+  CheckMesh(clac3, ptr);
 
-  //  meshDataInterface.GetUnstructCells().CreateLocalNumbering();
-  //  polyMeshRepartition(&clac3, meshDataInterfacePtr);
-  //  polyMeshExportImport(&clac3, meshDataInterfacePtr,
-  //                       "/stck/aleprevo/code_dev/CODA_src/FSClipping/test/Mesh/Output/hexa_clipped_local", logLevel, false);
+  polyMeshRepartition(&clac3, ptr);
 
-  polyMeshExtractFaces(meshDataInterfacePtr->GetUnstructCells());
+  polyMeshExtractFaces(ptr->GetUnstructCells());
+
+  polyMeshExportImport(
+    &clac3,
+    ptr,
+    MeshPath("output/cube2D_clipped_HexaHexa"),
+    1,
+    false);
+}
+
+TEST(FSClippingTestInterface, BuildVolumeInterfaceHexaHexa)
+{
+  FSClac clac1, clac2, clac3;
+
+  auto mesh1 = LoadMesh(clac1, MeshPath("input/cube_hexa_coarse.grid"));
+  auto mesh2 = LoadMesh(clac2, MeshPath("input/cube_hexa_fine.grid"));
+
+  const FS_intT marker1 = 2;
+  const FS_intT marker2 = 1;
+  const FS_floatT tol = 1e-8;
+
+  FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
+
+  auto meshInterface = clip.BuildVolumeInterface(mesh1, mesh2);
+  FSMeshData* ptr = &meshInterface;
+
+  CheckMesh(clac3, ptr);
+
+  polyMeshRepartition(&clac3, ptr);
+
+  polyMeshExtractFaces(ptr->GetUnstructCells());
+
+  polyMeshExportImport(
+    &clac3,
+    ptr,
+    MeshPath("output/cube3D_clipped_HexaHexa"),
+    1,
+    false);
+}
+
+TEST(FSClippingTestInterface, BuildVolumeInterfaceRefHexaTetra)
+{
+  FSClac clac1, clac2, clac3;
+
+  auto mesh1 = LoadMesh(clac1, MeshPath("input/cube_hexa_coarse.grid"));
+  auto mesh2 = LoadMesh(clac2, MeshPath("input/cube_tetra_fine.grid"));
+
+  const FS_intT marker1 = 2;
+  const FS_intT marker2 = 1;
+  const FS_floatT tol = 1e-8; // hole when tol < 1e-3
+
+  FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
+
+  auto meshInterface = clip.BuildVolumeInterface(mesh1, mesh2);
+  FSMeshData* ptr = &meshInterface;
+
+  CheckMesh(clac3, ptr);
+
+  polyMeshRepartition(&clac3, ptr);
+
+  polyMeshExtractFaces(ptr->GetUnstructCells());
+
+  polyMeshExportImport(
+    &clac3,
+    ptr,
+    MeshPath("output/cube3D_clipped_HexaTetra"),
+    1,
+    false);
 }

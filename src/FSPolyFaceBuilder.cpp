@@ -184,7 +184,6 @@ void FSPolyFaceBuilder::Reorienting()
       FSVec3 normal = ComputeFaceNormal(face, cellData.coords);
 
       FSVec3 dir = faceCenter - cellCenter;
-      std::cout << normal.InnerProduct(dir) << std::endl;
       if(normal.InnerProduct(dir) < 0.0) {
         std::reverse(face.nodeIds.begin(), face.nodeIds.end());
       }
