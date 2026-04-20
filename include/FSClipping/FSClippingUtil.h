@@ -77,6 +77,52 @@ inline FSVec2 ComputeIntersection(const FSVec2& P1,
 }
 
 /* -----------------------------------------------------------------
+   ArePointsColinear2D
+   ----------------------------------------------------------------- */
+inline bool ArePointsColinear2D(const std::vector<FSVec2>& pts, FS_floatT tol)
+{
+  if(pts.size() < 3)
+    return true;
+
+  const FSVec2& p0 = pts[0];
+  const FSVec2& p1 = pts[1];
+
+  FSVec2 dir = p1 - p0;
+
+  for(size_t i = 2; i < pts.size(); ++i) {
+    FSVec2 v = pts[i] - p0;
+
+    // produit vectoriel 2D = scalaire
+    FS_floatT cross = dir[0] * v[1] - dir[1] * v[0];
+
+    if(std::abs(cross) > tol)
+      return false;
+  }
+
+  return true;
+}
+
+/* -----------------------------------------------------------------
+   RemoveDuplicatePoints
+   ----------------------------------------------------------------- */
+inline void RemoveDuplicatePoints(std::vector<FSVec2>& pts, FS_floatT tol)
+{
+  std::vector<FSVec2> clean;
+
+  for(const auto& p : pts) {
+    if(clean.empty() || (p - clean.back()).Norm() > tol)
+      clean.push_back(p);
+  }
+
+  // check first/last
+  if(clean.size() > 1 &&
+     (clean.front() - clean.back()).Norm() < tol)
+    clean.pop_back();
+
+  pts = std::move(clean);
+}
+
+/* -----------------------------------------------------------------
    AreFacesIdentical
    ----------------------------------------------------------------- */
 bool AreFacesIdentical(const FSClippingFace& f1,

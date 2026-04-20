@@ -29,6 +29,15 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1,
 
   const FS_floatT areaClip = std::abs(FSClippingUtil::PolygonSignedArea(clip));
   const FS_floatT area2 = std::abs(FSClippingUtil::PolygonSignedArea(poly2));
+
+
+  FSClippingUtil::RemoveDuplicatePoints(clip, 100 * tol_);
+  if(clip.size() < 3)
+    return false;
+
+  if(FSClippingUtil::ArePointsColinear2D(clip, 100 * tol_))
+    return false;
+
   if(areaClip < tol_)
     return false;
 

@@ -180,7 +180,7 @@ void CheckMesh(FSClac& clac, FSMeshData* meshData)
 }
 } // namespace
 
-TEST(FSClippingTestInterface, BuildSurfaceInterfaceHexaHexa)
+TEST(FSClippingTestInterface, ReconstructClippedMesh2DHexaHexa)
 {
   FSClac clac1, clac2, clac3;
 
@@ -210,7 +210,7 @@ TEST(FSClippingTestInterface, BuildSurfaceInterfaceHexaHexa)
     false);
 }
 
-TEST(FSClippingTestInterface, BuildVolumeInterfaceHexaHexa)
+TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexa)
 {
   FSClac clac1, clac2, clac3;
 
@@ -240,7 +240,7 @@ TEST(FSClippingTestInterface, BuildVolumeInterfaceHexaHexa)
     false);
 }
 
-TEST(FSClippingTestInterface, BuildVolumeInterfaceRefHexaTetra)
+TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
 {
   FSClac clac1, clac2, clac3;
 
@@ -269,3 +269,32 @@ TEST(FSClippingTestInterface, BuildVolumeInterfaceRefHexaTetra)
     1,
     false);
 }
+
+// TEST(FSClippingTestInterface, ReconstructClippedMesh3DTest)
+//{
+//   FSClac clac1, clac2, clac3;
+//
+//   auto mesh1 = LoadMesh(clac1, MeshPath("input/interior.grid"));
+//   auto mesh2 = LoadMesh(clac2, MeshPath("input/exterior_rotate.grid"));
+//
+//   const FS_intT marker1 = 4;
+//   const FS_intT marker2 = 3;
+//   const FS_floatT tol = 1e-5;
+//   FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
+//
+//   auto meshInterface = clip.BuildVolumeInterface(mesh1, mesh2);
+//   FSMeshData* ptr = &meshInterface;
+//
+//   CheckMesh(clac3, ptr);
+//
+//   polyMeshRepartition(&clac3, ptr);
+//
+//   polyMeshExtractFaces(ptr->GetUnstructCells());
+//
+//   polyMeshExportImport(
+//     &clac3,
+//     ptr,
+//     MeshPath("output/interiorClipped3D"),
+//     1,
+//     false);
+// }
