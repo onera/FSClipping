@@ -7,7 +7,7 @@
 
 _FS_BEGIN_NAMESPACE
 
-FSMeshData FSClippingInterface::BuildSurfaceInterface(FSMesh& mesh1, FSMesh& mesh2)
+FSMesh FSClippingInterface::BuildSurfaceInterface(FSMesh& mesh1, FSMesh& mesh2)
 {
   // 1. Extract boundary faces
   FSMeshFaceExtractor extractor1, extractor2;
@@ -33,7 +33,7 @@ FSMeshData FSClippingInterface::BuildSurfaceInterface(FSMesh& mesh1, FSMesh& mes
   return meshReconstruction.Build(mesh1.GetMeshData()->GetUnstructCells(), surfaceTopology);
 }
 
-FSMeshData FSClippingInterface::BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh2)
+FSMesh FSClippingInterface::BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh2)
 {
   /// 1- Boundary extraction
   FSMeshFaceExtractor ex1, ex2;
@@ -85,10 +85,6 @@ FSMeshData FSClippingInterface::BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh
 
   // 5- Reconstruct the entire new mesh
   FSMeshReconstruction FSMeshReconstruction(clac1_);
-  auto meshDataInterface = FSMeshReconstruction.Build(mesh1.GetMeshData()->GetUnstructCells(), volumeTopology);
-
-  return meshDataInterface;
+  return FSMeshReconstruction.Build(mesh1.GetMeshData()->GetUnstructCells(), volumeTopology);
 }
-
-
 _FS_END_NAMESPACE

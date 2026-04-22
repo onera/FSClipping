@@ -193,8 +193,8 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh2DHexaHexa)
 
   FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
 
-  auto meshInterface = clip.BuildSurfaceInterface(mesh1, mesh2);
-  FSMeshData* ptr = &meshInterface;
+  auto meshClipped = clip.BuildSurfaceInterface(mesh1, mesh2);
+  FSMeshData* ptr = meshClipped.GetMeshData();
 
   CheckMesh(clac3, ptr);
 
@@ -223,8 +223,8 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexa)
 
   FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
 
-  auto meshInterface = clip.BuildVolumeInterface(mesh1, mesh2);
-  FSMeshData* ptr = &meshInterface;
+  auto meshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
+  FSMeshData* ptr = meshClipped.GetMeshData();
 
   CheckMesh(clac3, ptr);
 
@@ -253,8 +253,8 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
 
   FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
 
-  auto meshInterface = clip.BuildVolumeInterface(mesh1, mesh2);
-  FSMeshData* ptr = &meshInterface;
+  auto meshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
+  FSMeshData* ptr = meshClipped.GetMeshData();
 
   CheckMesh(clac3, ptr);
 
@@ -270,6 +270,36 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
     false);
 }
 
+// TEST(FSClippingTestInterface, ReconstructClippedMesh3DVortex)
+//{
+//   FSClac clac1, clac2, clac3;
+//
+//   auto mesh1 = LoadMesh(clac1, MeshPath("input/vortex_hexa1.grid"));
+//   auto mesh2 = LoadMesh(clac2, MeshPath("input/vortex_hexa0.grid"));
+//
+//   const FS_intT marker1 = 1;
+//   const FS_intT marker2 = 2;
+//   const FS_floatT tol = 1e-8; // hole when tol < 1e-3
+//
+//   FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
+//
+//   auto MeshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
+//   FSMeshData* ptr = MeshClipped.GetMeshData();
+//
+//   CheckMesh(clac3, ptr);
+//
+//   polyMeshRepartition(&clac3, ptr);
+//
+//   polyMeshExtractFaces(ptr->GetUnstructCells());
+//
+//   polyMeshExportImport(
+//     &clac3,
+//     ptr,
+//     MeshPath("output/vortex_clipped_1"),
+//     1,
+//     false);
+// }
+
 // TEST(FSClippingTestInterface, ReconstructClippedMesh3DTest)
 //{
 //   FSClac clac1, clac2, clac3;
@@ -282,8 +312,8 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
 //   const FS_floatT tol = 1e-5;
 //   FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
 //
-//   auto meshInterface = clip.BuildVolumeInterface(mesh1, mesh2);
-//   FSMeshData* ptr = &meshInterface;
+//   auto MeshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
+//   FSMeshData* ptr = &MeshClipped;
 //
 //   CheckMesh(clac3, ptr);
 //

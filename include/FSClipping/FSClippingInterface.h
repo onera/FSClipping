@@ -20,11 +20,11 @@ public:
                                              boundaryMarkerMesh1_(markerMesh1),
                                              boundaryMarkerMesh2_(markerMesh2) {};
 
-  FSMeshData BuildSurfaceInterface(FSMesh& mesh1,
-                                   FSMesh& mesh2);
+  FSMesh BuildSurfaceInterface(FSMesh& mesh1,
+                               FSMesh& mesh2);
 
-  FSMeshData BuildVolumeInterface(FSMesh& mesh1,
-                                  FSMesh& mesh2);
+  FSMesh BuildVolumeInterface(FSMesh& mesh1,
+                              FSMesh& mesh2);
 
 private:
   FSClac& clac1_;

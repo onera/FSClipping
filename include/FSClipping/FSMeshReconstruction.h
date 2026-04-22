@@ -12,7 +12,7 @@ class FSMeshReconstruction
 public:
   explicit FSMeshReconstruction(FSClac& clac) : clac_(clac) {};
 
-  FSMeshData Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData);
+  FSMesh Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData);
 
   void CopyCellAttributes(const FSUnstructMeshData& meshData,
                           const FSTopologyData& topo,

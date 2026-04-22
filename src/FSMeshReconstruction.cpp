@@ -1,15 +1,11 @@
 #include "FSClipping/FSMeshReconstruction.h"
 #include <FSMeshData.h>
 
-FSMeshData FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData)
+FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData)
 {
+  FSMesh MeshClipped = FSMesh(&clac_);
 
-  FSMeshData meshDataInterface = FSMeshData(&clac_);
   // init pointer to meshdata
-  // FSMeshData* meshDataInterfacePtr = &meshDataInterface;
-  // init reference to unstructured mesh data
-  FSUnstructMeshData& unstructMeshData = meshDataInterface.GetUnstructCells();
-
   const auto& globalCoords = topologyData.globalCoords;
   auto& cell2NodePoly2D = topologyData.cell2NodePoly2D;
   auto& cell2NodePoly3D = topologyData.cell2NodePoly3D;
@@ -17,16 +13,21 @@ FSMeshData FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOrigina
   auto& polyFaces = topologyData.polyFaces;
 
   // begin initialization
-  meshDataInterface.BeginInitialization();
+  MeshClipped.BeginInitialization();
+  FSMeshData* MeshDataClippedPtr = MeshClipped.GetMeshData();
+  FSUnstructMeshData& unstructMeshData = MeshDataClippedPtr->GetUnstructCells();
 
-  meshDataInterface.InitUnstructNodes(globalCoords.size());
+  MeshClipped.InitUnstructNodes(globalCoords.size());
   if(!cell2NodeInner.IsEmpty()) {
     for(auto& [type, cell2Node] : topologyData.cell2NodeInner)
-      meshDataInterface.InitUnstructCells(type, cell2Node);
+      MeshClipped.InitUnstructCells(type, cell2Node);
   }
-  meshDataInterface.InitUnstructCells(FSMeshEnums::CT_Poly2D, cell2NodePoly2D);
-  meshDataInterface.InitUnstructCells(FSMeshEnums::CT_Poly3D, cell2NodePoly3D);
-  meshDataInterface.InitUnstructCellFaces(FSMeshEnums::CT_Poly3D, polyFaces);
+
+  // init reference to unstructured mesh data
+  MeshDataClippedPtr->InitUnstructCells(FSMeshEnums::CT_Poly2D, cell2NodePoly2D);
+  MeshDataClippedPtr->InitUnstructCells(FSMeshEnums::CT_Poly3D, cell2NodePoly3D);
+  MeshDataClippedPtr->InitUnstructCellFaces(FSMeshEnums::CT_Poly3D, polyFaces);
+  MeshClipped.EndInitialization();
 
   FSQuantityDescArrayT coordsDesc(3);
   coordsDesc[0] = FSQuantityDesc(FSDataName::Coordinates(), FSDataName::Coordinate().X());
@@ -46,27 +47,25 @@ FSMeshData FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOrigina
     FSError.SetAndPrintAndExit("FSMeshReconstruction : Error while set coordinates");
 
   FS_intT currentOffset = 0;
-  FSIntArrayT cellTypeArray_2 = meshDataInterface.GetUnstructCells().GetCellTypesArray();
+  FSIntArrayT cellTypeArray_2 = MeshDataClippedPtr->GetUnstructCells().GetCellTypesArray();
   for(FSIntArrayT::ConstIterator cellType = cellTypeArray_2.BeginConst(); cellType.IsValid(); cellType.Next()) {
     if(*cellType == FSMeshEnums::CellType::CT_Node) {
-      meshDataInterface.GetUnstructCells().InitGlobalCellNumber((FSMeshEnums::CellType)*cellType, currentOffset);
-      currentOffset += meshDataInterface.GetUnstructCells().GetNCells((FSMeshEnums::CellType)*cellType);
+      MeshDataClippedPtr->GetUnstructCells().InitGlobalCellNumber((FSMeshEnums::CellType)*cellType, currentOffset);
+      currentOffset += MeshDataClippedPtr->GetUnstructCells().GetNCells((FSMeshEnums::CellType)*cellType);
     }
   }
 
   CopyCellAttributes(meshDataOriginal, topologyData, unstructMeshData);
-  //    end initialization
-  meshDataInterface.EndInitialization();
+  // end initialization
+
   // check if initialization is complete
-  success = meshDataInterface.IsInitialized();
+  success = MeshClipped.IsInitialized();
 
   if(!success)
     FSError.SetAndPrintAndExit("FSMeshReconstruction : Error while initialization the new mesh");
 
-  return meshDataInterface;
+  return MeshClipped;
 }
-
-
 
 void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshDataOriginal,
                                               const FSTopologyData& topo,
