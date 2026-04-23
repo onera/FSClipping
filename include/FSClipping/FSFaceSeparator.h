@@ -17,6 +17,7 @@
 #include "FSBoundaryFace.h"
 #include "FSCellAdress.h"
 #include "FSFace.h"
+#include "FSClipping/FSBoundaryFaceProvider.h"
 
 _FS_BEGIN_NAMESPACE
 
@@ -24,18 +25,9 @@ namespace FSFaceSeparator {
 
 void SeparateFaces(const FSMesh& fsmesh,
                    const FSMeshFaceExtractor& faceExtractor,
-                   std::vector<FSFace>& localFacesFSDM,
-                   std::vector<FSFace>& haloFacesFSDM,
-                   std::vector<FSBoundaryFace>& bdryFacesFSDM,
-                   std::vector<FSFace>& extBdryFacesFSDM,
-                   std::vector<FSBoundaryFace>& sepBdryFacesFSDM);
-
-bool PrepareNodalData(const FSMesh& fsmesh, FSMeshFaceExtractor& faceExtractor);
-
-std::vector<FSBoundaryFace> SeparateBoundariesFaceWithMarker(FSMesh& fsmesh,
-                                                             FSMeshFaceExtractor& faceExtractor,
-                                                             const FS_intT marker);
-
+                   std::vector<FSBoundaryFace>& bdryFaces,
+                   BoundaryExtraction& result,
+                   const FS_intT markerBoundaryClipped);
 } // namespace FSFaceSeparator
 _FS_END_NAMESPACE
 

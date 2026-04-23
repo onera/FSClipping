@@ -162,11 +162,10 @@ FSIntArrayT FSTopologyAssembler::UpdateOldCell2Node(const FSIntArrayT& oldCell2N
   return cell2Node;
 }
 
-void FSTopologyAssembler::AppendUnclippedSurfaces(
-  FSMesh& mesh,
-  const std::unordered_map<FS_intT, std::set<FS_intT> >& bdry2DCells,
-  const FSFloatArrayT& oldCoords,
-  FSTopologyData& topo)
+void FSTopologyAssembler::AppendUnclippedSurfaces(FSMesh& mesh,
+                                                  const std::unordered_map<FS_intT, std::set<FS_intT> >& bdry2DCells,
+                                                  const FSFloatArrayT& oldCoords,
+                                                  FSTopologyData& topo)
 {
   for(const auto& t : mesh.GetCellTypes()) {
     if(!FSMeshEnums::IsUnstructSurfaceCellType(t))

@@ -11,17 +11,32 @@ FSBoundaryFaceProvider::Extract(FSMesh& mesh,
 {
 
   // mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+  assert(mesh.GetMeshData()->GetUnstructCells().HasLocalNumbering());
+  BoundaryExtraction result;
+
   ex.PrepareFaceConnectivity(mesh.GetMeshData()->GetUnstructCells(), true,
                              false);
   ex.PrepareFaceNodeCoordinates(FSQuantityDescArrayT());
 
-  auto bdryFaces =
-    FSFaceSeparator::SeparateBoundariesFaceWithMarker(mesh, ex, boundaryMarker);
+  // The FSDM domain local bdry faces (owning element (FSDM volume cell) also
+  // local)
+  std::vector<FSBoundaryFace> bdryFaces;
+  // Locally used, but external (i.e. located somewhere remote) FSDM bdry faces.
+  // std::vector<FSFace> extBdryFacesFSDM;
+  // Separated local FSDM bdry faces, i.e. owner element somewhere remote.
+  // std::vector<FSBoundaryFace> sepBdryFacesFSDM;
+  // the FSDM domain local faces (between two local elements, respectively)
+  // std::vector<FSFace> localFacesFSDM;
+  // the FSDM halo-touching faces, i.e. owning element is local, but neighboring
+  // element somewhere remote
+  // std::vector<FSFace> haloFacesFSDM;
+
+  FSFaceSeparator::SeparateFaces(mesh, ex, bdryFaces, result, boundaryMarker);
 
   std::vector<FSClippingFace> clipFaces;
   // clipFaces.reserve(bdryFaces.size());
 
-  BoundaryExtraction result;
+
   FSFloatArrayT faceCoordinates;
   for(const auto& f : bdryFaces) {
     FS_intT faceIndex = ex.GetFaceIndex(*(f._faceFSDM));
@@ -31,43 +46,16 @@ FSBoundaryFaceProvider::Extract(FSMesh& mesh,
 
     result.faceKeys.insert(key);
     result.faces.emplace_back(f, faceIndex, faceCoordinates);
+
+    // volume (owner)
+    result.volumeCells[f._faceFSDM->mOwner.mCellType]
+      .insert(f._faceFSDM->mOwner.mCell);
+
+    // surface (neighbor)
+    result.surfaceCells[f._faceFSDM->mNeighbor.mCellType]
+      .insert(f._faceFSDM->mNeighbor.mCell);
   }
 
   return result;
-}
-
-
-std::unordered_map<FS_intT, std::set<FS_intT> >
-FSBoundaryFaceProvider::ExtractOwner3DCells(const std::vector<FSClippingFace>& faces)
-{
-  std::unordered_map<FS_intT, std::set<FS_intT> > bdryElemTypes;
-  for(const auto& f : faces) {
-    auto elemIndex = f.topo()._faceFSDM->mOwner.mCell;
-    auto elemType = f.topo()._faceFSDM->mOwner.mCellType;
-    if(bdryElemTypes.contains(elemType)) {
-      bdryElemTypes.at(elemType).insert(elemIndex);
-    } else {
-      std::set<FS_intT> index = {elemIndex};
-      bdryElemTypes.insert({elemType, index});
-    }
-  }
-  return bdryElemTypes;
-}
-
-std::unordered_map<FS_intT, std::set<FS_intT> >
-FSBoundaryFaceProvider::Extract2DCells(const std::vector<FSClippingFace>& faces)
-{
-  std::unordered_map<FS_intT, std::set<FS_intT> > bdryCellTypes;
-  for(const auto& f : faces) {
-    auto cellIndex = f.topo()._faceFSDM->mNeighbor.mCell;
-    auto cellType = f.topo()._faceFSDM->mNeighbor.mCellType;
-    if(bdryCellTypes.contains(cellType)) {
-      bdryCellTypes.at(cellType).insert(cellIndex);
-    } else {
-      std::set<FS_intT> index = {cellIndex};
-      bdryCellTypes.insert({cellType, index});
-    }
-  }
-  return bdryCellTypes;
 }
 _FS_BEGIN_NAMESPACE

@@ -97,6 +97,7 @@ void FSPolyFaceBuilder::AddInnerFaces(FSMeshEnums::CellType type,
     FSVec3 p(x, y, z);
     innerFace.nodeIds[fc] = FindNodeLocalElem(p, cellData.at(cell));
   }
+  // we check if we not add the entire original face on the boundarie
   GeomFaceKey key(coords, tol_);
   if(boundaryFaceKeys_.find(key) != boundaryFaceKeys_.end()) {
     return;

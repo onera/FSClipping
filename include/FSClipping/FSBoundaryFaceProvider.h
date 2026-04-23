@@ -101,6 +101,9 @@ struct GeomFaceKeyHash {
 struct BoundaryExtraction {
   std::vector<FSClippingFace> faces;
   std::unordered_set<GeomFaceKey, GeomFaceKeyHash> faceKeys;
+
+  std::unordered_map<FS_intT, std::set<FS_intT> > volumeCells;
+  std::unordered_map<FS_intT, std::set<FS_intT> > surfaceCells;
 };
 
 class FSBoundaryFaceProvider
@@ -110,11 +113,6 @@ public:
                                     FSMeshFaceExtractor& ex,
                                     FS_intT boundaryMarker,
                                     FS_floatT tol);
-
-
-  static std::unordered_map<FS_intT, std::set<FS_intT> > ExtractOwner3DCells(const std::vector<FSClippingFace>& faces);
-
-  static std::unordered_map<FS_intT, std::set<FS_intT> > Extract2DCells(const std::vector<FSClippingFace>& faces);
 };
 
 

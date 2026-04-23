@@ -1,5 +1,5 @@
-#ifndef FSTOPOLOGYBUILDER_H
-#define FSTOPOLOGYBUILDER_H
+#ifndef FSTOPOLOGYASSEMBLER_H
+#define FSTOPOLOGYASSEMBLER_H
 
 #include "FSClipping/FSBoundaryFaceProvider.h"
 #include "FSClipping/FSCell2NodeBuilder.h"

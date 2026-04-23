@@ -8,7 +8,7 @@ add_compile_definitions(FS_TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/test/Mesh")
 include(GoogleTest)
 
 add_executable(FSClippingTest FSClipping/FSClippingTestGeo.cpp 
-                              FSClipping/FSClippingTestFaceExtractor.cpp 
+                              FSClipping/FSClippingTestBoundaryExtractor.cpp 
                               FSClipping/FSClippingTestMatches.cpp 
                               FSClipping/FSClippingTestCell2NodeBuilder.cpp 
                               FSClipping/FSClippingTestPolyFaceBuilder.cpp
