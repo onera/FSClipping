@@ -9,8 +9,6 @@
 /build
 /.waf*
 /.lock-waf*
-/example/tmp
-/example/Summary.HowToResults
-/html
 /.cache
 /.clangd
+/test/Mesh/output

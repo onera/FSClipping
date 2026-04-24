@@ -10,7 +10,7 @@ FSBoundaryFaceProvider::Extract(FSMesh& mesh,
                                 FS_floatT tol)
 {
 
-  // mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+  mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
   assert(mesh.GetMeshData()->GetUnstructCells().HasLocalNumbering());
   BoundaryExtraction result;
 
@@ -31,7 +31,7 @@ FSBoundaryFaceProvider::Extract(FSMesh& mesh,
   // element somewhere remote
   // std::vector<FSFace> haloFacesFSDM;
 
-  FSFaceSeparator::SeparateFaces(mesh, ex, bdryFaces, result, boundaryMarker);
+  FSFaceSeparator::SeparateFaces(mesh, ex, bdryFaces, boundaryMarker);
 
   std::vector<FSClippingFace> clipFaces;
   // clipFaces.reserve(bdryFaces.size());

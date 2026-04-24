@@ -14,7 +14,9 @@ add_library(fsclipping SHARED   FSClippingUtil.cpp
                                 FSBoundaryFaceProvider.cpp 
                                 FSTopologyAssembler.cpp
                                 FSMeshReconstruction.cpp
-                                FSClippingInterface.cpp)
+                                FSClippingInterface.cpp
+                                FSClippedMeshParams.cpp
+                                FSClippedMesh.cpp)
 
 # Create an alias so that other targets can refer to it as fsclipping::fsclipping
 add_library(fsclipping::fsclipping ALIAS fsclipping)
@@ -55,6 +57,10 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSTopologyAssembler.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSMeshReconstruction.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippingInterface.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippedMeshParams.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippedMeshParams.i
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippedMesh.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/_FSClippedMesh.i
 )
 
 # Expose the list of public headers to the install command

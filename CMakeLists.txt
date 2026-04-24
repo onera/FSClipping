@@ -69,6 +69,11 @@ include(GNUInstallDirs)   # defines CMAKE_INSTALL_LIBDIR, CMAKE_INSTALL_INCLUDED
 add_subdirectory(src)
 
 # --------------------------------------------------------------
+# Add the python sub-directory using SWIG
+# --------------------------------------------------------------
+add_subdirectory(py)
+
+# --------------------------------------------------------------
 # Add the test sub‑directory (contains the simplified CMakeLists.txt)
 # --------------------------------------------------------------
 include(CTest)
