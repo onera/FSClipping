@@ -8,7 +8,6 @@ namespace FSFaceSeparator {
 void SeparateFaces(const FSMesh& fsmesh,
                    const FSMeshFaceExtractor& faceExtractor,
                    std::vector<FSBoundaryFace>& bdryFaces,
-                   BoundaryExtraction& result,
                    const FS_intT markerBoundaryClipped)
 {
   assert(bdryFaces.empty());

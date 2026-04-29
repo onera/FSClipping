@@ -26,7 +26,6 @@ namespace FSFaceSeparator {
 void SeparateFaces(const FSMesh& fsmesh,
                    const FSMeshFaceExtractor& faceExtractor,
                    std::vector<FSBoundaryFace>& bdryFaces,
-                   BoundaryExtraction& result,
                    const FS_intT markerBoundaryClipped);
 } // namespace FSFaceSeparator
 _FS_END_NAMESPACE
