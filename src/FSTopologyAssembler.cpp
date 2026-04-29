@@ -189,4 +189,4 @@ void FSTopologyAssembler::AppendUnclippedSurfaces(FSMesh& mesh,
   }
 }
 
-_FS_BEGIN_NAMESPACE
+_FS_END_NAMESPACE

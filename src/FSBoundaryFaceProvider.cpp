@@ -58,4 +58,4 @@ FSBoundaryFaceProvider::Extract(FSMesh& mesh,
 
   return result;
 }
-_FS_BEGIN_NAMESPACE
+_FS_END_NAMESPACE

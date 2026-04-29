@@ -210,7 +210,6 @@ FSIntArrayT FSCell2NodeBuilder::Cell2NodeInner(FSMeshEnums::CellType type)
       i++;
     }
   }
-  std::cout << "\n";
 
   return cell2Node;
 }

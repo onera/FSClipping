@@ -47,7 +47,7 @@ void FSClippingFace::computeGeometry()
   FSVec3 t2 = vertices_[2] - vertices_[0];
   normal_ = t1.CrossProduct(t2);
   FS_floatT cross_norm = normal_.L2Norm();
-  normal_ /= normal_.L2Norm();
+  normal_ /= cross_norm;
 
   FS_floatT eps = 1e-12 * std::max(t1.L2Norm(), t2.L2Norm());
   if(cross_norm < eps) {
