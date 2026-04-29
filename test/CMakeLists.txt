@@ -7,12 +7,17 @@ add_compile_definitions(FS_TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/test/Mesh")
 # implementation of the test infrastructure
 include(GoogleTest)
 
-add_executable(FSClippingTest FSClipping/FSClippingTestGeo.cpp 
-                              FSClipping/FSClippingTestBoundaryExtractor.cpp 
-                              FSClipping/FSClippingTestMatches.cpp 
-                              FSClipping/FSClippingTestCell2NodeBuilder.cpp 
+add_executable(FSClippingTest FSClipping/FSClippingTestGeo.cpp
+                              FSClipping/FSClippingTestBoundaryExtractor.cpp
+                              FSClipping/FSClippingTestMatches.cpp
+                              FSClipping/FSClippingTestCell2NodeBuilder.cpp
                               FSClipping/FSClippingTestPolyFaceBuilder.cpp
                               FSClipping/FSClippingTestInterface.cpp)
 target_link_libraries(FSClippingTest PUBLIC GTest::gtest_mpi_main fsclipping::fsclipping)
 set_property(TARGET FSClippingTest PROPERTY CROSSCOMPILING_EMULATOR '${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 1')
 gtest_discover_tests(FSClippingTest DISCOVERY_TIMEOUT 20 PROPERTIES LABELS "CppUnitTests")
+
+add_executable(FSClippingParallelTest FSClipping/FSClippingTestInterfaceParallel.cpp)
+target_link_libraries(FSClippingParallelTest PUBLIC GTest::gtest_mpi_main fsclipping::fsclipping)
+set_property(TARGET FSClippingParallelTest PROPERTY CROSSCOMPILING_EMULATOR '${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2')
+gtest_discover_tests(FSClippingParallelTest DISCOVERY_TIMEOUT 20 PROPERTIES LABELS "CppUnitTests")

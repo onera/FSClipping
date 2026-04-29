@@ -3,7 +3,7 @@
 
 #include <FSMesh.h>
 
-#include "FSClipping/FSClippingFace.h"
+#include "FSClipping/FSBoundaryFaceProvider.h"
 
 _FS_BEGIN_NAMESPACE
 
@@ -25,6 +25,10 @@ public:
 
   FSMesh BuildVolumeInterface(FSMesh& mesh1,
                               FSMesh& mesh2);
+
+  // Parallel variant: each process owns one mesh (clac embedded in the mesh).
+  // Extracts boundary faces locally and logs the count per process.
+  BoundaryExtraction BuildSurfaceInterfacePar(FSMesh& mesh, FS_intT marker);
 
 private:
   FSClac& clac1_;

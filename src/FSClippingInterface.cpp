@@ -4,6 +4,7 @@
 #include "FSClipping/FSMeshReconstruction.h"
 #include "FSClipping/FSTopologyAssembler.h"
 #include <FSMeshData.h>
+#include <iostream>
 
 _FS_BEGIN_NAMESPACE
 
@@ -87,4 +88,17 @@ FSMesh FSClippingInterface::BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh2)
   FSMeshReconstruction FSMeshReconstruction(clac1_);
   return FSMeshReconstruction.Build(mesh1.GetMeshData()->GetUnstructCells(), volumeTopology);
 }
+
+BoundaryExtraction FSClippingInterface::BuildSurfaceInterfacePar(FSMesh& mesh, FS_intT marker)
+{
+  FSMeshFaceExtractor extractor;
+  auto extraction = FSBoundaryFaceProvider::Extract(mesh, extractor, marker, tol_);
+
+  int worldRank = FSClac::WorldProcID();
+  std::cout << "[Proc " << worldRank << "] BuildSurfaceInterfacePar: extracted "
+            << extraction.faces.size() << " faces (marker " << marker << ")\n";
+
+  return extraction;
+}
+
 _FS_END_NAMESPACE

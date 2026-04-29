@@ -79,16 +79,21 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
       FS_intT faceIndexClippedBVHTree = outIndicesBVHTree(k);
       FSFaceMatch match;
       match.face1 = faceIndexSubject;
-      match.elemOwner1 = subject.topo().GetOwnerCellFSDMIndex(); // this is why we need the topo in FSClipping
-      match.faceOwner1 = subject.topo().GetNeighborCellFSDMIndex();
-      match.elemOwnerType1 = subject.topo()._faceFSDM->mOwner.mCellType;
-      match.faceOwnerType1 = subject.topo()._faceFSDM->mNeighbor.mCellType;
+      if(subject.topo()._faceFSDM) { // this is why we need the topo in FSClipping
+        match.elemOwner1 = subject.topo().GetOwnerCellFSDMIndex();
+        match.faceOwner1 = subject.topo().GetNeighborCellFSDMIndex();
+        match.elemOwnerType1 = subject.topo()._faceFSDM->mOwner.mCellType;
+        match.faceOwnerType1 = subject.topo()._faceFSDM->mNeighbor.mCellType;
+      }
 
       match.face2 = clippedFaces_[faceIndexClippedBVHTree].faceIndex();
-      match.elemOwner2 = clippedFaces_[faceIndexClippedBVHTree].topo().GetOwnerCellFSDMIndex();
-      match.faceOwner2 = clippedFaces_[faceIndexClippedBVHTree].topo().GetNeighborCellFSDMIndex();
-      match.elemOwnerType2 = clippedFaces_[faceIndexClippedBVHTree].topo()._faceFSDM->mOwner.mCellType;
-      match.faceOwnerType2 = clippedFaces_[faceIndexClippedBVHTree].topo()._faceFSDM->mNeighbor.mCellType;
+      if(clippedFaces_[faceIndexClippedBVHTree].topo()._faceFSDM) {
+        match.elemOwner2 = clippedFaces_[faceIndexClippedBVHTree].topo().GetOwnerCellFSDMIndex();
+        match.faceOwner2 = clippedFaces_[faceIndexClippedBVHTree].topo().GetNeighborCellFSDMIndex();
+        match.elemOwnerType2 = clippedFaces_[faceIndexClippedBVHTree].topo()._faceFSDM->mOwner.mCellType;
+        match.faceOwnerType2 = clippedFaces_[faceIndexClippedBVHTree].topo()._faceFSDM->mNeighbor.mCellType;
+      }
+
       if(ComputeMatch(subject, clippedFaces_[faceIndexClippedBVHTree],
                       match)) {
         match.clippedPoly3D =
