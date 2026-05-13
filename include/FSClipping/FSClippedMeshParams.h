@@ -92,14 +92,14 @@ public:
   //                          XML
   //
 
-   #ifdef FS_HAVE_LIBXML2
+#ifdef FS_HAVE_LIBXML2
   //   //! Init the entity from an XML node and its children.
   //   /*!
   //     \param doc the current XML document in which the node is included.
   //     \param node the current XML node to be used to init the object.
   //     \return True if the object could be initialized successfully, otherwise false.
   //   */
-     bool InitFromXML(xmlDocPtr doc, xmlNodePtr node) override;
+  bool InitFromXML(xmlDocPtr doc, xmlNodePtr node) override;
   //
   //   //! Convert the entity to an XML node.
   //   /*!
@@ -108,8 +108,8 @@ public:
   //     \param node the current XML node to be used to convert the object.
   //     \return True if the object could be converted successfully, otherwise false.
   //   */
-     bool ConvertToXML(xmlDocPtr doc, xmlNsPtr ns, xmlNodePtr node) override;
-   #endif
+  bool ConvertToXML(xmlDocPtr doc, xmlNsPtr ns, xmlNodePtr node) override;
+#endif
 
 
   // ==============================================================

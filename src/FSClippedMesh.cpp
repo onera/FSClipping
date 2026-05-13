@@ -89,7 +89,7 @@ bool FSClippedMesh::DoOp(FSDataManagerData*& data, const FSDataManagerOpParams* 
   // --- check input mesh ---
   FSMesh* meshOriginal1 = mData->GetMesh(mParams.mMeshKeyOriginal1, false);
   FSMesh* meshOriginal2 = mData->GetMesh(mParams.mMeshKeyOriginal2, false);
-  FSMesh* meshClipped = mData->GetMesh(mParams.mMeshKeyClipped, false);
+  FSMesh* meshClipped = mData->GetMesh(mParams.mMeshKeyClipped, true);
 
   if((!meshOriginal1->IsInitialized()) || (!meshOriginal1->IsUnstructured()) ||
      (!meshOriginal2->IsInitialized()) || (!meshOriginal2->IsUnstructured())) {
@@ -105,8 +105,8 @@ bool FSClippedMesh::DoOp(FSDataManagerData*& data, const FSDataManagerOpParams* 
     return false;
   }
 #endif
-  // meshClipped->Check();
-  // meshClipped->PrintInfo();
+  meshClipped->Check();
+  meshClipped->PrintInfo();
   timer.Stop();
   timer.Print(0, "FSClippedMesh: created clipped mesh:");
 
@@ -128,21 +128,23 @@ bool FSClippedMesh::GenerateClippedMesh(FSMesh& meshOriginal1, FSMesh& meshOrigi
      (!meshOriginal2.IsInitialized()) || (!meshOriginal2.IsUnstructured()))
     okFlag = false;
 
-  BoundaryExtraction boundaryExtraction1, boundaryExtraction2;
-  FSTopologyData meshClippedTopo;
-
-  FSUnstructMeshData& meshDataOrig1 = meshOriginal1.GetMeshData()->GetUnstructCells();
-  FSUnstructMeshData& meshDataOrig2 = meshOriginal2.GetMeshData()->GetUnstructCells();
-
-  const bool originalHasLocalNumbering1 = meshDataOrig1.HasLocalNumbering();
-  if(originalHasLocalNumbering1)
-    meshDataOrig1.CreateGlobalNumbering();
-
-  const bool originalHasLocalNumbering2 = meshDataOrig2.HasLocalNumbering();
-  if(originalHasLocalNumbering2)
-    meshDataOrig2.CreateGlobalNumbering();
-
   if(okFlag) {
+    // meshClipped.BeginInitialization();
+
+    FSUnstructMeshData& meshDataOrig1 = meshOriginal1.GetMeshData()->GetUnstructCells();
+    FSUnstructMeshData& meshDataOrig2 = meshOriginal2.GetMeshData()->GetUnstructCells();
+
+    const bool originalHasLocalNumbering1 = meshDataOrig1.HasLocalNumbering();
+    if(originalHasLocalNumbering1)
+      meshDataOrig1.CreateGlobalNumbering();
+
+    const bool originalHasLocalNumbering2 = meshDataOrig2.HasLocalNumbering();
+    if(originalHasLocalNumbering2)
+      meshDataOrig2.CreateGlobalNumbering();
+
+    BoundaryExtraction boundaryExtraction1, boundaryExtraction2;
+    FSTopologyData meshClippedTopo;
+
 
     okFlag = ExtractBoundaryFaces(meshOriginal1, meshOriginal2, boundaryExtraction1, boundaryExtraction2);
 
@@ -151,7 +153,6 @@ bool FSClippedMesh::GenerateClippedMesh(FSMesh& meshOriginal1, FSMesh& meshOrigi
 
     if(okFlag)
       okFlag = GenerateMesh(meshOriginal1, meshClippedTopo, meshClipped);
-
     if(!okFlag) {
       FSLog("Could not create mesh of sub-elements");
       return false;
@@ -219,7 +220,7 @@ bool FSClippedMesh::GenerateMesh(FSMesh& meshOriginal1, FSTopologyData& meshClip
   FSClac* originalClac = meshOriginal1.GetClac();
   FSUnstructMeshData& meshDataOrig1 = meshOriginal1.GetMeshData()->GetUnstructCells();
   FSMeshReconstruction meshReconstruction(*originalClac);
+  // meshReconstruction.BuildTmp(meshDataOrig1, clippedMesh, meshClippedTopo);
   clippedMesh = meshReconstruction.Build(meshDataOrig1, meshClippedTopo);
-
   return true;
 }

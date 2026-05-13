@@ -13,7 +13,7 @@ dm = FSDataManager(clac)
 # --- instantiate and register FSMesh objects
 fsmeshOrig1 = dm.GetMesh("original1")
 fsmeshOrig2 = dm.GetMesh("original2")
-fsmeshClipped = dm.GetMesh("clippedMesh", True)
+
 
 meshOps = (("ImportMeshTAU", {"MeshFilename"    : "/stck/aleprevo/code_dev/CODA_src/FSClipping/test/Mesh/input/cube_hexa_coarse.grid",}),
            "PrintInfo",
@@ -37,8 +37,7 @@ dataManagerOps = (("ClippedMesh", {"MeshKeyOrig1"   : "original1",
                                 }),)
 
 dm.DoOps(dataManagerOps) or FSError.PrintAndExit()
-
-#meshOps = ("PrintInfo", "Check")
-#fsmeshClipped.DoOps(meshOps) or FSError.PrintAndExit()
+print(dm.HasMesh("original1"))
+print(dm.HasMesh("clippedMesh"))
+fsmeshClipped = dm.GetMesh("clippedMesh")
 fsmeshClipped.PrintInfo()
-fsmeshOrig1.PrintInfo()
