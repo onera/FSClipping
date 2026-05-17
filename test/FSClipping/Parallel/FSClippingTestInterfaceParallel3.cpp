@@ -1,4 +1,5 @@
 #include "FSClipping/FSBoundaryFaceProvider.h"
+#include "FSClipping/FSClippingInterfacePar.h"
 #include "FSClipping/FSFaceExchange.h"
 #include "FSClipping/FSFaceMatcher.h"
 #include "FSClipping/FSTopologyAssembler.h"
@@ -16,9 +17,12 @@ _FS_BEGIN_NAMESPACE
 //
 //   Proc 0 : mesh1 owner → extracts boundary faces → FSFaceExchange::Send to proc 2
 //   Proc 1 : mesh2 owner → extracts boundary faces → FSFaceExchange::Send to proc 2
-//   Proc 2 : clipper     → FSFaceExchange::Receive both → FSFaceMatcher → matches
+//   Proc 2 : clipper     → Receive both → ComputeMatches → InjectTopology
+//                       → BuildSurfaceTopo
 //
-// No cross-mesh data ever lives on proc 0 or proc 1.
+// FSFaceExchange transmits both vertex geometry and FSFaceConnectivity
+// (owner/neighbor cell IDs and types) so that proc 2 can fully assemble
+// the surface topology without owning either mesh.
 TEST(FSClippingTestInterfaceParallel3, ComputeMatchesOnClipperProc)
 {
   FSClac globalClac(MPI_COMM_WORLD);
@@ -32,6 +36,7 @@ TEST(FSClippingTestInterfaceParallel3, ComputeMatchesOnClipperProc)
   const FS_floatT tol = 1e-8;
 
   if(meshID == 0) {
+    // --- Mesh 1 proc: extract boundary faces and send geometry + topology ---
     auto mesh = LoadMeshWithClac(clac, MeshPath("input/cube_hexa_coarse.grid"));
     FSMeshFaceExtractor extractor;
     auto extraction = FSBoundaryFaceProvider::Extract(mesh, extractor, 2, tol);
@@ -39,6 +44,7 @@ TEST(FSClippingTestInterfaceParallel3, ComputeMatchesOnClipperProc)
     std::cout << "[Proc 0] sent " << extraction.faces.size() << " faces (mesh1) to proc 2\n";
 
   } else if(meshID == 1) {
+    // --- Mesh 2 proc: extract boundary faces and send geometry + topology ---
     auto mesh = LoadMeshWithClac(clac, MeshPath("input/cube_hexa_fine.grid"));
     FSMeshFaceExtractor extractor;
     auto extraction = FSBoundaryFaceProvider::Extract(mesh, extractor, 1, tol);
@@ -46,18 +52,58 @@ TEST(FSClippingTestInterfaceParallel3, ComputeMatchesOnClipperProc)
     std::cout << "[Proc 1] sent " << extraction.faces.size() << " faces (mesh2) to proc 2\n";
 
   } else {
-    auto subjectFaces = FSFaceExchange::Receive(globalClac, 0);
-    auto clippedFaces = FSFaceExchange::Receive(globalClac, 1);
-    std::cout << "[Proc 2] received " << subjectFaces.size() << " subject faces (mesh1) and "
-              << clippedFaces.size() << " clipped faces (mesh2)\n";
+    // --- Clipper proc: receive both face sets, compute matches, build surface topo ---
+    auto subjectReceived = FSFaceExchange::Receive(globalClac, 0);
+    auto clippedReceived = FSFaceExchange::Receive(globalClac, 1);
 
-    // clac is a 1-proc communicator → BVH built and queried locally, no MPI
-    FSFaceMatcher matcher(clac, subjectFaces, clippedFaces, tol);
+    std::cout << "[Proc 2] received " << subjectReceived.faces.size()
+              << " subject faces (mesh1) and " << clippedReceived.faces.size()
+              << " clipped faces (mesh2)\n";
+
+    // --- ComputeMatches (clac is 1-proc → BVH purely local) ---
+    FSFaceMatcher matcher(clac, subjectReceived.faces, clippedReceived.faces, tol);
     std::vector<FSFaceMatch> matches;
     matcher.ComputeMatches(matches);
     std::cout << "[Proc 2] computed " << matches.size() << " face matches\n";
-    EXPECT_GT(matches.size(), 0u);
+    ASSERT_GT(matches.size(), 0u);
+
+    // --- Inject FSDM topology into matches so BuildSurfaceTopo has cell IDs ---
+    FSFaceExchange::InjectTopology(matches, subjectReceived);
+
+    // --- Build surface topology (faceKeys not needed for surface-only) ---
+    FSTopologyAssembler assembler(tol);
+    const std::unordered_set<GeomFaceKey, GeomFaceKeyHash> emptyFaceKeys;
+    FSTopologyData surfaceTopo = assembler.BuildSurfaceTopo(matches, emptyFaceKeys);
+
+    std::cout << "[Proc 2] surface topo: " << surfaceTopo.globalCoords.size()
+              << " nodes\n";
+
+    EXPECT_GT(surfaceTopo.globalCoords.size(), 0u);
   }
+}
+
+TEST(FSCLippingTestInterfaceParllel3, SurfaceInterface)
+{
+  FSClac globalClac(MPI_COMM_WORLD);
+  FS_intT meshID = globalClac.GetProcID();
+  FSClac clac;
+  globalClac.DivideIntoGroups(meshID, clac);
+
+  FSMesh mesh;
+  const FS_floatT tol = 1e-8;
+  FS_intT marker;
+
+  if(meshID == 0) {
+    mesh = LoadMeshWithClac(clac, MeshPath("input/cube_hexa_coarse.grid"));
+    marker = 2;
+
+  } else if(meshID == 1) {
+    mesh = LoadMeshWithClac(clac, MeshPath("input/cube_hexa_fine.grid"));
+    marker = 1;
+  }
+
+  FSClippingInterfacePar surfaceInterface(globalClac, clac, tol, marker);
+  surfaceInterface.BuildSurfaceInterface(mesh);
 }
 
 _FS_END_NAMESPACE

@@ -18,17 +18,13 @@ public:
                                              clac2_(clac2),
                                              tol_(tol),
                                              boundaryMarkerMesh1_(markerMesh1),
-                                             boundaryMarkerMesh2_(markerMesh2) {};
+                                             boundaryMarkerMesh2_(markerMesh2){};
 
   FSMesh BuildSurfaceInterface(FSMesh& mesh1,
                                FSMesh& mesh2);
 
   FSMesh BuildVolumeInterface(FSMesh& mesh1,
                               FSMesh& mesh2);
-
-  // Parallel variant: each process owns one mesh (clac embedded in the mesh).
-  // Extracts boundary faces locally and logs the count per process.
-  BoundaryExtraction BuildSurfaceInterfacePar(FSMesh& mesh, FS_intT marker);
 
 private:
   FSClac& clac1_;
