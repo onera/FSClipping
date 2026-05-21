@@ -33,12 +33,18 @@ void Send(FSClac& clac, FS_intT destProc, const std::vector<FSClippingFace>& fac
 // Receive and unpack faces and their FSDM connectivity from sourceProc.
 ReceivedFaces Receive(FSClac& clac, FS_intT sourceProc);
 
-// Inject FSDM connectivity into match topology fields (elemOwner1, elemOwnerType1,
-// faceOwner1, faceOwnerType1) using the connectivity received alongside subjectFaces.
-// Must be called after ComputeMatches and before BuildSurfaceTopo.
-void InjectTopology(std::vector<FSFaceMatch>& matches, const ReceivedFaces& subjectReceived);
-
 } // namespace FSFaceExchange
+
+namespace FSMatchExchange {
+
+// Pack face geometry + FSDM connectivity into clac's send buffer and transmit
+// to destProc. destProc must call Receive(clac, thisProc).
+void Send(FSClac& clac, FS_intT destProc, const std::vector<FSFaceMatch>& matches);
+
+// Receive and unpack faces and their FSDM connectivity from sourceProc.
+std::vector<FSFaceMatch> Receive(FSClac& clac, FS_intT sourceProc);
+
+} // namespace FSMatchExchange
 
 _FS_END_NAMESPACE
 

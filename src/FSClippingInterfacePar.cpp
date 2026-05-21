@@ -1,6 +1,8 @@
 #include "FSClipping/FSClippingInterfacePar.h"
 #include "FSClipping/FSFaceExchange.h"
+#include "FSClipping/FSMeshReconstruction.h"
 #include "FSClipping/FSTopologyAssembler.h"
+#include <FSMeshData.h>
 
 _FS_BEGIN_NAMESPACE
 
@@ -20,6 +22,16 @@ FSMesh FSClippingInterfacePar::BuildSurfaceInterface(FSMesh& mesh)
     auto boundaryExtraction = FSBoundaryFaceProvider::Extract(mesh, extraction, boundaryMarkerMesh_, tol_);
 
     FSFaceExchange::Send(globalClac_, 2, boundaryExtraction.faces);
+
+    std::vector<FSFaceMatch> matches = FSMatchExchange::Receive(globalClac_, 2);
+
+    FSTopologyAssembler topologyAssembler(tol_);
+    FSTopologyData surfaceTopology = topologyAssembler.BuildSurfaceTopo(matches, boundaryExtraction.faceKeys);
+    if(meshId == 0) {
+      FSMeshReconstruction meshReconstruction(clac_);
+      meshReconstruction.Build(mesh.GetMeshData()->GetUnstructCells(), surfaceTopology);
+    }
+    return mesh;
   }
 
   else {
@@ -31,11 +43,15 @@ FSMesh FSClippingInterfacePar::BuildSurfaceInterface(FSMesh& mesh)
     std::vector<FSFaceMatch> matches;
     matcher.ComputeMatches(matches);
 
-    // --- Build surface topology (faceKeys not needed for surface-only) ---
-    FSTopologyAssembler assembler(tol_);
-    const std::unordered_set<GeomFaceKey, GeomFaceKeyHash> emptyFaceKeys;
-    FSTopologyData surfaceTopo = assembler.BuildSurfaceTopo(matches, emptyFaceKeys);
+    FSMatchExchange::Send(globalClac_, 0, matches);
+    FSMatchExchange::Send(globalClac_, 1, matches);
+    // // - Build surface topology (faceKeys not needed for surface-only) ---
+    // FSTopologyAssembler assembler(tol_);
+    // const std::unordered_set<GeomFaceKey, GeomFaceKeyHash> emptyFaceKeys;
+    // FSTopologyData surfaceTopo = assembler.BuildSurfaceTopo(matches, emptyFaceKeys);
   }
+
+
 
   return mesh;
 }

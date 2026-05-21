@@ -18,7 +18,8 @@ set_property(TARGET FSClippingTest PROPERTY CROSSCOMPILING_EMULATOR '${MPIEXEC_E
 gtest_discover_tests(FSClippingTest DISCOVERY_TIMEOUT 20 PROPERTIES LABELS "CppUnitTests")
 
 # Parallel tests — 3 procs (clipper proc receives both face sets and computes matches)
-add_executable(FSClippingParallelTest FSClipping/Parallel/FSClippingTestInterfaceParallel3.cpp)
+add_executable(FSClippingParallelTest FSClipping/Parallel/FSClippingTestInterfaceParallel3.cpp
+                                      FSClipping/Parallel/FSClippingTestMatchesSendReceive.cpp)
 target_link_libraries(FSClippingParallelTest PUBLIC GTest::gtest_mpi_main fsclipping::fsclipping)
 target_include_directories(FSClippingParallelTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/FSClipping)
 set_property(TARGET FSClippingParallelTest PROPERTY CROSSCOMPILING_EMULATOR '${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 3')
