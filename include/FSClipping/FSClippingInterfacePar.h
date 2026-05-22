@@ -3,7 +3,6 @@
 
 #include <FSMesh.h>
 
-#include "FSClipping/FSBoundaryFaceProvider.h"
 
 _FS_BEGIN_NAMESPACE
 
@@ -16,9 +15,11 @@ public:
                          FS_intT boundaryMarkerMesh) : globalClac_(globalClac),
                                                        clac_(clac),
                                                        tol_(tol),
-                                                       boundaryMarkerMesh_(boundaryMarkerMesh){};
+                                                       boundaryMarkerMesh_(boundaryMarkerMesh) {};
 
   FSMesh BuildSurfaceInterface(FSMesh& mesh);
+
+  FSMesh BuildVolumeInterface(FSMesh& mesh);
 
 private:
   FSClac& globalClac_;

@@ -1,5 +1,3 @@
-#include "FSError.h"
-
 #include "FSClipping/FSClippingUtil.h"
 #include "FSClipping/FSFaceMatcher.h"
 
@@ -202,6 +200,17 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
         outMatches.emplace_back(std::move(match));
       }
     }
+  }
+}
+
+void FSFaceMatcher::InvertMatches(std::vector<FSFaceMatch>& matches)
+{
+  for(auto& m : matches) {
+    std::swap(m.face1, m.face2);
+    std::swap(m.elemOwner1, m.elemOwner2);
+    std::swap(m.elemOwnerType1, m.elemOwnerType2);
+    std::swap(m.faceOwner1, m.faceOwner2);
+    std::swap(m.faceOwnerType1, m.faceOwnerType2);
   }
 }
 

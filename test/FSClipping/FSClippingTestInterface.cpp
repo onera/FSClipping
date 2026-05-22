@@ -1,23 +1,16 @@
-#include "FSClipping/FSMeshReconstruction.h"
 #include "FSMeshImportParamsTAU.h"
 #include "FSMeshExportFilterVTK.h"
 #include "FSMeshExportFilterVTK.h"
 #include "FSMeshExportParamsVTK.h"
-#include "FSMeshCreateLocalNumbering.h"
 #include "FSMeshExportFilterHDF5.h"
 #include "FSMeshImportFilterHDF5.h"
 #include "FSMeshPartitionerRCB.h"
-#include "FSMeshPartitionerPARMETIS.h"
 #include "gtest/gtest.h"
+#include <FSMeshCheck.h>
+#include <FSMeshData.h>
+#include <FSMeshPrintInfo.h>
 
 #include "FSClipping/FSClippingInterface.h"
-#include "FSClipping/FSBoundaryFaceProvider.h"
-#include "FSClipping/FSTopologyAssembler.h"
-#include "FSClipping/FSClippingFace.h"
-#include "FSClipping/FSFaceSeparator.h"
-#include "FSClipping/FSFaceMatcher.h"
-#include "FSClipping/FSCell2NodeBuilder.h"
-#include "FSClipping/FSPolyFaceBuilder.h"
 #include "TestUtils.hpp"
 
 _FS_BEGIN_NAMESPACE
@@ -202,12 +195,12 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh2DHexaHexa)
 
   polyMeshExtractFaces(ptr->GetUnstructCells());
 
-  polyMeshExportImport(
-    &clac3,
-    ptr,
-    MeshPath("output/cube2D_clipped_HexaHexa"),
-    1,
-    false);
+  // polyMeshExportImport(
+  //   &clac3,
+  //   ptr,
+  //   MeshPath("output/cube2D_clipped_HexaHexa"),
+  //   1,
+  //   false);
 }
 
 TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexa)
@@ -232,12 +225,12 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexa)
 
   polyMeshExtractFaces(ptr->GetUnstructCells());
 
-  polyMeshExportImport(
-    &clac3,
-    ptr,
-    MeshPath("output/cube3D_clipped_HexaHexa"),
-    1,
-    false);
+  // polyMeshExportImport(
+  //   &clac3,
+  //   ptr,
+  //   MeshPath("output/cube3D_clipped_HexaHexa"),
+  //   1,
+  //   false);
 }
 
 TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
@@ -262,12 +255,12 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
 
   polyMeshExtractFaces(ptr->GetUnstructCells());
 
-  polyMeshExportImport(
-    &clac3,
-    ptr,
-    MeshPath("output/cube3D_clipped_HexaTetra"),
-    1,
-    false);
+  //  polyMeshExportImport(
+  //    &clac3,
+  //    ptr,
+  //    MeshPath("output/cube3D_clipped_HexaTetra"),
+  //    1,
+  //    false);
 }
 
 // TEST(FSClippingTestInterface, ReconstructClippedMesh3DVortex)

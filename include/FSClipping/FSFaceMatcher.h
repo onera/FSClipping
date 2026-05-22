@@ -78,6 +78,8 @@ public:
 
   void ComputeMatches(std::vector<FSFaceMatch>& outMatches);
 
+  void InvertMatches(std::vector<FSFaceMatch>& matches);
+
 private:
   const std::vector<FSClippingFace>& subjectFaces_;
   const std::vector<FSClippingFace>& clippedFaces_;
