@@ -112,7 +112,8 @@ public:
   static BoundaryExtraction Extract(FSMesh& mesh,
                                     FSMeshFaceExtractor& ex,
                                     FS_intT boundaryMarker,
-                                    FS_floatT tol);
+                                    FS_floatT tol,
+                                    bool matchRemoteFaces = true);
 };
 
 

@@ -40,8 +40,12 @@
               paramsXML += "<%s>%s</%s>\n" % (key, str(params[key]), key)
               del params[key]
 
-      for key in ("MeshKey Clipped",
-                  "MeshKeyClipped"):
+      for key in ("MeshKeyClipped1",):
+          if key in params:
+              paramsXML += "<%s>%s</%s>\n" % (key, str(params[key]), key)
+              del params[key]
+
+      for key in ("MeshKeyClipped2",):
           if key in params:
               paramsXML += "<%s>%s</%s>\n" % (key, str(params[key]), key)
               del params[key]

@@ -20,7 +20,7 @@ FSMesh FSClippingInterfacePar::BuildSurfaceInterface(FSMesh& mesh)
   if(meshId == 0 || meshId == 1) {
 
     FSMeshFaceExtractor extraction;
-    auto boundaryExtraction = FSBoundaryFaceProvider::Extract(mesh, extraction, boundaryMarkerMesh_, tol_);
+    auto boundaryExtraction = FSBoundaryFaceProvider::Extract(mesh, extraction, boundaryMarkerMesh_, tol_, false);
 
     FSFaceExchange::Send(globalClac_, 2, boundaryExtraction.faces);
 

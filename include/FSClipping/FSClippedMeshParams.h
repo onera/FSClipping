@@ -37,7 +37,10 @@ public:
   FSString mMeshKeyOriginal2;
 
   //! The mesh key of the clipped mesh1.
-  FSString mMeshKeyClipped;
+  FSString mMeshKeyClipped1;
+
+  //! The mesh key of the clipped mesh2.
+  FSString mMeshKeyClipped2;
   //@}
 
   // --- Class Methods ---

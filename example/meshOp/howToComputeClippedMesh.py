@@ -6,39 +6,61 @@ from FSDataManager import FSDataManager
 
 import FSClipping
 
-# --- instantiate clac and data manager
+# --- parallel setup: 3 processes required
+# proc 0 = subject mesh (mesh1), proc 1 = clipper mesh (mesh2), proc 2 = matcher
+globalClac = FSClac()
+assert globalClac.GetNProcs() == 3, "3 MPI processes required"
+meshID = globalClac.GetProcID()
 clac = FSClac()
-dm = FSDataManager(clac)
+globalClac.DivideIntoGroups(meshID, clac)
 
-# --- instantiate and register FSMesh objects
-fsmeshOrig1 = dm.GetMesh("original1")
-fsmeshOrig2 = dm.GetMesh("original2")
-fsmeshClipped = dm.GetMesh("clippedMesh", True)
+# --- instantiate data manager with global communicator
+dm = FSDataManager(globalClac)
 
-meshOps = (("ImportMeshTAU", {"MeshFilename"    : "/stck/aleprevo/code_dev/CODA_src/FSClipping/test/Mesh/input/cube_hexa_coarse.grid",}),
-           "PrintInfo",
-           "Check",
-          )
-fsmeshOrig1.DoOps(meshOps) or FSError.PrintAndExit()
+# --- load meshes on their respective processes
+if meshID == 0:
+    fsmeshOrig1 = dm.GetMesh("original1", clac)
+    meshOps = (("ImportMeshTAU", {"MeshFilename": "test/Mesh/input/cube_hexa_coarse.grid"}),
+               "CreateLocalNumbering",
+               "PrintInfo",
+               "Check",
+              )
+    fsmeshOrig1.DoOps(meshOps) or FSError.PrintAndExit()
 
-meshOps = (("ImportMeshTAU", {"MeshFilename"    : "/stck/aleprevo/code_dev/CODA_src/FSClipping/test/Mesh/input/cube_tetra_fine.grid",}),
-           "PrintInfo",
-           "Check",
-          )
+if meshID == 1:
+    fsmeshOrig2 = dm.GetMesh("original2", clac)
+    meshOps = (("ImportMeshTAU", {"MeshFilename": "test/Mesh/input/cube_hexa_fine.grid"}),
+               "CreateLocalNumbering",
+               "PrintInfo",
+               "Check",
+              )
+    fsmeshOrig2.DoOps(meshOps) or FSError.PrintAndExit()
 
-fsmeshOrig2.DoOps(meshOps) or FSError.PrintAndExit()
 
-dataManagerOps = (("ClippedMesh", {"MeshKeyOrig1"   : "original1",
-                                   "MeshKeyOrig2"   : "original2",
-                                   "MeshKeyClipped" : "clippedMesh",
-                                   "ClippedMarker1"        : 2,
-                                   "ClippedMarker2"        : 1,
-                                   "Tolerance"      : 1e-8,
+# --- run parallel clipping operation
+dataManagerOps = (("ClippedMesh", {"MeshKeyOrig1"      : "original1",
+                                   "MeshKeyOrig2"      : "original2",
+                                   "MeshKeyClipped1"   : "clippedMesh1",
+                                   "MeshKeyClipped2"   : "clippedMesh2",
+                                   "ClippedMarker1"    : 2,
+                                   "ClippedMarker2"    : 1,
+                                   "Tolerance"         : 1e-8,
                                 }),)
 
 dm.DoOps(dataManagerOps) or FSError.PrintAndExit()
 
-#meshOps = ("PrintInfo", "Check")
-#fsmeshClipped.DoOps(meshOps) or FSError.PrintAndExit()
-fsmeshClipped.PrintInfo()
-fsmeshOrig1.PrintInfo()
+if meshID == 0:
+   if(dm.HasMesh("clippedMesh1")):
+       clippedMesh1 = dm.GetMesh("clippedMesh1", False)
+       clippedMesh1.PrintInfo()
+   else:
+      FSError.PrintAndExit()
+
+if meshID == 1:
+   if(dm.HasMesh("clippedMesh2")):
+       clippedMesh1 = dm.GetMesh("clippedMesh2", False)
+       clippedMesh1.PrintInfo()
+   else:
+      FSError.PrintAndExit()
+
+
