@@ -130,11 +130,11 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1,
   const FS_floatT area2 = std::abs(FSClippingUtil::PolygonSignedArea(poly2));
 
 
-  FSClippingUtil::RemoveDuplicatePoints(clip, 100 * tol_);
+  FSClippingUtil::RemoveDuplicatePoints(clip, tol_);
   if(clip.size() < 3)
     return false;
 
-  if(FSClippingUtil::ArePointsColinear2D(clip, 100 * tol_))
+  if(FSClippingUtil::ArePointsColinear2D(clip, tol_))
     return false;
 
   if(areaClip < tol_)
@@ -168,9 +168,10 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
     FS_intT n = bvhClipped_.FindBoxesIntersectingWithBox(
       subject.boundingBox().boxMinMax, outIndicesBVHTree);
     FS_intT faceIndexSubject = subject.faceIndex();
-    // here we can have potential face index clipped which are on other proc. We
-    // need to acess all of them on this proc for now we'll supose that we are
-    // on sequential
+    // std::cout << "Face " << subject.faceIndex() << " found " << n << "Boxes Intersecting provided by the face " << faceIndexSubject << std::endl;
+    //  here we can have potential face index clipped which are on other proc. We
+    //  need to acess all of them on this proc for now we'll supose that we are
+    //  on sequential
     outIndicesBVHTree.Resize(n);
 
 

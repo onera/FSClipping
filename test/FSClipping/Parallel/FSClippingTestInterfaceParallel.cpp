@@ -85,7 +85,7 @@ void CheckMesh(FSClac& clac, FSMeshData* meshData)
   ASSERT_TRUE(meshCheck.DoOp(meshData, &dummy)) << "Check failed";
 }
 
-TEST(FSCLippingTestInterfaceParllel3Proc, SurfaceInterface)
+TEST(FSCLippingTestInterfacePar, SurfaceInterface)
 {
   FSClac globalClac(MPI_COMM_WORLD);
   FS_intT meshID = globalClac.GetProcID();
@@ -116,7 +116,7 @@ TEST(FSCLippingTestInterfaceParllel3Proc, SurfaceInterface)
   }
 }
 
-TEST(FSCLippingTestInterfaceParllel3Proc, VolumeInterface)
+TEST(FSCLippingTestInterfacePar, VolumeInterface)
 {
   FSClac globalClac(MPI_COMM_WORLD);
   FS_intT meshID = globalClac.GetProcID();
@@ -135,6 +135,37 @@ TEST(FSCLippingTestInterfaceParllel3Proc, VolumeInterface)
   if(meshID == 0) {
     mesh = LoadMeshWithClac(clac, MeshPath("input/cube_hexa_coarse.grid"));
     marker = 2;
+  }
+
+  FSClippingInterfacePar clip(globalClac, clac, tol, marker);
+  FSMesh meshClipped = clip.BuildVolumeInterface(mesh);
+
+  if(meshID == 0 || meshID == 1) {
+    FSMeshData* ptr = meshClipped.GetMeshData();
+    CheckMesh(clac, ptr);
+    polyMeshRepartition(&clac, ptr);
+  }
+}
+
+TEST(FSClippingTestInterfacePar, ReconstructClippedMeshRotorStator)
+{
+  FSClac globalClac(MPI_COMM_WORLD);
+  FS_intT meshID = globalClac.GetProcID();
+  FSClac clac;
+  globalClac.DivideIntoGroups(meshID, clac);
+
+  FSMesh mesh;
+  const FS_floatT tol = 1e-10;
+  FS_intT marker = -1;
+
+  if(meshID == 1) {
+    mesh = LoadMeshWithClac(clac, MeshPath("input/rotor360_coarse_NJ2.grid"));
+    marker = 3;
+  }
+
+  if(meshID == 0) {
+    mesh = LoadMeshWithClac(clac, MeshPath("input/stator360_coarse_NJ2.grid"));
+    marker = 3;
   }
 
   FSClippingInterfacePar clip(globalClac, clac, tol, marker);
