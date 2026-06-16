@@ -7,15 +7,19 @@ BoundaryExtraction
 FSBoundaryFaceProvider::Extract(FSMesh& mesh,
                                 FSMeshFaceExtractor& ex,
                                 FS_intT boundaryMarker,
-                                FS_floatT tol)
+                                FS_floatT tol,
+                                bool matchRemoteFaces)
 {
 
-  mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+  // mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
   assert(mesh.GetMeshData()->GetUnstructCells().HasLocalNumbering());
   BoundaryExtraction result;
 
-  ex.PrepareFaceConnectivity(mesh.GetMeshData()->GetUnstructCells(), true,
+  ex.PrepareFaceConnectivity(mesh.GetMeshData()->GetUnstructCells(), matchRemoteFaces,
                              false);
+  auto clac = mesh.GetClac();
+  FS_intT meshId = clac->GetWorldProcID();
+
   ex.PrepareFaceNodeCoordinates(FSQuantityDescArrayT());
 
   // The FSDM domain local bdry faces (owning element (FSDM volume cell) also

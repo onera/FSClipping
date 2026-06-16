@@ -27,6 +27,9 @@ struct FSTopologyData {
 
   FSCellType2IntArrayT cellParent;
   FSCellType2IntArrayT cellParentType;
+
+  void Send(FSClac& clac, FS_intT destProc);
+  void Received(FSClac& clac, FS_intT sourceProc);
 };
 
 
@@ -36,7 +39,7 @@ class FSTopologyAssembler
 
 public:
   explicit FSTopologyAssembler(FS_floatT tol) : tol_(tol),
-                                                cell2NodeBuilder_(FSCell2NodeBuilder(tol)) {};
+                                                cell2NodeBuilder_(FSCell2NodeBuilder(tol)){};
 
   FSTopologyData BuildSurfaceTopo(const std::vector<FSFaceMatch>& matches,
                                   const std::unordered_set<GeomFaceKey, GeomFaceKeyHash>& faceKeys);

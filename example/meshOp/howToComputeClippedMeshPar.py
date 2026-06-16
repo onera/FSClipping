@@ -9,27 +9,40 @@ import FSClipping
 # --- parallel setup: 3 processes required
 # proc 0 = subject mesh (mesh1), proc 1 = clipper mesh (mesh2), proc 2 = matcher
 globalClac = FSClac()
-assert globalClac.GetNProcs() == 3, "3 MPI processes required"
-meshID = globalClac.GetProcID()
+procId = globalClac.GetProcID()
+meshId = -1
+if(procId) :
+    if(procId%2):
+        meshId = 0
+    else:
+        meshId = 1
+else:
+    meshId = 2
+if(meshId < 0):
+    FSError.PrintAndExit()
+
+print("MeshId " + str(meshId) + " get proc " + str(procId))
 clac = FSClac()
-globalClac.DivideIntoGroups(meshID, clac)
+globalClac.DivideIntoGroups(meshId, clac)
 
 # --- instantiate data manager with global communicator
 dm = FSDataManager(globalClac)
 
 # --- load meshes on their respective processes
-if meshID == 0:
+if meshId == 0:
     fsmeshOrig1 = dm.GetMesh("original1", clac)
-    meshOps = (("ImportMeshTAU", {"MeshFilename": "test/Mesh/input/cube_hexa_coarse.grid"}),
+    meshOps = (("ImportMeshTAU", {"MeshFilename": "test/Mesh/input/cube_hexa_fine.grid"}),
+               "RepartitionMeshRCB",
                "CreateLocalNumbering",
                "PrintInfo",
                "Check",
               )
     fsmeshOrig1.DoOps(meshOps) or FSError.PrintAndExit()
 
-if meshID == 1:
+if meshId == 1:
     fsmeshOrig2 = dm.GetMesh("original2", clac)
-    meshOps = (("ImportMeshTAU", {"MeshFilename": "test/Mesh/input/cube_hexa_fine.grid"}),
+    meshOps = (("ImportMeshTAU", {"MeshFilename": "test/Mesh/input/cube_tetra_fine.grid"}),
+               "RepartitionMeshRCB",
                "CreateLocalNumbering",
                "PrintInfo",
                "Check",
@@ -62,5 +75,24 @@ if meshID == 1:
        clippedMesh1.PrintInfo()
    else:
       FSError.PrintAndExit()
+
+#if meshId == 0:
+#    meshOps = (("ExportMeshVTK", {"Filename"          : "meshHexa",
+#                              "Format"            : "RAW",
+#                              "FilePerProcess"    : True,
+#                              "PrefixDatasetName" : True,
+#                              "SplitDataset"      : True,
+#                              "ExtractVectors"    : True}),)
+#    fsmeshOrig1.DoOps(meshOps)
+#
+#if meshId == 1:
+#    meshOps = (("ExportMeshVTK", {"Filename"          : "meshTetra",
+#                              "Format"            : "RAW",
+#                              "FilePerProcess"    : True,
+#                              "PrefixDatasetName" : True,
+#                              "SplitDataset"      : True,
+#                              "ExtractVectors"    : True}),)
+#    fsmeshOrig2.DoOps(meshOps)
+
 
 

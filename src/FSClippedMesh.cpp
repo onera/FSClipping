@@ -1,6 +1,8 @@
 #include "FSClipping/FSClippedMesh.h"
 #include "FSClipping/FSClippedMeshParams.h"
 
+#include "FSClipping/FSFaceExchange.h"
+#include "FSClipping/FSFaceMatcher.h"
 #include "FSClipping/FSMeshReconstruction.h"
 #include "FSDataManagerData.h"
 #include "FSTimer.h"
@@ -58,7 +60,6 @@ FSString FSClippedMesh::GetClassName() const
 
 bool FSClippedMesh::DoOp(FSDataManagerData*& data, const FSDataManagerOpParams* params)
 {
-  bool okFlag = true;
   const FSClippedMeshParams* clippedMeshParams = dynamic_cast<const FSClippedMeshParams*>(params);
 
   if(clippedMeshParams == nullptr) {
@@ -66,148 +67,131 @@ bool FSClippedMesh::DoOp(FSDataManagerData*& data, const FSDataManagerOpParams* 
     return false;
   }
 
-  // --- timer ---
+  if(mClac->GetNProcs() != 3)
+    FSError.SetAndPrintAndExit("FSClippedMesh: 3 MPI processes required");
+
   FSTimer timer(mClac, sTimerLevel);
   timer.Start();
 
-  mData = data; // copy pointer
+  const FS_intT meshId = mClac->GetProcID();
+  FSClac meshClac(MPI_COMM_SELF);
 
-  if(mData == nullptr) {
-    FSError("FSLinearSubElementsMesh: data manager data NOT initialized.");
+  mData = data;
+
+  // proc 2 (matcher) has no DataManager data — only procs 0 and 1 require it
+  if(meshId != 2 && mData == nullptr) {
+    FSError("FSClippedMesh: data manager data NOT initialized.");
     return false;
   }
 
-  /// --- set parameters ---
   mParams = *clippedMeshParams;
 
   if(!mParams.IsInitialized())
     return false;
 
-  if(!mData->HasMesh(mParams.mMeshKeyOriginal1) || !mData->HasMesh(mParams.mMeshKeyOriginal2))
-    return false;
-
-  // --- check input mesh ---
-  FSMesh* meshOriginal1 = mData->GetMesh(mParams.mMeshKeyOriginal1, false);
-  FSMesh* meshOriginal2 = mData->GetMesh(mParams.mMeshKeyOriginal2, false);
-  FSMesh* meshClipped = mData->GetMesh(mParams.mMeshKeyClipped, true);
-
-  if((!meshOriginal1->IsInitialized()) || (!meshOriginal1->IsUnstructured()) ||
-     (!meshOriginal2->IsInitialized()) || (!meshOriginal2->IsUnstructured())) {
-    FSError("FSClippedMesh: original mesh NOT initialized.");
-    return false;
-  }
-
-  okFlag = GenerateClippedMesh(*meshOriginal1, *meshOriginal2, *meshClipped);
-
-#ifdef FS_SAFETYCHECKS
-  if(!meshClipped->Check()) {
-    FSError("FSLinearSubElementsMesh: resulting mesh of sub-elements is invalid.");
-    return false;
-  }
-#endif
-  meshClipped->Check();
-  meshClipped->PrintInfo();
+  const bool okFlag = GenerateClippedMesh(meshId, meshClac);
   timer.Stop();
   timer.Print(0, "FSClippedMesh: created clipped mesh:");
-
   return okFlag;
 }
 
 //-----------------------------------------------------------------------------
 //
-//  GenerateSubElementsMesh
+//  GenerateClippedMesh
 //
 
-bool FSClippedMesh::GenerateClippedMesh(FSMesh& meshOriginal1, FSMesh& meshOriginal2, FSMesh& meshClipped)
+bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId, FSClac& meshClac)
 {
+  if(meshId == 0 || meshId == 1) {
 
-  bool okFlag = true;
+    const FS_intT marker = (meshId == 0) ? mParams.mMarker1 : mParams.mMarker2;
+    const FSString& meshKey = (meshId == 0) ? mParams.mMeshKeyOriginal1 : mParams.mMeshKeyOriginal2;
+    const FSString& clippedKey = (meshId == 0) ? mParams.mMeshKeyClipped1 : mParams.mMeshKeyClipped2;
 
-  // --- check input mesh ---
-  if((!meshOriginal1.IsInitialized()) || (!meshOriginal1.IsUnstructured()) ||
-     (!meshOriginal2.IsInitialized()) || (!meshOriginal2.IsUnstructured()))
-    okFlag = false;
+    if(!mData->HasMesh(meshKey))
+      return false;
+    FSMesh* mesh = mData->GetMesh(meshKey, false);
+    FSMesh* meshClipped = mData->GetMesh(clippedKey, mesh->GetClac(), true);
 
-  if(okFlag) {
-    // meshClipped.BeginInitialization();
+    BoundaryExtraction be;
+    ExtractBoundaryFaces(*mesh, marker, be);
 
-    FSUnstructMeshData& meshDataOrig1 = meshOriginal1.GetMeshData()->GetUnstructCells();
-    FSUnstructMeshData& meshDataOrig2 = meshOriginal2.GetMeshData()->GetUnstructCells();
+    FSFaceExchange::Send(*mClac, 2, be.faces);
+    const std::vector<FSFaceMatch> matches = FSMatchExchange::Receive(*mClac, 2);
 
-    const bool originalHasLocalNumbering1 = meshDataOrig1.HasLocalNumbering();
-    if(originalHasLocalNumbering1)
-      meshDataOrig1.CreateGlobalNumbering();
-
-    const bool originalHasLocalNumbering2 = meshDataOrig2.HasLocalNumbering();
-    if(originalHasLocalNumbering2)
-      meshDataOrig2.CreateGlobalNumbering();
-
-    BoundaryExtraction boundaryExtraction1, boundaryExtraction2;
     FSTopologyData meshClippedTopo;
-
-
-    okFlag = ExtractBoundaryFaces(meshOriginal1, meshOriginal2, boundaryExtraction1, boundaryExtraction2);
-
-    if(okFlag)
-      okFlag = GenerateMeshClippedTopo(meshOriginal1, meshOriginal2, boundaryExtraction1, boundaryExtraction2, meshClippedTopo);
-
-    if(okFlag)
-      okFlag = GenerateMesh(meshOriginal1, meshClippedTopo, meshClipped);
-    if(!okFlag) {
-      FSLog("Could not create mesh of sub-elements");
+    if(!GenerateMeshClippedTopo(*mesh, be, matches, meshClippedTopo))
+      return false;
+    if(!GenerateMesh(*mesh, meshClippedTopo, *meshClipped))
+      return false;
+#ifdef FS_SAFETYCHECKS
+    if(!meshClipped->Check()) {
+      FSError("FSClippedMesh: resulting mesh of sub-elements is invalid.");
       return false;
     }
+#endif
+
+  } else { // meshId == 2
+
+    auto subjectReceived = FSFaceExchange::Receive(*mClac, 0);
+    auto clippedReceived = FSFaceExchange::Receive(*mClac, 1);
+
+    FSFaceMatcher matcher(meshClac, subjectReceived.faces, clippedReceived.faces, mParams.mTol);
+    std::vector<FSFaceMatch> matches;
+    matcher.ComputeMatches(matches);
+    FSMatchExchange::Send(*mClac, 0, matches);
+    matcher.InvertMatches(matches);
+    FSMatchExchange::Send(*mClac, 1, matches);
   }
-  return okFlag;
+
+  return true;
 }
 
-bool FSClippedMesh::ExtractBoundaryFaces(FSMesh& meshOriginal1, FSMesh& meshOriginal2, BoundaryExtraction& boundaryExtraction1, BoundaryExtraction& boundaryExtraction2)
-{
-  boundaryExtraction1 = FSBoundaryFaceProvider::Extract(meshOriginal1, mFaceExtractor1, mParams.mMarker1, mParams.mTol);
-  boundaryExtraction2 = FSBoundaryFaceProvider::Extract(meshOriginal2, mFaceExtractor2, mParams.mMarker2, mParams.mTol);
+//-----------------------------------------------------------------------------
+//
+//  ExtractBoundaryFaces
+//
 
-  if(boundaryExtraction1.faces.empty() || boundaryExtraction2.faces.empty()) {
-    FSLog("No faces were extract from the mesh");
+bool FSClippedMesh::ExtractBoundaryFaces(FSMesh& mesh, FS_intT marker, BoundaryExtraction& be)
+{
+  FSMeshFaceExtractor& fex = (mClac->GetProcID() == 0) ? mFaceExtractor1 : mFaceExtractor2;
+  be = FSBoundaryFaceProvider::Extract(mesh, fex, marker, mParams.mTol, false);
+
+  if(be.faces.empty()) {
+    FSLog("No faces were extracted from the mesh");
     return false;
   }
   return true;
 }
 
-bool FSClippedMesh::GenerateMeshClippedTopo(FSMesh& meshOriginal1, FSMesh& meshOriginal2, BoundaryExtraction& boundaryExtraction1, BoundaryExtraction& boundaryExtraction2, FSTopologyData& meshClippedTopo)
+//-----------------------------------------------------------------------------
+//
+//  GenerateMeshClippedTopo
+//
+
+bool FSClippedMesh::GenerateMeshClippedTopo(FSMesh& mesh, const BoundaryExtraction& be1,
+                                            const std::vector<FSFaceMatch>& matches,
+                                            FSTopologyData& meshClippedTopo)
 {
-  auto subjectFaces = boundaryExtraction1.faces;
-  auto clippedFaces = boundaryExtraction2.faces;
-  auto clippedClac = meshOriginal2.GetClac();
-
-  // Compute the matches and the corresponding intersections
-  FSFaceMatcher matcher(*clippedClac, subjectFaces, clippedFaces, mParams.mTol);
-  std::vector<FSFaceMatch> matches;
-  matcher.ComputeMatches(matches);
-
-  // Compute the new surface topology of the border
   FSTopologyAssembler topologyAssembler(mParams.mTol);
-  FSTopologyData surfaceClippedTopo = topologyAssembler.BuildSurfaceTopo(matches, boundaryExtraction1.faceKeys);
+  FSTopologyData surfaceClippedTopo = topologyAssembler.BuildSurfaceTopo(matches, be1.faceKeys);
 
-  // Get the coordinate of the original mesh
-  FSUnstructMeshData& meshDataOrig1 = meshOriginal1.GetMeshData()->GetUnstructCells();
+  FSUnstructMeshData& meshData = mesh.GetMeshData()->GetUnstructCells();
   FSFloatArrayT oldCoords;
   FS_intT nodeOffset;
   FSQuantityDescArrayT coordDesc;
-  meshDataOrig1.GetCoordinates3D(coordDesc, oldCoords, nodeOffset);
+  meshData.GetCoordinates3D(coordDesc, oldCoords, nodeOffset);
 
-  const auto& cellType = meshOriginal1.GetCellTypes();
-  for(const auto& t : cellType) {
+  for(const auto& t : mesh.GetCellTypes()) {
     if(FSMeshEnums::IsUnstructVolumeCellType(t)) {
-      const auto& cell2Node1 = meshOriginal1.GetCell2Node(t);
-      const auto& cellPool1 = meshOriginal1.GetMeshData()->GetUnstructCells().GetCellPool(t);
-      const auto& bdryCellPool1 = boundaryExtraction1.volumeCells.at(t);
-
-      topologyAssembler.BuildVolumeTopo(cell2Node1, bdryCellPool1, *cellPool1, oldCoords, meshClippedTopo);
-      // volumeTopology = topolyBuilder.BuildVolumeTopo(cell2Node, surfaceTopology); in the future
+      const auto& cell2Node = mesh.GetCell2Node(t);
+      const auto& cellPool = meshData.GetCellPool(t);
+      const auto& bdryPool = be1.volumeCells.at(t);
+      topologyAssembler.BuildVolumeTopo(cell2Node, bdryPool, *cellPool, oldCoords, meshClippedTopo);
     }
   }
 
-  topologyAssembler.AppendUnclippedSurfaces(meshOriginal1, boundaryExtraction1.surfaceCells, oldCoords, meshClippedTopo);
+  topologyAssembler.AppendUnclippedSurfaces(mesh, be1.surfaceCells, oldCoords, meshClippedTopo);
 
   meshClippedTopo.cellParent[FSMeshEnums::CellType::CT_Poly2D] = surfaceClippedTopo.cellParent[FSMeshEnums::CellType::CT_Poly2D];
   meshClippedTopo.cellParentType[FSMeshEnums::CellType::CT_Poly2D] = surfaceClippedTopo.cellParentType[FSMeshEnums::CellType::CT_Poly2D];
@@ -222,5 +206,6 @@ bool FSClippedMesh::GenerateMesh(FSMesh& meshOriginal1, FSTopologyData& meshClip
   FSMeshReconstruction meshReconstruction(*originalClac);
   // meshReconstruction.BuildTmp(meshDataOrig1, clippedMesh, meshClippedTopo);
   clippedMesh = meshReconstruction.Build(meshDataOrig1, meshClippedTopo);
+  // clippedMesh.PrintInfo();
   return true;
 }

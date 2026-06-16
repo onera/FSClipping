@@ -65,46 +65,34 @@ protected:
 
   //! A copy constructor, disabled.
   FSClippedMesh(const FSClippedMesh&);
-  //! Generate the mesh clipped of the mesh 1 (subject) with the mesh 2 (clipped).
+  //! Top-level parallel driver: dispatches to proc-specific steps based on meshId.
   /*!
-    \param meshOriginal1 The original mesh1 to clip.
-    \param meshOriginal2 The original mesh2 used for the clipping.
-    \param[out] meshClipped The destination mesh of linear sub-elements.
+    \param meshId  Global proc rank (0 = subject, 1 = clipper, 2 = matcher).
+    \param meshClac Single-proc communicator for this process (from DivideIntoGroups).
     \return True if the operation succeeded, otherwise false.
   */
-  bool GenerateClippedMesh(FSMesh& meshOriginal1, FSMesh& meshOriginal2, FSMesh& clippedMesh);
+  bool GenerateClippedMesh(FS_intT meshId, FSClac& meshClac);
 
-  //! Extract all the boundary data of mesh 1 and mesh 2 used for the clipping algorithm.
+  //! Extract boundary faces for a single mesh.
   /*!
-    \param meshOriginal1 The original mesh1 to clip.
-    \param meshOriginal2 The original mesh2 used for the clipping.
-    \param[out] boundaryExtraction1 .
-    \param[out] boundaryExtraction2 .
-    \return True if the operation succeeded, otherwise false.
+    \param mesh    The mesh to extract from.
+    \param marker  Boundary marker to select.
+    \param[out] be Extracted boundary data.
+    \return True if any faces were extracted, otherwise false.
   */
-  bool ExtractBoundaryFaces(FSMesh& meshOriginal1, FSMesh& meshOriginal2, BoundaryExtraction& boundaryExtraction1, BoundaryExtraction& boundaryExtraction2);
+  bool ExtractBoundaryFaces(FSMesh& mesh, FS_intT marker, BoundaryExtraction& be);
 
-  //! Clipping algorithm.
+  //! Build the new topology of mesh1 from pre-computed face matches.
   /*!
-    \param meshOriginal2 The original mesh2 used for the clipping.
-    \param boundaryExtraction1 .
-    \param boundaryExtraction2 .
-    \param[inout] topologyAssembler .
-    \param[out] clippedSurface .
+    \param mesh1           The subject mesh (proc 0).
+    \param be1             Boundary extraction of mesh1.
+    \param matches         Face matches received from the matcher proc.
+    \param[out] meshClippedTopo Resulting topology.
     \return True if the operation succeeded, otherwise false.
   */
-  bool ComputeSurfaceClipped(FSMesh& meshOriginal2, BoundaryExtraction& boundaryExtraction1, BoundaryExtraction& boundaryExtraction2, FSTopologyAssembler& topologyAssembler, FSTopologyData& clippedSurface);
-
-  //! Generathe the new topology of the mesh 1 with the new polygon faces.
-  /*!
-    \param meshOriginal1 The original mesh1
-    \param boundaryExtraction1 .
-    \param topologyAssembler .
-    \param surfaceClippedTopo .
-    \param[out] meshClippedTopo .
-    \return True if the operation succeeded, otherwise false.
-  */
-  bool GenerateMeshClippedTopo(FSMesh& meshOriginal1, FSMesh& meshOriginal2, BoundaryExtraction& boundaryExtraction1, BoundaryExtraction& boundaryExtraction2, FSTopologyData& meshClippedTopo);
+  bool GenerateMeshClippedTopo(FSMesh& mesh1, const BoundaryExtraction& be1,
+                                const std::vector<FSFaceMatch>& matches,
+                                FSTopologyData& meshClippedTopo);
 
   //! Generate the final clipped mesh.
   /*!

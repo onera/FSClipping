@@ -3,7 +3,7 @@
 
 FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData)
 {
-  FSMesh MeshClipped = FSMesh(&clac_);
+  FSMesh meshClipped = FSMesh(&clac_);
 
   // init pointer to meshdata
   const auto& globalCoords = topologyData.globalCoords;
@@ -13,21 +13,21 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
   auto& polyFaces = topologyData.polyFaces;
 
   // begin initialization
-  MeshClipped.BeginInitialization();
-  FSMeshData* MeshDataClippedPtr = MeshClipped.GetMeshData();
+  meshClipped.BeginInitialization();
+  FSMeshData* MeshDataClippedPtr = meshClipped.GetMeshData();
   FSUnstructMeshData& unstructMeshData = MeshDataClippedPtr->GetUnstructCells();
 
-  MeshClipped.InitUnstructNodes(globalCoords.size());
+  meshClipped.InitUnstructNodes(globalCoords.size());
   if(!cell2NodeInner.IsEmpty()) {
     for(auto& [type, cell2Node] : topologyData.cell2NodeInner)
-      MeshClipped.InitUnstructCells(type, cell2Node);
+      meshClipped.InitUnstructCells(type, cell2Node);
   }
 
   // init reference to unstructured mesh data
   MeshDataClippedPtr->InitUnstructCells(FSMeshEnums::CT_Poly2D, cell2NodePoly2D);
   MeshDataClippedPtr->InitUnstructCells(FSMeshEnums::CT_Poly3D, cell2NodePoly3D);
   MeshDataClippedPtr->InitUnstructCellFaces(FSMeshEnums::CT_Poly3D, polyFaces);
-  MeshClipped.EndInitialization();
+  meshClipped.EndInitialization();
 
   FSQuantityDescArrayT coordsDesc(3);
   coordsDesc[0] = FSQuantityDesc(FSDataName::Coordinates(), FSDataName::Coordinate().X());
@@ -59,12 +59,12 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
   // end initialization
 
   // check if initialization is complete
-  success = MeshClipped.IsInitialized();
+  success = meshClipped.IsInitialized();
 
   if(!success)
     FSError.SetAndPrintAndExit("FSMeshReconstruction : Error while initialization the new mesh");
 
-  return MeshClipped;
+  return meshClipped;
 }
 
 void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshDataOriginal,

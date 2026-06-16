@@ -48,7 +48,8 @@ void FSClippedMeshParams::Copy(const FSClippedMeshParams& other)
   // --- self ---
   mMeshKeyOriginal1 = other.mMeshKeyOriginal1;
   mMeshKeyOriginal2 = other.mMeshKeyOriginal2;
-  mMeshKeyClipped = other.mMeshKeyClipped;
+  mMeshKeyClipped1 = other.mMeshKeyClipped1;
+  mMeshKeyClipped2 = other.mMeshKeyClipped2;
   mMarker1 = other.mMarker1;
   mMarker2 = other.mMarker2;
   mTol = other.mTol;
@@ -213,7 +214,23 @@ bool FSClippedMeshParams::InitFromXML(xmlDocPtr doc, xmlNodePtr node)
         xmlFree(nodeValue);
       }
 
-      // --- check for 'marker' ---
+      // --- check for 'meshkeyClipped1' ---
+      else if(xmlStrcasecmp(cur->name, (const xmlChar*)"MeshKeyClipped1") == 0) {
+        xmlChar* nodeValue = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+        mMeshKeyClipped1 = FSString::UTF8TOISOLAT1(nodeValue);
+        mMeshKeyClipped1.Strip();
+        xmlFree(nodeValue);
+      }
+
+      // --- check for 'meshkeyClipped2' ---
+      else if(xmlStrcasecmp(cur->name, (const xmlChar*)"MeshKeyClipped2") == 0) {
+        xmlChar* nodeValue = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+        mMeshKeyClipped2 = FSString::UTF8TOISOLAT1(nodeValue);
+        mMeshKeyClipped2.Strip();
+        xmlFree(nodeValue);
+      }
+
+      // --- check for 'tolerance' ---
       else if(xmlStrcasecmp(cur->name, (const xmlChar*)"ClippedTolerance") == 0 ||
               xmlStrcasecmp(cur->name, (const xmlChar*)"Clipped tolerance") == 0 ||
               xmlStrcasecmp(cur->name, (const xmlChar*)"Tolerance") == 0) {
@@ -272,6 +289,14 @@ bool FSClippedMeshParams::ConvertToXML(xmlDocPtr doc, xmlNsPtr ns, xmlNodePtr no
   if(mMeshKeyOriginal2.IsInitialized()) {
     xmlNewChild(node, ns, reinterpret_cast<const xmlChar*>("MeshKeyOriginal2"), reinterpret_cast<const xmlChar*>(mMeshKeyOriginal2.c_str()));
   }
+
+  if(mMeshKeyClipped1.IsInitialized()) {
+    xmlNewChild(node, ns, reinterpret_cast<const xmlChar*>("MeshKeyClipped1"), reinterpret_cast<const xmlChar*>(mMeshKeyClipped1.c_str()));
+  }
+
+  if(mMeshKeyClipped2.IsInitialized()) {
+    xmlNewChild(node, ns, reinterpret_cast<const xmlChar*>("MeshKeyClipped2"), reinterpret_cast<const xmlChar*>(mMeshKeyClipped2.c_str()));
+  }
   return true;
 }
 #endif
@@ -294,7 +319,8 @@ FSClippedMeshParams::sizeT FSClippedMeshParams::GetBufSize(FSClac& clac) const
   bufSize += clac.GetBufSize<FS_floatT>(); // /Tol
   bufSize += mMeshKeyOriginal1.GetBufSize(clac);
   bufSize += mMeshKeyOriginal2.GetBufSize(clac);
-  bufSize += mMeshKeyClipped.GetBufSize(clac);
+  bufSize += mMeshKeyClipped1.GetBufSize(clac);
+  bufSize += mMeshKeyClipped2.GetBufSize(clac);
 
   return bufSize;
 }
@@ -315,7 +341,8 @@ void FSClippedMeshParams::Pack(FSClac& clac)
   clac.Pack(&mTol);
   mMeshKeyOriginal1.Pack(clac);
   mMeshKeyOriginal2.Pack(clac);
-  mMeshKeyClipped.Pack(clac);
+  mMeshKeyClipped1.Pack(clac);
+  mMeshKeyClipped2.Pack(clac);
 }
 
 
@@ -335,7 +362,8 @@ void FSClippedMeshParams::Unpack(FSClac& clac)
   clac.Unpack(&mTol);
   mMeshKeyOriginal1.Unpack(clac);
   mMeshKeyOriginal2.Unpack(clac);
-  mMeshKeyClipped.Unpack(clac);
+  mMeshKeyClipped1.Unpack(clac);
+  mMeshKeyClipped2.Unpack(clac);
 }
 
 

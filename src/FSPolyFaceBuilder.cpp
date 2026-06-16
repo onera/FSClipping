@@ -131,7 +131,7 @@ FSIntRegisterT FSPolyFaceBuilder::Cell2NodePoly2D()
 void FSPolyFaceBuilder::Build(FSMeshPolyFaceStorage& polyFaces)
 {
   // CollectMatchesFaces();
-
+  // std::ofstream file1("name", std::ios::app);
   FS_intT nCells = cellFaces_.size();
   polyFaces.Init(nCells);
 
@@ -155,12 +155,12 @@ void FSPolyFaceBuilder::Build(FSMeshPolyFaceStorage& polyFaces)
 
   // 3-Collect the local index of each coord in cell2Node.coords
   for(FS_intT c = 0; c < nCells; ++c) {
-    // std::cout << "Element " << c << " : ";
+    // file << "Element " << c << " : ";
     for(std::size_t f = 0; f < cellFaces_[c].size(); ++f) {
-      // std::cout << " { ";
+      // file << " { ";
       for(FS_intT nid : cellFaces_[c][f].nodeIds) {
         polyFaces.AddFaceNode(c, f, nid);
-        // std::cout << cell2NodeBuilder_.GlobalCoords()[nid] << " ";
+        // file << cell2NodeBuilder_.GlobalCoords()[nid] << " ";
       }
       // file << "}";
     }

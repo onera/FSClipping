@@ -5,16 +5,18 @@
 # --------------------------------------------------------------
 # Shared library definition
 # --------------------------------------------------------------
-add_library(fsclipping SHARED   FSClippingUtil.cpp 
-                                FSClippingFace.cpp 
-                                FSFaceSeparator.cpp 
-                                FSFaceMatcher.cpp 
-                                FSCell2NodeBuilder.cpp 
-                                FSPolyFaceBuilder.cpp 
-                                FSBoundaryFaceProvider.cpp 
+add_library(fsclipping SHARED   FSClippingUtil.cpp
+                                FSClippingFace.cpp
+                                FSFaceSeparator.cpp
+                                FSFaceMatcher.cpp
+                                FSCell2NodeBuilder.cpp
+                                FSPolyFaceBuilder.cpp
+                                FSBoundaryFaceProvider.cpp
                                 FSTopologyAssembler.cpp
                                 FSMeshReconstruction.cpp
                                 FSClippingInterface.cpp
+                                FSFaceExchange.cpp
+                                FSClippingInterfacePar.cpp
                                 FSClippedMeshParams.cpp
                                 FSClippedMesh.cpp)
 
@@ -57,6 +59,8 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSTopologyAssembler.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSMeshReconstruction.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippingInterface.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSFaceExchange.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippingInterfacePar.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippedMeshParams.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippedMeshParams.i
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippedMesh.h

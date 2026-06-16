@@ -44,6 +44,10 @@ struct FSFaceMatch {
 
   // FS_IntTersection polygon re‑projected in 3D in face 1
   std::vector<FSVec3> clippedPoly3D;
+
+  FSClac::sizeT GetBufSize(FSClac& clac) const;
+  void Pack(FSClac& clac);
+  void Unpack(FSClac& clac);
 };
 
 class FSFaceMatcher
@@ -73,6 +77,8 @@ public:
   }
 
   void ComputeMatches(std::vector<FSFaceMatch>& outMatches);
+
+  void InvertMatches(std::vector<FSFaceMatch>& matches);
 
 private:
   const std::vector<FSClippingFace>& subjectFaces_;

@@ -1,23 +1,16 @@
-#include "FSClipping/FSMeshReconstruction.h"
 #include "FSMeshImportParamsTAU.h"
 #include "FSMeshExportFilterVTK.h"
 #include "FSMeshExportFilterVTK.h"
 #include "FSMeshExportParamsVTK.h"
-#include "FSMeshCreateLocalNumbering.h"
 #include "FSMeshExportFilterHDF5.h"
 #include "FSMeshImportFilterHDF5.h"
 #include "FSMeshPartitionerRCB.h"
-#include "FSMeshPartitionerPARMETIS.h"
 #include "gtest/gtest.h"
+#include <FSMeshCheck.h>
+#include <FSMeshData.h>
+#include <FSMeshPrintInfo.h>
 
 #include "FSClipping/FSClippingInterface.h"
-#include "FSClipping/FSBoundaryFaceProvider.h"
-#include "FSClipping/FSTopologyAssembler.h"
-#include "FSClipping/FSClippingFace.h"
-#include "FSClipping/FSFaceSeparator.h"
-#include "FSClipping/FSFaceMatcher.h"
-#include "FSClipping/FSCell2NodeBuilder.h"
-#include "FSClipping/FSPolyFaceBuilder.h"
 #include "TestUtils.hpp"
 
 _FS_BEGIN_NAMESPACE
@@ -209,82 +202,52 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh2DHexaHexa)
     1,
     false);
 }
-
-TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexa)
-{
-  FSClac clac1, clac2, clac3;
-
-  auto mesh1 = LoadMesh(clac1, MeshPath("input/cube_hexa_coarse.grid"));
-  auto mesh2 = LoadMesh(clac2, MeshPath("input/cube_hexa_fine.grid"));
-
-  const FS_intT marker1 = 2;
-  const FS_intT marker2 = 1;
-  const FS_floatT tol = 1e-8;
-
-  FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
-
-  auto meshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
-  FSMeshData* ptr = meshClipped.GetMeshData();
-
-  CheckMesh(clac3, ptr);
-
-  polyMeshRepartition(&clac3, ptr);
-
-  polyMeshExtractFaces(ptr->GetUnstructCells());
-
-  polyMeshExportImport(
-    &clac3,
-    ptr,
-    MeshPath("output/cube3D_clipped_HexaHexa"),
-    1,
-    false);
-}
-
-TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
-{
-  FSClac clac1, clac2, clac3;
-
-  auto mesh1 = LoadMesh(clac1, MeshPath("input/cube_hexa_coarse.grid"));
-  auto mesh2 = LoadMesh(clac2, MeshPath("input/cube_tetra_fine.grid"));
-
-  const FS_intT marker1 = 2;
-  const FS_intT marker2 = 1;
-  const FS_floatT tol = 1e-8; // hole when tol < 1e-3
-
-  FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
-
-  auto meshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
-  FSMeshData* ptr = meshClipped.GetMeshData();
-
-  CheckMesh(clac3, ptr);
-
-  polyMeshRepartition(&clac3, ptr);
-
-  polyMeshExtractFaces(ptr->GetUnstructCells());
-
-  polyMeshExportImport(
-    &clac3,
-    ptr,
-    MeshPath("output/cube3D_clipped_HexaTetra"),
-    1,
-    false);
-}
-
-// TEST(FSClippingTestInterface, ReconstructClippedMesh3DVortex)
+//
+// TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexa)
 //{
 //   FSClac clac1, clac2, clac3;
 //
-//   auto mesh1 = LoadMesh(clac1, MeshPath("input/vortex_hexa1.grid"));
-//   auto mesh2 = LoadMesh(clac2, MeshPath("input/vortex_hexa0.grid"));
+//   auto mesh1 = LoadMesh(clac1, MeshPath("input/cube_hexa_coarse.grid"));
+//   auto mesh2 = LoadMesh(clac2, MeshPath("input/cube_hexa_fine.grid"));
 //
-//   const FS_intT marker1 = 1;
-//   const FS_intT marker2 = 2;
+//   const FS_intT marker1 = 2;
+//   const FS_intT marker2 = 1;
+//   const FS_floatT tol = 1e-8;
+//
+//   FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
+//
+//   auto meshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
+//   FSMeshData* ptr = meshClipped.GetMeshData();
+//
+//   CheckMesh(clac3, ptr);
+//
+//   polyMeshRepartition(&clac3, ptr);
+//
+//   polyMeshExtractFaces(ptr->GetUnstructCells());
+//
+//   polyMeshExportImport(
+//     &clac3,
+//     ptr,
+//     MeshPath("output/cube3D_clipped_HexaHexa"),
+//     1,
+//     false);
+// }
+//
+// TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
+//{
+//   FSClac clac1, clac2, clac3;
+//
+//   auto mesh1 = LoadMesh(clac1, MeshPath("input/cube_hexa_coarse.grid"));
+//   auto mesh2 = LoadMesh(clac2, MeshPath("input/cube_tetra_fine.grid"));
+//
+//   const FS_intT marker1 = 2;
+//   const FS_intT marker2 = 1;
 //   const FS_floatT tol = 1e-8; // hole when tol < 1e-3
 //
 //   FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
 //
-//   auto MeshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
-//   FSMeshData* ptr = MeshClipped.GetMeshData();
+//   auto meshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
+//   FSMeshData* ptr = meshClipped.GetMeshData();
 //
 //   CheckMesh(clac3, ptr);
 //
@@ -295,25 +258,26 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
 //   polyMeshExportImport(
 //     &clac3,
 //     ptr,
-//     MeshPath("output/vortex_clipped_1"),
+//     MeshPath("output/cube3D_clipped_HexaTetra"),
 //     1,
 //     false);
 // }
 
-// TEST(FSClippingTestInterface, ReconstructClippedMesh3DTest)
+// TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexaRotate)
 //{
 //   FSClac clac1, clac2, clac3;
 //
-//   auto mesh1 = LoadMesh(clac1, MeshPath("input/interior.grid"));
-//   auto mesh2 = LoadMesh(clac2, MeshPath("input/exterior_rotate.grid"));
+//   auto mesh1 = LoadMesh(clac1, MeshPath("input/square_mesh.grid"));
+//   auto mesh2 = LoadMesh(clac2, MeshPath("input/square_mesh_rotate.grid"));
 //
-//   const FS_intT marker1 = 4;
-//   const FS_intT marker2 = 3;
-//   const FS_floatT tol = 1e-5;
+//   const FS_intT marker1 = 2;
+//   const FS_intT marker2 = 1;
+//   const FS_floatT tol = 1e-10;
+//
 //   FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
 //
-//   auto MeshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
-//   FSMeshData* ptr = &MeshClipped;
+//   auto meshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
+//   FSMeshData* ptr = meshClipped.GetMeshData();
 //
 //   CheckMesh(clac3, ptr);
 //
@@ -324,7 +288,36 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
 //   polyMeshExportImport(
 //     &clac3,
 //     ptr,
-//     MeshPath("output/interiorClipped3D"),
+//     MeshPath("output/cube3D_clipped_HexaHexaRotate"),
 //     1,
 //     false);
 // }
+
+TEST(FSClippingTestInterface, ReconstructClippedMeshRotorStator)
+{
+  FSClac clac1, clac2, clac3;
+
+  auto mesh1 = LoadMesh(clac1, MeshPath("input/rotor360_coarse_NJ2.grid"));
+  auto mesh2 = LoadMesh(clac2, MeshPath("input/stator360_coarse_NJ2.grid"));
+
+  const FS_intT marker1 = 3;
+  const FS_intT marker2 = 3;
+  const FS_floatT tol = 1e-10;
+  FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
+
+  auto meshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
+  FSMeshData* ptr = meshClipped.GetMeshData();
+
+  CheckMesh(clac3, ptr);
+
+  polyMeshRepartition(&clac3, ptr);
+
+  polyMeshExtractFaces(ptr->GetUnstructCells());
+
+  polyMeshExportImport(
+    &clac3,
+    ptr,
+    MeshPath("output/interiorClipped3D"),
+    1,
+    false);
+}
