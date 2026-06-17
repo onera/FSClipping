@@ -19,26 +19,17 @@ struct FSFace {
   FS_intT GetOwnerCellFSDMIndex() const { return _faceFSDM->mOwner.mCell; }
 
   /// Get the FSDM element link neighbor cell index.
-  FS_intT GetNeighborCellFSDMIndex() const
-  {
-    return _faceFSDM->mNeighbor.mCell;
-  }
+  FS_intT GetNeighborCellFSDMIndex() const { return _faceFSDM->mNeighbor.mCell; }
 
   /// Get the FSDM element link neighbor cell process index.
-  FS_intT GetNeighborCellProcFSDMIndex() const
-  {
-    return _faceFSDM->mNeighbor.mCellProcID;
-  }
+  FS_intT GetNeighborCellProcFSDMIndex() const { return _faceFSDM->mNeighbor.mCellProcID; }
 
   /// Is this less than other?
   /**
    * @param other The object to compare against.
    * @return true if this object is ordered before other, false otherwise.
    */
-  bool operator<(const FSFace& other) const
-  {
-    return *_faceFSDM < *other._faceFSDM;
-  }
+  bool operator<(const FSFace& other) const { return *_faceFSDM < *other._faceFSDM; }
 
   // --- Default constructor ---
   FSFace() : _faceFSDM()

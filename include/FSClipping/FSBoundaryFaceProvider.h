@@ -12,10 +12,7 @@ _FS_BEGIN_NAMESPACE
 struct QuantizedPoint {
   int x, y, z;
 
-  bool operator==(const QuantizedPoint& other) const
-  {
-    return x == other.x && y == other.y && z == other.z;
-  }
+  bool operator==(const QuantizedPoint& other) const { return x == other.x && y == other.y && z == other.z; }
 
   bool operator<(const QuantizedPoint& other) const
   {
@@ -29,10 +26,8 @@ struct QuantizedPoint {
 
 inline QuantizedPoint Quantize(const FSVec3& p, double tol)
 {
-  return {
-    static_cast<int>(std::round(p[0] / tol)),
-    static_cast<int>(std::round(p[1] / tol)),
-    static_cast<int>(std::round(p[2] / tol))};
+  return {static_cast<int>(std::round(p[0] / tol)), static_cast<int>(std::round(p[1] / tol)),
+          static_cast<int>(std::round(p[2] / tol))};
 }
 
 struct GeomFaceKey {
@@ -40,7 +35,7 @@ struct GeomFaceKey {
 
   GeomFaceKey(const FSFloatArrayT& coords, double tol)
   {
-    const int n = coords.Size(0); // nombre de points
+    const int n = coords.Size(0); // vertex count
 
     pts.reserve(n);
     for(int i = 0; i < n; ++i) {
@@ -79,10 +74,7 @@ struct GeomFaceKey {
     pts = *std::min_element(candidates.begin(), candidates.end());
   }
 
-  bool operator==(const GeomFaceKey& other) const
-  {
-    return pts == other.pts;
-  }
+  bool operator==(const GeomFaceKey& other) const { return pts == other.pts; }
 };
 
 struct GeomFaceKeyHash {
@@ -109,10 +101,7 @@ struct BoundaryExtraction {
 class FSBoundaryFaceProvider
 {
 public:
-  static BoundaryExtraction Extract(FSMesh& mesh,
-                                    FSMeshFaceExtractor& ex,
-                                    FS_intT boundaryMarker,
-                                    FS_floatT tol,
+  static BoundaryExtraction Extract(FSMesh& mesh, FSMeshFaceExtractor& ex, FS_intT boundaryMarker, FS_floatT tol,
                                     bool matchRemoteFaces = true);
 };
 

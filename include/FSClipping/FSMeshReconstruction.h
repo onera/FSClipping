@@ -10,12 +10,11 @@ _FS_BEGIN_NAMESPACE
 class FSMeshReconstruction
 {
 public:
-  explicit FSMeshReconstruction(FSClac& clac) : clac_(clac){};
+  explicit FSMeshReconstruction(FSClac& clac) : clac_(clac) {};
 
   FSMesh Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData);
 
-  void CopyCellAttributes(const FSUnstructMeshData& meshData,
-                          const FSTopologyData& topo,
+  void CopyCellAttributes(const FSUnstructMeshData& meshData, const FSTopologyData& topo,
                           FSUnstructMeshData& meshDataNew);
 
 private:

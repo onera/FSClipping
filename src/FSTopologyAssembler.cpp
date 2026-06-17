@@ -9,24 +9,22 @@ FSTopologyData FSTopologyAssembler::BuildSurfaceTopo(const std::vector<FSFaceMat
                                                      const std::unordered_set<GeomFaceKey, GeomFaceKeyHash>& faceKeys)
 {
   if(matches.empty())
-    FSError.SetAndPrintAndExit("There was an error with the clipping algorithm. No matches were found. Look at the boundary marker for each mesh.");
+    FSError.SetAndPrintAndExit("There was an error with the clipping algorithm. No matches were found. Look at the "
+                               "boundary marker for each mesh.");
 
   FSTopologyData result;
 
   // -------------------------------------------------
-  // 1) Build cell2node + global coordinates
+  // 1. Build cell2node + global coordinates
   // -------------------------------------------------
-  // FSCell2NodeBuilder cell2NodeBuilder(tol_);
-
   for(const auto& f : matches) {
     const auto elemIndex = f.elemOwner1;
     const auto cellType = f.elemOwnerType1;
 
     cell2NodeBuilder_.AddCellNodes(elemIndex, cellType);
 
-    if(f.type != FSFaceMatch::UNKNOWN) {
+    if(f.type != FSFaceMatch::UNKNOWN)
       cell2NodeBuilder_.AddClippedPolygon(elemIndex, f.clippedPoly3D);
-    }
   }
   cell2NodeBuilder_.SetAllCellOnTheBorder();
   cell2NodeBuilder_.BuildGlobalNumbering();
@@ -35,7 +33,7 @@ FSTopologyData FSTopologyAssembler::BuildSurfaceTopo(const std::vector<FSFaceMat
   result.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly3D();
 
   // -------------------------------------------------
-  // 2) Build polygonal faces
+  // 2. Build polygonal faces
   // -------------------------------------------------
   polyFaceBuilder_ = std::make_unique<FSPolyFaceBuilder>(FSPolyFaceBuilder(matches, cell2NodeBuilder_, faceKeys, tol_));
   polyFaceBuilder_->CollectMatchesFaces();
@@ -62,23 +60,19 @@ void FSTopologyAssembler::CheckSurfaceWasBuilt() const
     FSError.SetAndPrintAndExit("Surface topology must be built before volume topology.");
 }
 
-void FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node,
-                                          const std::set<FS_intT>& bdryCellPool,
-                                          const FSCellPool& cellPool,
-                                          const FSFloatArrayT& oldCoords,
+void FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node, const std::set<FS_intT>& bdryCellPool,
+                                          const FSCellPool& cellPool, const FSFloatArrayT& oldCoords,
                                           FSTopologyData& volumeResult)
 {
   CheckSurfaceWasBuilt();
 
   auto type = cellPool.GetCellType();
-
   auto offSet = cellPool.GetOffset();
   auto nCells = cellPool.GetNCells();
 
   // -------------------------------------------------
   // 1. Add volume cells
   // -------------------------------------------------
-
   for(FS_intT c = offSet; c < nCells + offSet; c++)
     cell2NodeBuilder_.AddVolumeCellNodes(c, type, cell2Node, oldCoords);
 
@@ -87,7 +81,6 @@ void FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node,
   // -------------------------------------------------
   // 2. Update topology data
   // -------------------------------------------------
-
   volumeResult.globalCoords = cell2NodeBuilder_.GlobalCoords();
   volumeResult.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly3D();
 
@@ -110,13 +103,14 @@ void FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node,
 
   volumeResult.cellParent[type] = std::move(cellParent);
   if(!cellParentPoly3D.IsEmpty()) {
-    volumeResult.cellParent[FSMeshEnums::CellType::CT_Poly3D] = std::move(cellParentPoly3D); // attention si on a different type d element sur la frontiere, on ecrase
+    // NOTE: if multiple element types touch the border, the last one wins here.
+    volumeResult.cellParent[FSMeshEnums::CellType::CT_Poly3D] = std::move(cellParentPoly3D);
     volumeResult.cellParentType[FSMeshEnums::CellType::CT_Poly3D] = std::move(cellParentPolyType);
   }
+
   // -------------------------------------------------
   // 3. Build internal faces for clipped cells
   // -------------------------------------------------
-
   for(const auto& c : bdryCellPool) {
     FS_intT nFaces = FSCellInfo::NFaces(type);
 
@@ -128,11 +122,8 @@ void FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node,
   volumeResult.cell2NodePoly2D = polyFaceBuilder_->Cell2NodePoly2D();
 }
 
-
-FSIntArrayT FSTopologyAssembler::UpdateOldCell2Node(const FSIntArrayT& oldCell2Node,
-                                                    const FSFloatArrayT& oldCoords,
-                                                    const std::set<FS_intT>& bdry2DCells,
-                                                    FSIntArrayT& cellParent)
+FSIntArrayT FSTopologyAssembler::UpdateOldCell2Node(const FSIntArrayT& oldCell2Node, const FSFloatArrayT& oldCoords,
+                                                    const std::set<FS_intT>& bdry2DCells, FSIntArrayT& cellParent)
 {
   FS_intT nCellOld = oldCell2Node.Size(0);
   FS_intT nCellNew = nCellOld - bdry2DCells.size();
@@ -164,8 +155,7 @@ FSIntArrayT FSTopologyAssembler::UpdateOldCell2Node(const FSIntArrayT& oldCell2N
 
 void FSTopologyAssembler::AppendUnclippedSurfaces(FSMesh& mesh,
                                                   const std::unordered_map<FS_intT, std::set<FS_intT> >& bdry2DCells,
-                                                  const FSFloatArrayT& oldCoords,
-                                                  FSTopologyData& topo)
+                                                  const FSFloatArrayT& oldCoords, FSTopologyData& topo)
 {
   for(const auto& t : mesh.GetCellTypes()) {
     if(!FSMeshEnums::IsUnstructSurfaceCellType(t))
@@ -173,16 +163,10 @@ void FSTopologyAssembler::AppendUnclippedSurfaces(FSMesh& mesh,
 
     const auto& oldCell2Node = mesh.GetCell2Node(t);
 
-    const auto& bdry =
-      bdry2DCells.contains(t) ? bdry2DCells.at(t)
-                              : std::set<FS_intT>{};
+    const auto& bdry = bdry2DCells.contains(t) ? bdry2DCells.at(t) : std::set<FS_intT>{};
 
     FSIntArrayT parent;
-
-    auto cell2Node = UpdateOldCell2Node(oldCell2Node,
-                                        oldCoords,
-                                        bdry,
-                                        parent);
+    auto cell2Node = UpdateOldCell2Node(oldCell2Node, oldCoords, bdry, parent);
 
     topo.cell2NodeInner[t] = std::move(cell2Node);
     topo.cellParent[t] = std::move(parent);

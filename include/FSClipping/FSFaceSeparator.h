@@ -23,10 +23,8 @@ _FS_BEGIN_NAMESPACE
 
 namespace FSFaceSeparator {
 
-void SeparateFaces(const FSMesh& fsmesh,
-                   const FSMeshFaceExtractor& faceExtractor,
-                   std::vector<FSBoundaryFace>& bdryFaces,
-                   const FS_intT markerBoundaryClipped);
+void SeparateFaces(const FSMesh& fsmesh, const FSMeshFaceExtractor& faceExtractor,
+                   std::vector<FSBoundaryFace>& bdryFaces, const FS_intT markerBoundaryClipped);
 } // namespace FSFaceSeparator
 _FS_END_NAMESPACE
 

@@ -7,10 +7,7 @@ _FS_BEGIN_NAMESPACE
 //  Create
 //
 
-FSDataManagerOpParams* FSClippedMeshParams::Create()
-{
-  return new FSClippedMeshParams();
-}
+FSDataManagerOpParams* FSClippedMeshParams::Create() { return new FSClippedMeshParams(); }
 
 
 //-----------------------------------------------------------------------------
@@ -18,10 +15,7 @@ FSDataManagerOpParams* FSClippedMeshParams::Create()
 //  Copy constructor
 //
 
-FSClippedMeshParams::FSClippedMeshParams(const FSClippedMeshParams& other)
-{
-  Copy(other);
-}
+FSClippedMeshParams::FSClippedMeshParams(const FSClippedMeshParams& other) { Copy(other); }
 
 
 //-----------------------------------------------------------------------------
@@ -71,10 +65,7 @@ void FSClippedMeshParams::Duplicate(const FSDataManagerOpParams& other)
 //  Reset
 //
 
-void FSClippedMeshParams::Reset()
-{
-  *this = FSClippedMeshParams{};
-}
+void FSClippedMeshParams::Reset() { *this = FSClippedMeshParams{}; }
 
 //-----------------------------------------------------------------------------
 //
@@ -95,10 +86,7 @@ bool FSClippedMeshParams::IsInitialized() const
 //  GetClassName
 //
 
-FSString FSClippedMeshParams::GetClassName() const
-{
-  return "FSClippedMeshParams";
-}
+FSString FSClippedMeshParams::GetClassName() const { return "FSClippedMeshParams"; }
 
 #ifdef FS_HAVE_LIBXML2
 
@@ -110,7 +98,8 @@ bool FSClippedMeshParams::InitFromXML(xmlDocPtr doc, xmlNodePtr node)
 {
   // --- check ---
   if(doc == NULL) {
-    FSError.Set("NULL pointer given for XML document, non-blanked mesh parameters can not be initialized from XML node.");
+    FSError.Set(
+      "NULL pointer given for XML document, non-blanked mesh parameters can not be initialized from XML node.");
     return false;
   }
   if(node == NULL) {
@@ -266,11 +255,13 @@ bool FSClippedMeshParams::ConvertToXML(xmlDocPtr doc, xmlNsPtr ns, xmlNodePtr no
 {
   // --- check ---
   if(doc == nullptr) {
-    FSError.Set("NULL pointer given for XML document, data transformation parameters can not be converted to an XML node.");
+    FSError.Set(
+      "NULL pointer given for XML document, data transformation parameters can not be converted to an XML node.");
     return false;
   }
   if(node == nullptr) {
-    FSError.Set("NULL pointer given for XML node, data transformation parameters can not be be converted to an XML node.");
+    FSError.Set(
+      "NULL pointer given for XML node, data transformation parameters can not be be converted to an XML node.");
     return false;
   }
 
@@ -283,19 +274,23 @@ bool FSClippedMeshParams::ConvertToXML(xmlDocPtr doc, xmlNsPtr ns, xmlNodePtr no
 
   // --- convert mesh keys ---
   if(mMeshKeyOriginal1.IsInitialized()) {
-    xmlNewChild(node, ns, reinterpret_cast<const xmlChar*>("MeshKeyOriginal1"), reinterpret_cast<const xmlChar*>(mMeshKeyOriginal1.c_str()));
+    xmlNewChild(node, ns, reinterpret_cast<const xmlChar*>("MeshKeyOriginal1"),
+                reinterpret_cast<const xmlChar*>(mMeshKeyOriginal1.c_str()));
   }
 
   if(mMeshKeyOriginal2.IsInitialized()) {
-    xmlNewChild(node, ns, reinterpret_cast<const xmlChar*>("MeshKeyOriginal2"), reinterpret_cast<const xmlChar*>(mMeshKeyOriginal2.c_str()));
+    xmlNewChild(node, ns, reinterpret_cast<const xmlChar*>("MeshKeyOriginal2"),
+                reinterpret_cast<const xmlChar*>(mMeshKeyOriginal2.c_str()));
   }
 
   if(mMeshKeyClipped1.IsInitialized()) {
-    xmlNewChild(node, ns, reinterpret_cast<const xmlChar*>("MeshKeyClipped1"), reinterpret_cast<const xmlChar*>(mMeshKeyClipped1.c_str()));
+    xmlNewChild(node, ns, reinterpret_cast<const xmlChar*>("MeshKeyClipped1"),
+                reinterpret_cast<const xmlChar*>(mMeshKeyClipped1.c_str()));
   }
 
   if(mMeshKeyClipped2.IsInitialized()) {
-    xmlNewChild(node, ns, reinterpret_cast<const xmlChar*>("MeshKeyClipped2"), reinterpret_cast<const xmlChar*>(mMeshKeyClipped2.c_str()));
+    xmlNewChild(node, ns, reinterpret_cast<const xmlChar*>("MeshKeyClipped2"),
+                reinterpret_cast<const xmlChar*>(mMeshKeyClipped2.c_str()));
   }
   return true;
 }

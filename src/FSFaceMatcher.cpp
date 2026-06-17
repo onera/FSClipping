@@ -9,13 +9,13 @@ FSClac::sizeT FSFaceMatch::GetBufSize(FSClac& clac) const
   s += clac.GetBufSizeInt32(11);
   // intersectedArea → 1 FS_float64T
   s += clac.GetBufSizeFloat64(1);
-  // clippedPoly2D : taille + n * 2 coords
+  // clippedPoly2D: size + n * 2 coords
   s += clac.GetBufSizeInt32(1);
   s += clac.GetBufSizeFloat64(static_cast<FSClac::intT>(clippedPoly2D.size()) * 2);
-  // clippedPoly3D (face1 frame) : taille + n * 3 coords
+  // clippedPoly3D (face1 frame): size + n * 3 coords
   s += clac.GetBufSizeInt32(1);
   s += clac.GetBufSizeFloat64(static_cast<FSClac::intT>(clippedPoly3D.size()) * 3);
-  // clippedPoly3D_face2 (face2 frame) : taille + n * 3 coords
+  // clippedPoly3D_face2 (face2 frame): size + n * 3 coords
   s += clac.GetBufSizeInt32(1);
   s += clac.GetBufSizeFloat64(static_cast<FSClac::intT>(clippedPoly3D_face2.size()) * 3);
   return s;
@@ -127,22 +127,18 @@ void FSFaceMatch::Unpack(FSClac& clac)
   }
 }
 
-bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1,
-                                 const FSClippingFace& f2,
-                                 FSFaceMatch& out) const
+bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1, const FSClippingFace& f2, FSFaceMatch& out) const
 {
-
   // 1. Identical faces
   if(FSClippingUtil::AreFacesIdentical(f1, f2, tol_)) {
     out.type = FSFaceMatch::IDENTICAL;
     return true;
   }
 
-  // 2. Clipped algorithm
+  // 2. Sutherland-Hodgman clipping in the plane of f1
   auto poly1 = f1.projected2D();
   auto poly2 = FSClippingUtil::ProjectFaceInPlane(f2, f1);
 
-  // We check that we have the same orientation for the two poly
   FSClippingUtil::EnsureSameOrientation(poly2, FSClippingUtil::PolygonSignedArea(poly1));
 
   std::vector<FSVec2> clip;
@@ -151,7 +147,6 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1,
 
   const FS_floatT areaClip = std::abs(FSClippingUtil::PolygonSignedArea(clip));
   const FS_floatT area2 = std::abs(FSClippingUtil::PolygonSignedArea(poly2));
-
 
   FSClippingUtil::RemoveDuplicatePoints(clip, tol_);
   if(clip.size() < 3)
@@ -163,11 +158,9 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1,
   if(areaClip < tol_)
     return false;
 
-  // We do not test anymore for inclusion before the clipping algorithm because the inclusion clause is the source
-  // of a lot of bugs (depends on orientation, the sign of the normal etc...).
-  // All inclusions can be treated by the clipping algorithm without additionnal cost.
-  // Finnaly we just add inclusion's match if the area of the poly and clipped faces are identical.
-  // This remark was written after spending lots of time debugging the inclusion case.
+  // Inclusion is detected via area equality after clipping — no dedicated
+  // pre-check is needed. A separate inclusion branch was removed because it
+  // was orientation-sensitive and produced incorrect results in edge cases.
   if(std::abs(areaClip - area2) < tol_)
     out.type = FSFaceMatch::INCLUDED;
   else
@@ -180,29 +173,19 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1,
 
 void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
 {
-
   outMatches.clear();
-  FSIntArrayT outIndicesBVHTree; // indice in the BVH Tree of the clipped faces
-                                 // corresponding to the index in the
-                                 // clippedFaces_=std::vector<FSClippingFace>
+  FSIntArrayT outIndicesBVHTree; // indices in the BVH tree, parallel to clippedFaces_
 
   for(const auto& subject : subjectFaces_) {
-
-    FS_intT n = bvhClipped_.FindBoxesIntersectingWithBox(
-      subject.boundingBox().boxMinMax, outIndicesBVHTree);
+    FS_intT n = bvhClipped_.FindBoxesIntersectingWithBox(subject.boundingBox().boxMinMax, outIndicesBVHTree);
     FS_intT faceIndexSubject = subject.faceIndex();
-    // std::cout << "Face " << subject.faceIndex() << " found " << n << "Boxes Intersecting provided by the face " << faceIndexSubject << std::endl;
-    //  here we can have potential face index clipped which are on other proc. We
-    //  need to acess all of them on this proc for now we'll supose that we are
-    //  on sequential
     outIndicesBVHTree.Resize(n);
-
 
     for(FS_intT k = 0; k < n; ++k) {
       FS_intT faceIndexClippedBVHTree = outIndicesBVHTree(k);
       FSFaceMatch match;
       match.face1 = faceIndexSubject;
-      if(subject.topo()._faceFSDM) { // this is why we need the topo in FSClipping
+      if(subject.topo()._faceFSDM) {
         match.elemOwner1 = subject.topo().GetOwnerCellFSDMIndex();
         match.faceOwner1 = subject.topo().GetNeighborCellFSDMIndex();
         match.elemOwnerType1 = subject.topo()._faceFSDM->mOwner.mCellType;
@@ -217,21 +200,19 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
         match.faceOwnerType2 = clippedFaces_[faceIndexClippedBVHTree].topo()._faceFSDM->mNeighbor.mCellType;
       }
 
-      if(ComputeMatch(subject, clippedFaces_[faceIndexClippedBVHTree],
-                      match)) {
-        match.clippedPoly3D =
-          FSClippingUtil::ProjectPoly2DTo3D(subject, match.clippedPoly2D);
+      if(ComputeMatch(subject, clippedFaces_[faceIndexClippedBVHTree], match)) {
+        match.clippedPoly3D = FSClippingUtil::ProjectPoly2DTo3D(subject, match.clippedPoly2D);
 
         // Compute the intersection polygon in the clipped face's own frame by
-        // running the clipping algorithm with the roles swapped. This guarantees
-        // that vertices of the clipped face appear with their exact projected2D()
-        // values, making them identical across all matches sharing the same
-        // clipped face. InvertMatches swaps clippedPoly3D <-> clippedPoly3D_face2
-        // so that proc 1 always receives coordinates in its own face's frame.
+        // running the clipping algorithm with roles swapped. This ensures that
+        // vertices of the clipped face appear with their exact projected2D()
+        // values, making them consistent across all matches sharing that face.
+        // InvertMatches swaps clippedPoly3D <-> clippedPoly3D_face2 so that
+        // proc 1 always receives coordinates in its own face frame.
         FSFaceMatch match_swapped;
         if(ComputeMatch(clippedFaces_[faceIndexClippedBVHTree], subject, match_swapped)) {
-          match.clippedPoly3D_face2 = FSClippingUtil::ProjectPoly2DTo3D(
-            clippedFaces_[faceIndexClippedBVHTree], match_swapped.clippedPoly2D);
+          match.clippedPoly3D_face2 =
+            FSClippingUtil::ProjectPoly2DTo3D(clippedFaces_[faceIndexClippedBVHTree], match_swapped.clippedPoly2D);
         }
 
         outMatches.emplace_back(std::move(match));

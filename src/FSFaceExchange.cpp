@@ -7,7 +7,6 @@ namespace FSFaceExchange {
 
 void Send(FSClac& clac, FS_intT destProc, const std::vector<FSClippingFace>& faces)
 {
-  // --- Compute exact buffer size ---
   // Per face: [n_verts (int32)] [coords (float64 * n*3)] [owner (5 int32)] [neighbor (5 int32)]
   FSClac::sizeT bufSize = clac.GetBufSizeInt32(1); // n_faces
   for(const auto& f : faces) {
@@ -20,12 +19,10 @@ void Send(FSClac& clac, FS_intT destProc, const std::vector<FSClippingFace>& fac
   clac.SelectSendBuffer(destProc);
   clac.InitSendBuffer(bufSize);
 
-  // --- Pack ---
   FS_intT n = static_cast<FS_intT>(faces.size());
   clac.Pack(&n, 1);
 
   for(const auto& f : faces) {
-    // geometry
     FS_intT nv = static_cast<FS_intT>(f.vertices().size());
     clac.Pack(&nv, 1);
     FS_intT faceIndex = f.faceIndex();
@@ -34,7 +31,7 @@ void Send(FSClac& clac, FS_intT destProc, const std::vector<FSClippingFace>& fac
       FS_float64T coords[3] = {v[0], v[1], v[2]};
       clac.Pack(coords, 3);
     }
-    // FSDM connectivity (owner + neighbor FSCellFace, 5 FS_intT each)
+    // Pack FSDM connectivity (owner + neighbor cell face, 5 FS_intT each)
     FSCellFace owner = f.topo()._faceFSDM->mOwner;
     FSCellFace neighbor = f.topo()._faceFSDM->mNeighbor;
     owner.Pack(clac);
@@ -57,14 +54,12 @@ ReceivedFaces Receive(FSClac& clac, FS_intT sourceProc)
   result.connectivity.reserve(nFaces);
 
   for(FS_intT f = 0; f < nFaces; ++f) {
-    // geometry
     FS_intT nVerts = 0;
     clac.Unpack(&nVerts, 1);
     FS_intT faceIndex = 0;
     clac.Unpack(&faceIndex, 1);
 
     FSFloatArrayT faceNodeCoordinates(nVerts, FS_3D);
-    std::vector<FSVec3> verts(nVerts);
     for(FS_intT v = 0; v < nVerts; ++v) {
       FS_float64T coords[3];
       clac.Unpack(coords, 3);
@@ -72,11 +67,8 @@ ReceivedFaces Receive(FSClac& clac, FS_intT sourceProc)
         faceNodeCoordinates(v, i) = coords[i];
     }
 
-    // FSDM connectivity
     FSFaceConnectivity conn;
     conn.Unpack(clac);
-    // conn.mOwner.Unpack(clac);
-    // conn.mNeighbor.Unpack(clac);
 
     result.connectivity.push_back(conn);
     result.faces.emplace_back(FSFace(result.connectivity.back()), faceIndex, faceNodeCoordinates);
@@ -91,18 +83,15 @@ namespace FSMatchExchange {
 
 void Send(FSClac& clac, FS_intT destProc, const std::vector<FSFaceMatch>& matches)
 {
-  // --- Compute exact buffer size ---
   FSClac::sizeT bufSize = clac.GetBufSizeInt32(1); // n_matches
-  for(const auto& m : matches) {
+  for(const auto& m : matches)
     bufSize += m.GetBufSize(clac);
-  }
 
   clac.SelectSendBuffer(destProc);
   clac.InitSendBuffer(bufSize);
   FS_intT nm = static_cast<FS_intT>(matches.size());
   clac.Pack(&nm, 1);
 
-  // --- Pack ---
   for(auto& m : matches) {
     FSFaceMatch fm = m;
     fm.Pack(clac);
@@ -120,7 +109,6 @@ std::vector<FSFaceMatch> Receive(FSClac& clac, FS_intT sourceProc)
 
   std::vector<FSFaceMatch> matches(numMatches);
   for(FS_intT m = 0; m < numMatches; m++) {
-    // geometry
     FSFaceMatch match;
     match.Unpack(clac);
     matches[m] = match;

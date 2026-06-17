@@ -16,23 +16,16 @@ struct FaceData {
 class FSPolyFaceBuilder
 {
 public:
-  FSPolyFaceBuilder(const std::vector<FSFaceMatch>& matches,
-                    const FSCell2NodeBuilder& cell2NodeBuilder,
-                    const std::unordered_set<GeomFaceKey, GeomFaceKeyHash>& faceKeys,
-                    FS_floatT tol = 1e-12) : matches_(matches),
-                                             cell2NodeBuilder_(cell2NodeBuilder),
-                                             boundaryFaceKeys_(faceKeys),
-                                             tol_(tol) {};
+  FSPolyFaceBuilder(const std::vector<FSFaceMatch>& matches, const FSCell2NodeBuilder& cell2NodeBuilder,
+                    const std::unordered_set<GeomFaceKey, GeomFaceKeyHash>& faceKeys, FS_floatT tol = 1e-12)
+    : matches_(matches), cell2NodeBuilder_(cell2NodeBuilder), boundaryFaceKeys_(faceKeys), tol_(tol) {};
 
-  void AddInnerFaces(FSMeshEnums::CellType,
-                     const FSCellPool& cellPool,
-                     FS_intT cell,
-                     FS_intT face,
+  void AddInnerFaces(FSMeshEnums::CellType, const FSCellPool& cellPool, FS_intT cell, FS_intT face,
                      const FSFloatArrayT& oldCoords);
 
-  void Build(FSMeshPolyFaceStorage& polyFaces); // build the FSMeshPolyFaceStorage for FSDM
+  void Build(FSMeshPolyFaceStorage& polyFaces);
 
-  void CollectMatchesFaces(); // main function, construct the cellFaces containers with the matches
+  void CollectMatchesFaces();
 
   void Reorienting();
 
@@ -43,16 +36,15 @@ public:
   FSIntRegisterT Cell2NodePoly2D();
 
 private:
-  std::vector<std::vector<FaceData> > cellFaces_; // the final container (cellId -> faceId -> nodeId) for recosntruct a new mesh with FSDM
+  std::vector<std::vector<FaceData> > cellFaces_; // cellId → faceId → nodeId, used to reconstruct the new mesh
   const std::vector<FSFaceMatch>& matches_;
   const FSCell2NodeBuilder& cell2NodeBuilder_;
   const std::unordered_set<GeomFaceKey, GeomFaceKeyHash>& boundaryFaceKeys_;
 
-  std::unordered_map<FS_intT, FS_intT> cellId2L_; // connectivity i -> i, usefull for searching in O(1)
+  std::unordered_map<FS_intT, FS_intT> cellId2L_; // cellId → local index, for O(1) lookup
   FS_floatT tol_;
 
-  FS_intT FindNodeLocalElem(const FSVec3& p,
-                            const Cell2NodeData& cell2Node) const;
+  FS_intT FindNodeLocalElem(const FSVec3& p, const Cell2NodeData& cell2Node) const;
 
   FSVec3 ComputeFaceCenter(const FaceData&, const std::vector<FSVec3>&) const;
   FSVec3 ComputeFaceNormal(const FaceData& face, const std::vector<FSVec3>& coords) const;

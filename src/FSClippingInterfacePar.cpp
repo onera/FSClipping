@@ -87,14 +87,15 @@ FSMesh FSClippingInterfacePar::BuildVolumeInterface(FSMesh& mesh)
         const auto& bdryCellPool1 = boundaryExtraction.volumeCells.at(t);
 
         topologyAssembler.BuildVolumeTopo(cell2Node1, bdryCellPool1, *cellPool1, oldCoords, volumeTopology);
-        // volumeTopology = topolyBuilder.BuildVolumeTopo(cell2Node, surfaceTopology); in the future
       }
     }
 
     topologyAssembler.AppendUnclippedSurfaces(mesh, boundaryExtraction.surfaceCells, oldCoords, volumeTopology);
 
-    volumeTopology.cellParent[FSMeshEnums::CellType::CT_Poly2D] = surfaceTopology.cellParent[FSMeshEnums::CellType::CT_Poly2D];
-    volumeTopology.cellParentType[FSMeshEnums::CellType::CT_Poly2D] = surfaceTopology.cellParentType[FSMeshEnums::CellType::CT_Poly2D];
+    volumeTopology.cellParent[FSMeshEnums::CellType::CT_Poly2D] =
+      surfaceTopology.cellParent[FSMeshEnums::CellType::CT_Poly2D];
+    volumeTopology.cellParentType[FSMeshEnums::CellType::CT_Poly2D] =
+      surfaceTopology.cellParentType[FSMeshEnums::CellType::CT_Poly2D];
     FSMeshReconstruction meshReconstruction(clac_);
     return meshReconstruction.Build(mesh.GetMeshData()->GetUnstructCells(), volumeTopology);
   }

@@ -9,13 +9,8 @@ _FS_BEGIN_NAMESPACE
 class FSClippingInterfacePar
 {
 public:
-  FSClippingInterfacePar(FSClac& globalClac,
-                         FSClac& clac,
-                         FS_floatT tol,
-                         FS_intT boundaryMarkerMesh) : globalClac_(globalClac),
-                                                       clac_(clac),
-                                                       tol_(tol),
-                                                       boundaryMarkerMesh_(boundaryMarkerMesh) {};
+  FSClippingInterfacePar(FSClac& globalClac, FSClac& clac, FS_floatT tol, FS_intT boundaryMarkerMesh)
+    : globalClac_(globalClac), clac_(clac), tol_(tol), boundaryMarkerMesh_(boundaryMarkerMesh) {};
 
   FSMesh BuildSurfaceInterface(FSMesh& mesh);
 

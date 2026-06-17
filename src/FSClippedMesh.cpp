@@ -16,20 +16,14 @@ _FS_BEGIN_NAMESPACE
 //  Create
 //
 
-FSDataManagerOp* FSClippedMesh::Create(FSClac* clac)
-{
-  return new FSClippedMesh(clac);
-}
+FSDataManagerOp* FSClippedMesh::Create(FSClac* clac) { return new FSClippedMesh(clac); }
 
 //-----------------------------------------------------------------------------
 //
 //  Constructor
 //
 
-FSClippedMesh::FSClippedMesh(FSClac* clac)
-  : FSDataManagerOp(clac)
-{
-}
+FSClippedMesh::FSClippedMesh(FSClac* clac) : FSDataManagerOp(clac) {}
 
 
 //-----------------------------------------------------------------------------
@@ -37,9 +31,7 @@ FSClippedMesh::FSClippedMesh(FSClac* clac)
 //  Destructor
 //
 
-FSClippedMesh::~FSClippedMesh()
-{
-}
+FSClippedMesh::~FSClippedMesh() {}
 
 
 //-----------------------------------------------------------------------------
@@ -47,10 +39,7 @@ FSClippedMesh::~FSClippedMesh()
 //  GetClassName
 //
 
-FSString FSClippedMesh::GetClassName() const
-{
-  return "FSClippedMesh";
-}
+FSString FSClippedMesh::GetClassName() const { return "FSClippedMesh"; }
 
 
 //-----------------------------------------------------------------------------
@@ -170,8 +159,7 @@ bool FSClippedMesh::ExtractBoundaryFaces(FSMesh& mesh, FS_intT marker, BoundaryE
 //
 
 bool FSClippedMesh::GenerateMeshClippedTopo(FSMesh& mesh, const BoundaryExtraction& be1,
-                                            const std::vector<FSFaceMatch>& matches,
-                                            FSTopologyData& meshClippedTopo)
+                                            const std::vector<FSFaceMatch>& matches, FSTopologyData& meshClippedTopo)
 {
   FSTopologyAssembler topologyAssembler(mParams.mTol);
   FSTopologyData surfaceClippedTopo = topologyAssembler.BuildSurfaceTopo(matches, be1.faceKeys);
@@ -193,8 +181,10 @@ bool FSClippedMesh::GenerateMeshClippedTopo(FSMesh& mesh, const BoundaryExtracti
 
   topologyAssembler.AppendUnclippedSurfaces(mesh, be1.surfaceCells, oldCoords, meshClippedTopo);
 
-  meshClippedTopo.cellParent[FSMeshEnums::CellType::CT_Poly2D] = surfaceClippedTopo.cellParent[FSMeshEnums::CellType::CT_Poly2D];
-  meshClippedTopo.cellParentType[FSMeshEnums::CellType::CT_Poly2D] = surfaceClippedTopo.cellParentType[FSMeshEnums::CellType::CT_Poly2D];
+  meshClippedTopo.cellParent[FSMeshEnums::CellType::CT_Poly2D] =
+    surfaceClippedTopo.cellParent[FSMeshEnums::CellType::CT_Poly2D];
+  meshClippedTopo.cellParentType[FSMeshEnums::CellType::CT_Poly2D] =
+    surfaceClippedTopo.cellParentType[FSMeshEnums::CellType::CT_Poly2D];
 
   return true;
 }
@@ -204,8 +194,6 @@ bool FSClippedMesh::GenerateMesh(FSMesh& meshOriginal1, FSTopologyData& meshClip
   FSClac* originalClac = meshOriginal1.GetClac();
   FSUnstructMeshData& meshDataOrig1 = meshOriginal1.GetMeshData()->GetUnstructCells();
   FSMeshReconstruction meshReconstruction(*originalClac);
-  // meshReconstruction.BuildTmp(meshDataOrig1, clippedMesh, meshClippedTopo);
   clippedMesh = meshReconstruction.Build(meshDataOrig1, meshClippedTopo);
-  // clippedMesh.PrintInfo();
   return true;
 }

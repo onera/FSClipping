@@ -15,8 +15,9 @@ struct FSBoundingBoxFace {
   FS_floatT boxMinMax[6];
 
   FSBoundingBoxFace()
-    : boxMinMax(+FS_FLOATT_MAX, +FS_FLOATT_MAX, +FS_FLOATT_MAX,
-                -FS_FLOATT_MAX, -FS_FLOATT_MAX, -FS_FLOATT_MAX) {}
+    : boxMinMax(+FS_FLOATT_MAX, +FS_FLOATT_MAX, +FS_FLOATT_MAX, -FS_FLOATT_MAX, -FS_FLOATT_MAX, -FS_FLOATT_MAX)
+  {
+  }
 
   void ExpandToInclude(const FSVec3& p)
   {
@@ -35,54 +36,43 @@ public:
   /* --------------------------------------------------------------
      Constructors
      -------------------------------------------------------------- */
-  explicit FSClippingFace(const FSFace& face,
-                          const FS_intT faceIndex,
-                          const FSFloatArrayT& faceNodeCoordinates)
+  explicit FSClippingFace(const FSFace& face, const FS_intT faceIndex, const FSFloatArrayT& faceNodeCoordinates)
     : topo_(face), faceIndex_(faceIndex)
   {
     buildGeometry(faceNodeCoordinates);
   };
 
-  /** Build the object from a raw coordinate array (3‑D only). */
-  explicit FSClippingFace(const FSFloatArrayT& coords)
-    : topo_(), faceIndex_(++s_nextId_)
+  explicit FSClippingFace(const FSFloatArrayT& coords) : topo_(), faceIndex_(++s_nextId_)
   {
-    setVerticesFromArray(coords); // triger computeGeometry()
+    setVerticesFromArray(coords); // triggers computeGeometry()
   }
 
-  /** Build the object from a raw std::vector of FSVec3D (3‑D only). */
-  explicit FSClippingFace(const std::vector<FSVec3>& vec)
-    : topo_(), faceIndex_(++s_nextId_)
+  explicit FSClippingFace(const std::vector<FSVec3>& vec) : topo_(), faceIndex_(++s_nextId_)
   {
-    setVertices(vec); // triger computeGeometry()
+    setVertices(vec); // triggers computeGeometry()
   }
 
   /* --------------------------------------------------------------
-     Public read‑only accessors
+     Public read-only accessors
      -------------------------------------------------------------- */
   const FSFace& topo() const noexcept { return topo_; }
   const FS_intT& faceIndex() const noexcept { return faceIndex_; }
   const FSBoundingBoxFace& boundingBox() const noexcept { return boundingBox_; }
   const std::vector<FSVec3>& vertices() const noexcept { return vertices_; }
-  const std::vector<FSVec2>& projected2D() const noexcept
-  {
-    return projected2D_;
-  }
+  const std::vector<FSVec2>& projected2D() const noexcept { return projected2D_; }
   const FSVec3& normal() const noexcept { return normal_; }
   const FSVec3& tangentVector1() const noexcept { return tangentVector1_; }
   const FSVec3& tangentVector2() const noexcept { return tangentVector2_; }
 
   /* --------------------------------------------------------------
-     Public mutators – thin wrappers that keep the object in a valid state
+     Public mutators
      -------------------------------------------------------------- */
   void setVertices(const std::vector<FSVec3>& verts)
   {
     vertices_ = verts;
-    // recompute everything from the new vertices
     computeGeometry();
   }
 
-  /** Fill the vertex list from a raw FSFloatArrayT (expects 3‑D data). */
   void setVerticesFromArray(const FSFloatArrayT& coords)
   {
     const FS_intT size = coords.Size() / FS_3D;
@@ -91,35 +81,30 @@ public:
 
     for(FS_intT i = 0; i < size; ++i)
       vertices_.emplace_back(coords(i, 0), coords(i, 1), coords(i, 2));
-    // recompute geometry now that we have the vertices
     computeGeometry();
   }
 
   /* --------------------------------------------------------------
-     Public wrapper that performs the full geometry construction
+     Full geometry construction
      -------------------------------------------------------------- */
   void buildGeometry(const FSFloatArrayT& faceNodeCoordinates);
 
 private:
   /* --------------------------------------------------------------
-     Private data members
+     Data members
      -------------------------------------------------------------- */
   const FSFace topo_;                    // immutable wrapper to the FSDM connectivity
   const FS_intT faceIndex_;              // global index of the face
-  FSBoundingBoxFace boundingBox_;        // bounding box of the face
-  static std::atomic<FS_intT> s_nextId_; // counter of the nb of faces for initializing faceIndex_
-                                         // with the coord constructor. Usefull only for unit test.
-  std::vector<FSVec3> vertices_;         // 3‑D vertices of the face
-  std::vector<FSVec2> projected2D_;      // 2‑D projection in the local basis
+  FSBoundingBoxFace boundingBox_;        // axis-aligned bounding box
+  static std::atomic<FS_intT> s_nextId_; // auto-increment id used by coordinate-only constructors (unit tests)
+  std::vector<FSVec3> vertices_;         // 3D vertices
+  std::vector<FSVec2> projected2D_;      // 2D projection onto the local basis
   FSVec3 normal_;                        // unit normal
-  FSVec3 tangentVector1_;                // first orthonormal basis vector
-  FSVec3 tangentVector2_;                // second orthonormal basis vector
+  FSVec3 tangentVector1_;                // first orthonormal tangent
+  FSVec3 tangentVector2_;                // second orthonormal tangent
 
-  /* --------------------------------------------------------------
-     Private implementation details
-     -------------------------------------------------------------- */
-  /** Compute normal, orthonormal basis, bounding box and 2‑D projection.
-      Called internally whenever the vertex list changes. */
+  /* Compute normal, orthonormal basis, bounding box and 2D projection.
+     Called whenever the vertex list changes. */
   void computeGeometry();
 };
 

@@ -22,10 +22,10 @@ struct FSBoundaryFace : FSFace {
    * @param fsdmFaceGlobalNumber The FSDM boundary face index uniquely defining
    * this face in the global mesh.
    */
-  FSBoundaryFace(const FSFaceConnectivity &face, const FS_intT marker,
-                 const FS_intT fsdmFaceGlobalNumber)
-      : FSFace(face), _marker(marker),
-        _fsdmFaceGlobalNumber(fsdmFaceGlobalNumber) {}
+  FSBoundaryFace(const FSFaceConnectivity& face, const FS_intT marker, const FS_intT fsdmFaceGlobalNumber)
+    : FSFace(face), _marker(marker), _fsdmFaceGlobalNumber(fsdmFaceGlobalNumber)
+  {
+  }
 
   _FS_END_NAMESPACE
 };

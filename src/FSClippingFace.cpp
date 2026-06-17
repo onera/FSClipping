@@ -20,8 +20,7 @@ void FSClippingFace::buildGeometry(const FSFloatArrayT& faceNodeCoordinates)
 
   const FS_intT size = faceNodeCoordinates.Size() / FS_3D;
   for(FS_intT i = 0; i < size; ++i)
-    vertices_.emplace_back(faceNodeCoordinates(i, 0), faceNodeCoordinates(i, 1),
-                           faceNodeCoordinates(i, 2));
+    vertices_.emplace_back(faceNodeCoordinates(i, 0), faceNodeCoordinates(i, 1), faceNodeCoordinates(i, 2));
 
   // -----------------------------------------------------------------
   // 2) Compute geometry (normal, tangents, bounding box, projection)

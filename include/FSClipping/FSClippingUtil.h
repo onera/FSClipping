@@ -32,8 +32,7 @@ inline FS_floatT PolygonSignedArea(const std::vector<FSVec2>& poly)
 /* -----------------------------------------------------------------
    EnsureSameOrientation
    ----------------------------------------------------------------- */
-inline void EnsureSameOrientation(std::vector<FSVec2>& poly,
-                                  FS_floatT refSignedArea)
+inline void EnsureSameOrientation(std::vector<FSVec2>& poly, FS_floatT refSignedArea)
 {
   FS_floatT area = PolygonSignedArea(poly);
 
@@ -45,24 +44,18 @@ inline void EnsureSameOrientation(std::vector<FSVec2>& poly,
 /* -----------------------------------------------------------------
    IsPointInsideEdge
    ----------------------------------------------------------------- */
-inline bool IsPointInsideEdge(const FSVec2& P,
-                              const FSVec2& A,
-                              const FSVec2& B,
+inline bool IsPointInsideEdge(const FSVec2& P, const FSVec2& A, const FSVec2& B,
                               FS_floatT tol = static_cast<FS_floatT>(1e-12))
 {
   // (B-A) × (p-A) >= 0  →  p is on the left of AB
-  FS_floatT cross =
-    (B[0] - A[0]) * (P[1] - A[1]) - (B[1] - A[1]) * (P[0] - A[0]);
+  FS_floatT cross = (B[0] - A[0]) * (P[1] - A[1]) - (B[1] - A[1]) * (P[0] - A[0]);
   return cross >= -tol;
 }
 
 /* -----------------------------------------------------------------
    ComputeIntersection
    ----------------------------------------------------------------- */
-inline FSVec2 ComputeIntersection(const FSVec2& P1,
-                                  const FSVec2& P2,
-                                  const FSVec2& A,
-                                  const FSVec2& B)
+inline FSVec2 ComputeIntersection(const FSVec2& P1, const FSVec2& P2, const FSVec2& A, const FSVec2& B)
 {
   FSVec2 U = P2 - P1; // direction of subject segment
   FSVec2 V = B - A;   // direction of clipping edge
@@ -115,8 +108,7 @@ inline void RemoveDuplicatePoints(std::vector<FSVec2>& pts, FS_floatT tol)
   }
 
   // check first/last
-  if(clean.size() > 1 &&
-     (clean.front() - clean.back()).Norm() < tol)
+  if(clean.size() > 1 && (clean.front() - clean.back()).Norm() < tol)
     clean.pop_back();
 
   pts = std::move(clean);
@@ -125,32 +117,26 @@ inline void RemoveDuplicatePoints(std::vector<FSVec2>& pts, FS_floatT tol)
 /* -----------------------------------------------------------------
    AreFacesIdentical
    ----------------------------------------------------------------- */
-bool AreFacesIdentical(const FSClippingFace& f1,
-                       const FSClippingFace& f2,
+bool AreFacesIdentical(const FSClippingFace& f1, const FSClippingFace& f2,
                        FS_floatT tol = static_cast<FS_floatT>(1e-12));
 
 /* -----------------------------------------------------------------
    ClipConvexPolygon - Sutherland-Hodgman Algorithm
    For illustration : https://github.com/mhdadk/sutherland-hodgman
    ----------------------------------------------------------------- */
-bool ClipConvexPolygon(const std::vector<FSVec2>& subject,
-                       const std::vector<FSVec2>& clipper,
-                       std::vector<FSVec2>& output,
-                       FS_floatT tol = static_cast<FS_floatT>(1e-12));
+bool ClipConvexPolygon(const std::vector<FSVec2>& subject, const std::vector<FSVec2>& clipper,
+                       std::vector<FSVec2>& output, FS_floatT tol = static_cast<FS_floatT>(1e-12));
 
 /* -----------------------------------------------------------------
    ProjectFaceInPlane
    ----------------------------------------------------------------- */
-std::vector<FSVec2> ProjectFaceInPlane(const FSClippingFace& src,
-                                       const FSClippingFace& planeOwner,
+std::vector<FSVec2> ProjectFaceInPlane(const FSClippingFace& src, const FSClippingFace& planeOwner,
                                        FS_floatT tol = 1e-12);
 
 /* -----------------------------------------------------------------
    ProjectPoly2DTo3D
    ----------------------------------------------------------------- */
-std::vector<FSVec3>
-ProjectPoly2DTo3D(const FSClippingFace& face,
-                  const std::vector<FSVec2>& poly2D);
+std::vector<FSVec3> ProjectPoly2DTo3D(const FSClippingFace& face, const std::vector<FSVec2>& poly2D);
 
 } // namespace FSClippingUtil
 

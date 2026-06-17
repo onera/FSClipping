@@ -28,12 +28,7 @@ struct FSFaceMatch {
   FSMeshEnums::CellType faceOwnerType2;
 
   // --- Type of geometric relation ---
-  enum MatchType : FS_intT {
-    UNKNOWN = 0,
-    IDENTICAL = 1,
-    INCLUDED = 2,
-    INTERSECTING = 3
-  } type = UNKNOWN;
+  enum MatchType : FS_intT { UNKNOWN = 0, IDENTICAL = 1, INCLUDED = 2, INTERSECTING = 3 } type = UNKNOWN;
 
   // --- Geometric measure ---
   FS_floatT intersectedArea = 0.0;
@@ -59,14 +54,9 @@ struct FSFaceMatch {
 class FSFaceMatcher
 {
 public:
-  FSFaceMatcher(
-    FSClac& clacClipped,
-    const std::vector<FSClippingFace>& subjectFaces,
-    const std::vector<FSClippingFace>& clippedFaces,
-    FS_floatT tol = 1e-12)
-    : subjectFaces_(subjectFaces),
-      clippedFaces_(clippedFaces),
-      tol_(tol)
+  FSFaceMatcher(FSClac& clacClipped, const std::vector<FSClippingFace>& subjectFaces,
+                const std::vector<FSClippingFace>& clippedFaces, FS_floatT tol = 1e-12)
+    : subjectFaces_(subjectFaces), clippedFaces_(clippedFaces), tol_(tol)
   {
 
     FS_sizeT size = static_cast<FS_sizeT>(clippedFaces.size());
@@ -77,8 +67,7 @@ public:
         boundingBoxes(i, j) = clippedFaces[i].boundingBox().boxMinMax[j];
       indices(i) = clippedFaces[i].faceIndex(); // global ID
     }
-    if(!FSBoundingBoxUtil::GatherBoundingBoxesIntoBVHTree(
-         &clacClipped, boundingBoxes, indices, bvhClipped_))
+    if(!FSBoundingBoxUtil::GatherBoundingBoxesIntoBVHTree(&clacClipped, boundingBoxes, indices, bvhClipped_))
       FSError.SetAndPrintAndExit("Failed to build BVH for clipped face");
   }
 
@@ -93,8 +82,7 @@ private:
   FSBVHTree bvhClipped_;
   FS_floatT tol_;
 
-  bool ComputeMatch(const FSClippingFace& f1, const FSClippingFace& f2,
-                    FSFaceMatch& out) const;
+  bool ComputeMatch(const FSClippingFace& f1, const FSClippingFace& f2, FSFaceMatch& out) const;
 };
 
 _FS_END_NAMESPACE

@@ -5,14 +5,12 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
 {
   FSMesh meshClipped = FSMesh(&clac_);
 
-  // init pointer to meshdata
   const auto& globalCoords = topologyData.globalCoords;
   auto& cell2NodePoly2D = topologyData.cell2NodePoly2D;
   auto& cell2NodePoly3D = topologyData.cell2NodePoly3D;
   auto& cell2NodeInner = topologyData.cell2NodeInner;
   auto& polyFaces = topologyData.polyFaces;
 
-  // begin initialization
   meshClipped.BeginInitialization();
   FSMeshData* MeshDataClippedPtr = meshClipped.GetMeshData();
   FSUnstructMeshData& unstructMeshData = MeshDataClippedPtr->GetUnstructCells();
@@ -23,7 +21,6 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
       meshClipped.InitUnstructCells(type, cell2Node);
   }
 
-  // init reference to unstructured mesh data
   MeshDataClippedPtr->InitUnstructCells(FSMeshEnums::CT_Poly2D, cell2NodePoly2D);
   MeshDataClippedPtr->InitUnstructCells(FSMeshEnums::CT_Poly3D, cell2NodePoly3D);
   MeshDataClippedPtr->InitUnstructCellFaces(FSMeshEnums::CT_Poly3D, polyFaces);
@@ -42,7 +39,6 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
   }
 
   bool success = unstructMeshData.SetCoordinates3D(coordsDesc, coordInterface);
-
   if(!success)
     FSError.SetAndPrintAndExit("FSMeshReconstruction : Error while set coordinates");
 
@@ -56,27 +52,21 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
   }
 
   CopyCellAttributes(meshDataOriginal, topologyData, unstructMeshData);
-  // end initialization
 
-  // check if initialization is complete
   success = meshClipped.IsInitialized();
-
   if(!success)
     FSError.SetAndPrintAndExit("FSMeshReconstruction : Error while initialization the new mesh");
 
   return meshClipped;
 }
 
-void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshDataOriginal,
-                                              const FSTopologyData& topo,
+void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshDataOriginal, const FSTopologyData& topo,
                                               FSUnstructMeshData& meshDataNew)
 {
   for(const auto& [cellType, parentArray] : topo.cellParent) {
     const FS_intT numCells = parentArray.Size();
 
-    // -----------------------------
     // Resolve parent cell type
-    // -----------------------------
     FSMeshEnums::CellType parentCellType = cellType;
 
     if(FSMeshEnums::IsPolyCellType(cellType)) {
@@ -87,28 +77,18 @@ void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshData
 #ifndef NDEBUG
       for(FS_intT i = 1; i < parentTypes.Size(); ++i) {
         if(parentTypes[i] != parentTypes[0]) {
-          FSError.SetAndPrintAndExit(
-            "CopyCellAttributes: heterogeneous parent types detected");
+          FSError.SetAndPrintAndExit("CopyCellAttributes: heterogeneous parent types detected");
         }
       }
 #endif
     }
 
-    // -----------------------------
-    // Access original data
-    // -----------------------------
-    const auto& attribNames =
-      meshDataOriginal.GetCellAttributes(parentCellType);
+    const auto& attribNames = meshDataOriginal.GetCellAttributes(parentCellType);
 
-    const FS_intT offset =
-      meshDataOriginal.GetCellPool(parentCellType)->GetOffset();
+    const FS_intT offset = meshDataOriginal.GetCellPool(parentCellType)->GetOffset();
 
-    // -----------------------------
-    // Copy attributes
-    // -----------------------------
     for(FSStringArrayT::ConstIterator AI = attribNames.BeginConst(); AI.IsValid(); ++AI) {
-      const auto& valuesOrig =
-        meshDataOriginal.GetCellAttribute(*AI, parentCellType);
+      const auto& valuesOrig = meshDataOriginal.GetCellAttribute(*AI, parentCellType);
 
       FSIntArrayT valuesNew(numCells);
 
@@ -120,9 +100,7 @@ void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshData
       meshDataNew.InitCellAttribute(*AI, cellType, valuesNew);
 
       if(meshDataOriginal.HasCellAttributeValueNames(*AI)) {
-        meshDataNew.SetCellAttributeValueNames(
-          *AI,
-          meshDataOriginal.GetCellAttributeValueNames(*AI));
+        meshDataNew.SetCellAttributeValueNames(*AI, meshDataOriginal.GetCellAttributeValueNames(*AI));
       }
     }
   }
