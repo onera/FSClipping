@@ -12,9 +12,12 @@ FSClac::sizeT FSFaceMatch::GetBufSize(FSClac& clac) const
   // clippedPoly2D : taille + n * 2 coords
   s += clac.GetBufSizeInt32(1);
   s += clac.GetBufSizeFloat64(static_cast<FSClac::intT>(clippedPoly2D.size()) * 2);
-  // clippedPoly3D : taille + n * 3 coords
+  // clippedPoly3D (face1 frame) : taille + n * 3 coords
   s += clac.GetBufSizeInt32(1);
   s += clac.GetBufSizeFloat64(static_cast<FSClac::intT>(clippedPoly3D.size()) * 3);
+  // clippedPoly3D_face2 (face2 frame) : taille + n * 3 coords
+  s += clac.GetBufSizeInt32(1);
+  s += clac.GetBufSizeFloat64(static_cast<FSClac::intT>(clippedPoly3D_face2.size()) * 3);
   return s;
 }
 
@@ -50,6 +53,15 @@ void FSFaceMatch::Pack(FSClac& clac)
   FS_intT n3 = static_cast<FS_intT>(clippedPoly3D.size());
   clac.Pack(&n3);
   for(auto& p : clippedPoly3D) {
+    FS_float64T x = p[0], y = p[1], z = p[2];
+    clac.Pack(&x);
+    clac.Pack(&y);
+    clac.Pack(&z);
+  }
+
+  FS_intT n3f2 = static_cast<FS_intT>(clippedPoly3D_face2.size());
+  clac.Pack(&n3f2);
+  for(auto& p : clippedPoly3D_face2) {
     FS_float64T x = p[0], y = p[1], z = p[2];
     clac.Pack(&x);
     clac.Pack(&y);
@@ -96,6 +108,17 @@ void FSFaceMatch::Unpack(FSClac& clac)
   clac.Unpack(&n3);
   clippedPoly3D.resize(n3);
   for(auto& p : clippedPoly3D) {
+    FS_float64T x, y, z;
+    clac.Unpack(&x);
+    clac.Unpack(&y);
+    clac.Unpack(&z);
+    p = FSVec3(x, y, z);
+  }
+
+  FS_intT n3f2;
+  clac.Unpack(&n3f2);
+  clippedPoly3D_face2.resize(n3f2);
+  for(auto& p : clippedPoly3D_face2) {
     FS_float64T x, y, z;
     clac.Unpack(&x);
     clac.Unpack(&y);
@@ -198,6 +221,19 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
                       match)) {
         match.clippedPoly3D =
           FSClippingUtil::ProjectPoly2DTo3D(subject, match.clippedPoly2D);
+
+        // Compute the intersection polygon in the clipped face's own frame by
+        // running the clipping algorithm with the roles swapped. This guarantees
+        // that vertices of the clipped face appear with their exact projected2D()
+        // values, making them identical across all matches sharing the same
+        // clipped face. InvertMatches swaps clippedPoly3D <-> clippedPoly3D_face2
+        // so that proc 1 always receives coordinates in its own face's frame.
+        FSFaceMatch match_swapped;
+        if(ComputeMatch(clippedFaces_[faceIndexClippedBVHTree], subject, match_swapped)) {
+          match.clippedPoly3D_face2 = FSClippingUtil::ProjectPoly2DTo3D(
+            clippedFaces_[faceIndexClippedBVHTree], match_swapped.clippedPoly2D);
+        }
+
         outMatches.emplace_back(std::move(match));
       }
     }
@@ -212,6 +248,7 @@ void FSFaceMatcher::InvertMatches(std::vector<FSFaceMatch>& matches)
     std::swap(m.elemOwnerType1, m.elemOwnerType2);
     std::swap(m.faceOwner1, m.faceOwner2);
     std::swap(m.faceOwnerType1, m.faceOwnerType2);
+    std::swap(m.clippedPoly3D, m.clippedPoly3D_face2);
   }
 }
 

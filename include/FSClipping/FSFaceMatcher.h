@@ -42,8 +42,14 @@ struct FSFaceMatch {
   // stored in 2D because polygon clipping is performed in 2D
   std::vector<FSVec2> clippedPoly2D;
 
-  // FS_IntTersection polygon re‑projected in 3D in face 1
+  // Intersection polygon re-projected in 3D in the frame of face1
   std::vector<FSVec3> clippedPoly3D;
+
+  // Intersection polygon re-projected in 3D in the frame of face2.
+  // InvertMatches swaps the two so that clippedPoly3D always refers to the
+  // current face1 frame. This ensures consistent float values when the
+  // same geometric vertex appears in multiple matches for the same cell.
+  std::vector<FSVec3> clippedPoly3D_face2;
 
   FSClac::sizeT GetBufSize(FSClac& clac) const;
   void Pack(FSClac& clac);
