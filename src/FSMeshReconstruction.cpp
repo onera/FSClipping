@@ -12,8 +12,8 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
   auto& polyFaces = topologyData.polyFaces;
 
   meshClipped.BeginInitialization();
-  FSMeshData* MeshDataClippedPtr = meshClipped.GetMeshData();
-  FSUnstructMeshData& unstructMeshData = MeshDataClippedPtr->GetUnstructCells();
+  FSMeshData* meshDataClippedPtr = meshClipped.GetMeshData();
+  FSUnstructMeshData& unstructMeshData = meshDataClippedPtr->GetUnstructCells();
 
   meshClipped.InitUnstructNodes(globalCoords.size());
   if(!cell2NodeInner.IsEmpty()) {
@@ -21,9 +21,9 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
       meshClipped.InitUnstructCells(type, cell2Node);
   }
 
-  MeshDataClippedPtr->InitUnstructCells(FSMeshEnums::CT_Poly2D, cell2NodePoly2D);
-  MeshDataClippedPtr->InitUnstructCells(FSMeshEnums::CT_Poly3D, cell2NodePoly3D);
-  MeshDataClippedPtr->InitUnstructCellFaces(FSMeshEnums::CT_Poly3D, polyFaces);
+  meshDataClippedPtr->InitUnstructCells(FSMeshEnums::CT_Poly2D, cell2NodePoly2D);
+  meshDataClippedPtr->InitUnstructCells(FSMeshEnums::CT_Poly3D, cell2NodePoly3D);
+  meshDataClippedPtr->InitUnstructCellFaces(FSMeshEnums::CT_Poly3D, polyFaces);
   meshClipped.EndInitialization();
 
   FSQuantityDescArrayT coordsDesc(3);
@@ -43,11 +43,11 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
     FSError.SetAndPrintAndExit("FSMeshReconstruction : Error while set coordinates");
 
   FS_intT currentOffset = 0;
-  FSIntArrayT cellTypeArray_2 = MeshDataClippedPtr->GetUnstructCells().GetCellTypesArray();
+  FSIntArrayT cellTypeArray_2 = meshDataClippedPtr->GetUnstructCells().GetCellTypesArray();
   for(FSIntArrayT::ConstIterator cellType = cellTypeArray_2.BeginConst(); cellType.IsValid(); cellType.Next()) {
     if(*cellType == FSMeshEnums::CellType::CT_Node) {
-      MeshDataClippedPtr->GetUnstructCells().InitGlobalCellNumber((FSMeshEnums::CellType)*cellType, currentOffset);
-      currentOffset += MeshDataClippedPtr->GetUnstructCells().GetNCells((FSMeshEnums::CellType)*cellType);
+      meshDataClippedPtr->GetUnstructCells().InitGlobalCellNumber((FSMeshEnums::CellType)*cellType, currentOffset);
+      currentOffset += meshDataClippedPtr->GetUnstructCells().GetNCells((FSMeshEnums::CellType)*cellType);
     }
   }
 
@@ -103,5 +103,14 @@ void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshData
         meshDataNew.SetCellAttributeValueNames(*AI, meshDataOriginal.GetCellAttributeValueNames(*AI));
       }
     }
+  }
+}
+
+void FSMeshReconstruction::CopyAttributes(const FSMesh& meshOriginal, FSMesh& meshClipped)
+{
+  const auto& attributes = meshOriginal.GetAttributeNames();
+  for(FSStringArrayT::ConstIterator AI = attributes.BeginConst(); AI.IsValid(); ++AI) {
+    const auto attributeName = meshOriginal.GetAttribute(*AI);
+    meshClipped.SetAttribute(*AI, attributeName);
   }
 }

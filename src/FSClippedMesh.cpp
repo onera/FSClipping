@@ -195,5 +195,6 @@ bool FSClippedMesh::GenerateMesh(FSMesh& meshOriginal1, FSTopologyData& meshClip
   FSUnstructMeshData& meshDataOrig1 = meshOriginal1.GetMeshData()->GetUnstructCells();
   FSMeshReconstruction meshReconstruction(*originalClac);
   clippedMesh = meshReconstruction.Build(meshDataOrig1, meshClippedTopo);
+  meshReconstruction.CopyAttributes(meshOriginal1, clippedMesh);
   return true;
 }

@@ -38,8 +38,7 @@ static void polyMeshRepartition(FSClac* clac, FSMeshData* meshDataPtr)
   ASSERT_TRUE(success);
 }
 
-static void
-polyMeshExtractFaces(FSUnstructMeshData& unstructMeshData)
+static void polyMeshExtractFaces(FSUnstructMeshData& unstructMeshData)
 {
   bool success;
 
