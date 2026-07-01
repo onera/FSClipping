@@ -52,14 +52,16 @@ dm.DoOps(dataManagerOps) or FSError.PrintAndExit()
 if meshID == 0:
    if(dm.HasMesh("clippedMesh1")):
        clippedMesh1 = dm.GetMesh("clippedMesh1", False)
-       clippedMesh1.PrintInfo()
+       meshOps = ( "PrintInfo", ("ExportMeshHDF5", {"MeshFilename" : "test/Mesh/output/cube_hexa_coarse_clipped.h5"}),)
+       clippedMesh1.DoOps(meshOps) or FSError.PrintAndExit() 
    else:
       FSError.PrintAndExit()
 
 if meshID == 1:
    if(dm.HasMesh("clippedMesh2")):
-       clippedMesh1 = dm.GetMesh("clippedMesh2", False)
-       clippedMesh1.PrintInfo()
+       clippedMesh2 = dm.GetMesh("clippedMesh2", False)
+       meshOps = ( "PrintInfo", ("ExportMeshHDF5", {"MeshFilename" : "test/Mesh/output/cube_hexa_fine_clipped.h5"}),)
+       clippedMesh2.DoOps(meshOps) or FSError.PrintAndExit() 
    else:
       FSError.PrintAndExit()
 

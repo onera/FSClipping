@@ -128,6 +128,7 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId, FSClac& meshClac)
     FSFaceMatcher matcher(meshClac, subjectReceived.faces, clippedReceived.faces, mParams.mTol);
     std::vector<FSFaceMatch> matches;
     matcher.ComputeMatches(matches);
+    std::cout << "Nb matches  : " << matches.size() << std::endl;
     FSMatchExchange::Send(*mClac, 0, matches);
     matcher.InvertMatches(matches);
     FSMatchExchange::Send(*mClac, 1, matches);

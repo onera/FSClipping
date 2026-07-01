@@ -6,12 +6,10 @@ _FS_BEGIN_NAMESPACE
 BoundaryExtraction FSBoundaryFaceProvider::Extract(FSMesh& mesh, FSMeshFaceExtractor& ex, FS_intT boundaryMarker,
                                                    FS_floatT tol, bool matchRemoteFaces)
 {
-  assert(mesh.GetMeshData()->GetUnstructCells().HasLocalNumbering());
+  // assert(mesh.GetMeshData()->GetUnstructCells().HasLocalNumbering());
   BoundaryExtraction result;
 
   ex.PrepareFaceConnectivity(mesh.GetMeshData()->GetUnstructCells(), matchRemoteFaces, false);
-  auto clac = mesh.GetClac();
-  FS_intT meshId = clac->GetWorldProcID();
 
   ex.PrepareFaceNodeCoordinates(FSQuantityDescArrayT());
 

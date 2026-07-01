@@ -44,8 +44,9 @@ void FSCell2NodeBuilder::BuildCellIdMapping()
 FS_intT FSCell2NodeBuilder::LocalCellIndex(FS_intT globalId) const
 {
   auto it = cellId2L_.find(globalId);
-  if(it == cellId2L_.end())
-    FSError.SetAndPrintAndExit("FSCell2NodeBuilder : Unknown cellId");
+  if(it == cellId2L_.end()) {
+    FSError.SetAndPrintAndExit("FSCell2NodeBuilder : Unknown cellId : " + globalId);
+  }
   return it->second;
 }
 

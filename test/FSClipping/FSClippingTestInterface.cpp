@@ -15,8 +15,8 @@
 
 _FS_BEGIN_NAMESPACE
 
-void polyMeshExportImport(FSClac* clac, FSMeshData* meshDataPtr, const FSString filename_prefix,
-                          FS_intT logLevel, bool partitionIndependent)
+void polyMeshExportImport(FSClac* clac, FSMeshData* meshDataPtr, const FSString filename_prefix, FS_intT logLevel,
+                          bool partitionIndependent)
 {
   FS_intT nProcs = FSCLAC_NPROCS(clac);
   bool success;
@@ -112,8 +112,7 @@ static void polyMeshRepartition(FSClac* clac, FSMeshData* meshDataPtr)
   ASSERT_TRUE(success);
 }
 
-static void
-polyMeshExtractFaces(FSUnstructMeshData& unstructMeshData)
+static void polyMeshExtractFaces(FSUnstructMeshData& unstructMeshData)
 {
   bool success;
 
@@ -195,12 +194,7 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh2DHexaHexa)
 
   polyMeshExtractFaces(ptr->GetUnstructCells());
 
-  polyMeshExportImport(
-    &clac3,
-    ptr,
-    MeshPath("output/cube2D_clipped_HexaHexa"),
-    1,
-    false);
+  polyMeshExportImport(&clac3, ptr, MeshPath("output/cube2D_clipped_HexaHexa"), 1, false);
 }
 
 TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexa)
@@ -225,14 +219,34 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexa)
 
   polyMeshExtractFaces(ptr->GetUnstructCells());
 
-  polyMeshExportImport(
-    &clac3,
-    ptr,
-    MeshPath("output/cube3D_clipped_HexaHexa"),
-    1,
-    false);
+  polyMeshExportImport(&clac3, ptr, MeshPath("output/cube3D_clipped_HexaHexa"), 1, false);
 }
-//
+
+TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexaZ)
+{
+  FSClac clac1, clac2, clac3;
+
+  auto mesh1 = LoadMesh(clac1, MeshPath("input/cube_hexa_coarse_z.grid"));
+  auto mesh2 = LoadMesh(clac2, MeshPath("input/cube_hexa_fine_z.grid"));
+
+  const FS_intT marker1 = 6;
+  const FS_intT marker2 = 5;
+  const FS_floatT tol = 1e-8;
+
+  FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
+
+  auto meshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
+  FSMeshData* ptr = meshClipped.GetMeshData();
+
+  CheckMesh(clac3, ptr);
+
+  polyMeshRepartition(&clac3, ptr);
+
+  polyMeshExtractFaces(ptr->GetUnstructCells());
+
+  polyMeshExportImport(&clac3, ptr, MeshPath("output/cube3D_clipped_HexaHexa_z"), 1, false);
+}
+
 TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
 {
   FSClac clac1, clac2, clac3;
@@ -255,12 +269,7 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
 
   polyMeshExtractFaces(ptr->GetUnstructCells());
 
-  polyMeshExportImport(
-    &clac3,
-    ptr,
-    MeshPath("output/cube3D_clipped_HexaTetra"),
-    1,
-    false);
+  polyMeshExportImport(&clac3, ptr, MeshPath("output/cube3D_clipped_HexaTetra"), 1, false);
 }
 
 TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexaRotate)
@@ -285,15 +294,58 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexaRotate)
 
   polyMeshExtractFaces(ptr->GetUnstructCells());
 
-  polyMeshExportImport(
-    &clac3,
-    ptr,
-    MeshPath("output/cube3D_clipped_HexaHexaRotate"),
-    1,
-    false);
+  polyMeshExportImport(&clac3, ptr, MeshPath("output/cube3D_clipped_HexaHexaRotate"), 1, false);
 }
 
-TEST(FSClippingTestInterface, ReconstructClippedMeshRotorStator)
+TEST(FSClippingTestInterface, ReconstructClippedMesh2Cylinders)
+{
+  FSClac clac1, clac2, clac3;
+
+  auto mesh1 = LoadMesh(clac1, MeshPath("input/mesh_1.grid"));
+  auto mesh2 = LoadMesh(clac2, MeshPath("input/mesh_2.grid"));
+
+  const FS_intT marker1 = 1;
+  const FS_intT marker2 = 1;
+  const FS_floatT tol = 1e-6;
+  FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
+
+  auto meshClipped = clip.BuildSurfaceInterface(mesh1, mesh2);
+  FSMeshData* ptr = meshClipped.GetMeshData();
+
+  CheckMesh(clac3, ptr);
+
+  polyMeshRepartition(&clac3, ptr);
+
+  polyMeshExtractFaces(ptr->GetUnstructCells());
+
+  polyMeshExportImport(&clac3, ptr, MeshPath("output/2Cylinders"), 1, false);
+}
+
+TEST(FSClippingTestInterface, ReconstructClippedMesh2CylindersZ)
+{
+  FSClac clac1, clac2, clac3;
+
+  auto mesh1 = LoadMesh(clac1, MeshPath("input/mesh_z_1.grid"));
+  auto mesh2 = LoadMesh(clac2, MeshPath("input/mesh_z_2.grid"));
+
+  const FS_intT marker1 = 1;
+  const FS_intT marker2 = 1;
+  const FS_floatT tol = 1e-6;
+  FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
+
+  auto meshClipped = clip.BuildSurfaceInterface(mesh1, mesh2);
+  FSMeshData* ptr = meshClipped.GetMeshData();
+
+  CheckMesh(clac3, ptr);
+
+  polyMeshRepartition(&clac3, ptr);
+
+  polyMeshExtractFaces(ptr->GetUnstructCells());
+
+  polyMeshExportImport(&clac3, ptr, MeshPath("output/2CylindersZ"), 1, false);
+}
+
+TEST(FSClippingTestInterface, ReconstructClippedMeshRotorStator2D)
 {
   FSClac clac1, clac2, clac3;
 
@@ -302,7 +354,7 @@ TEST(FSClippingTestInterface, ReconstructClippedMeshRotorStator)
 
   const FS_intT marker1 = 3;
   const FS_intT marker2 = 3;
-  const FS_floatT tol = 1e-10;
+  const FS_floatT tol = 1e-8;
   FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
 
   auto meshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
@@ -314,10 +366,5 @@ TEST(FSClippingTestInterface, ReconstructClippedMeshRotorStator)
 
   polyMeshExtractFaces(ptr->GetUnstructCells());
 
-  polyMeshExportImport(
-    &clac3,
-    ptr,
-    MeshPath("output/interiorClipped3D"),
-    1,
-    false);
+  polyMeshExportImport(&clac3, ptr, MeshPath("output/RotorStator"), 1, false);
 }
