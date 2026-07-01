@@ -309,7 +309,7 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh2Cylinders)
   const FS_floatT tol = 1e-6;
   FSClippingInterface clip(clac1, clac2, tol, marker1, marker2);
 
-  auto meshClipped = clip.BuildSurfaceInterface(mesh1, mesh2);
+  auto meshClipped = clip.BuildVolumeInterface(mesh1, mesh2);
   FSMeshData* ptr = meshClipped.GetMeshData();
 
   CheckMesh(clac3, ptr);
