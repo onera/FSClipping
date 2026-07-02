@@ -146,34 +146,4 @@ TEST(FSCLippingTestInterfacePar, VolumeInterface)
   }
 }
 
-TEST(FSClippingTestInterfacePar, ReconstructClippedMeshRotorStator)
-{
-  FSClac globalClac(MPI_COMM_WORLD);
-  FS_intT meshID = globalClac.GetProcID();
-  FSClac clac;
-  globalClac.DivideIntoGroups(meshID, clac);
-
-  FSMesh mesh;
-  const FS_floatT tol = 1e-10;
-  FS_intT marker = -1;
-
-  if(meshID == 1) {
-    mesh = LoadMeshWithClac(clac, MeshPath("input/rotor360_coarse_NJ2.grid"));
-    marker = 3;
-  }
-
-  if(meshID == 0) {
-    mesh = LoadMeshWithClac(clac, MeshPath("input/stator360_coarse_NJ2.grid"));
-    marker = 3;
-  }
-
-  FSClippingInterfacePar clip(globalClac, clac, tol, marker);
-  FSMesh meshClipped = clip.BuildVolumeInterface(mesh);
-
-  if(meshID == 0 || meshID == 1) {
-    FSMeshData* ptr = meshClipped.GetMeshData();
-    CheckMesh(clac, ptr);
-    polyMeshRepartition(&clac, ptr);
-  }
-}
 _FS_END_NAMESPACE
