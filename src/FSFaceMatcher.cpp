@@ -180,15 +180,16 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
   // Expand query bbox by tol_ to account for floating-point imprecision at flat
   // interfaces (e.g. two meshes whose shared plane coordinate differs by ~1 ULP).
   FS_floatT expandedBox[6];
-
   for(const auto& subject : subjectFaces_) {
     const FS_floatT* rawBox = subject.boundingBox().boxMinMax;
     for(FS_intT d = 0; d < FS_3D; ++d) {
-      expandedBox[d]         = rawBox[d]         - tol_;
+      expandedBox[d] = rawBox[d] - tol_;
       expandedBox[d + FS_3D] = rawBox[d + FS_3D] + tol_;
     }
     FS_intT n = bvhClipped_.FindBoxesIntersectingWithBox(expandedBox, outIndicesBVHTree);
     FS_intT faceIndexSubject = subject.faceIndex();
+    FS_floatT totalAreaClipped = 0.0;
+    FS_floatT initArea = FSClippingUtil::PolygonSignedArea(subject.projected2D());
 
     for(FS_intT k = 0; k < n; ++k) {
       FS_intT faceIndexClippedBVHTree = outIndicesBVHTree(k);
@@ -211,6 +212,7 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
 
       if(ComputeMatch(subject, clippedFaces_[faceIndexClippedBVHTree], match)) {
         match.clippedPoly3D = FSClippingUtil::ProjectPoly2DTo3D(subject, match.clippedPoly2D);
+        totalAreaClipped += match.intersectedArea;
         // Compute the intersection polygon in the clipped face's own frame by
         // running the clipping algorithm with roles swapped. This ensures that
         // vertices of the clipped face appear with their exact projected2D()
@@ -224,6 +226,18 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
         }
         outMatches.emplace_back(std::move(match));
       }
+    }
+    // If the total area of all clipped polygon is inferior to the then we have a hole. So we keep the original faces
+    if(std::abs(totalAreaClipped - initArea) > tol_) {
+      outMatches.resize(outMatches.size() - (n - 1));
+      auto& last = outMatches.back();
+      last.clippedPoly2D = subject.projected2D();
+      last.clippedPoly3D = subject.vertices();
+      // last.type = FSFaceMatch::UNKNOWN;
+      // last.clippedPoly3D_face2 = clippedFaces_[0].vertices();
+      last.intersectedArea = initArea;
+
+      std::cout << "Resulting clipped of face " << subject.faceIndex() << " have a hole " << std::endl;
     }
   }
 }
