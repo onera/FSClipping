@@ -208,12 +208,13 @@ TEST(FSClippingTestMatchesPar, Intersection)
   std::vector<FSClippingFace> clippedFaces;
   clippedFaces.emplace_back(centerArray); // owner 9
 
-  // The single clipped face intersects every subject quadrant
+  // The single clipped face intersects every subject quadrant, but covers
+  // none of them entirely: each subject face is kept unclipped (NOT_COVERED).
   const std::vector<ExpectedMatch> expected = {
-    {FSFaceMatch::INTERSECTING, 1, 5}, // bottomLeft   ∩ centerSquare
-    {FSFaceMatch::INTERSECTING, 2, 5}, // bottomRight  ∩ centerSquare
-    {FSFaceMatch::INTERSECTING, 3, 5}, // topLeft      ∩ centerSquare
-    {FSFaceMatch::INTERSECTING, 4, 5}, // topRight     ∩ centerSquare
+    {FSFaceMatch::NOT_COVERED, 1, -1}, // bottomLeft  partially covered
+    {FSFaceMatch::NOT_COVERED, 2, -1}, // bottomRight partially covered
+    {FSFaceMatch::NOT_COVERED, 3, -1}, // topLeft     partially covered
+    {FSFaceMatch::NOT_COVERED, 4, -1}, // topRight    partially covered
   };
 
   RunParallelMatchTest(globalClac, localClac,
@@ -256,9 +257,14 @@ TEST(FSClippingTestMatchesPar, Included)
   std::vector<FSClippingFace> clippedFaces;
   clippedFaces.emplace_back(includedArray); // owner 14
 
-  // Only bottomLeft (subject owner 0) contains the small quad (clipped owner 0)
+  // No subject face is fully covered: bottomLeft only partially (the small
+  // quad lies inside it) and the three others not at all. Every subject face
+  // is therefore kept unclipped as a NOT_COVERED match.
   const std::vector<ExpectedMatch> expected = {
-    {FSFaceMatch::INCLUDED, 1, 5},
+    {FSFaceMatch::NOT_COVERED, 1, -1},
+    {FSFaceMatch::NOT_COVERED, 2, -1},
+    {FSFaceMatch::NOT_COVERED, 3, -1},
+    {FSFaceMatch::NOT_COVERED, 4, -1},
   };
 
   RunParallelMatchTest(globalClac, localClac,

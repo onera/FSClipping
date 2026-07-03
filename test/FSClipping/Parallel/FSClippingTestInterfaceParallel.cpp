@@ -146,4 +146,39 @@ TEST(FSCLippingTestInterfacePar, VolumeInterface)
   }
 }
 
+// The two cylinder boundaries only partially overlap (relative rotation):
+// faces at the rim of the interface are not fully covered by the other mesh.
+// Both sides must keep those faces whole (NOT_COVERED) so that neither
+// rebuilt mesh has holes or missing faces.
+TEST(FSCLippingTestInterfacePar, VolumeInterface2Cylinders)
+{
+  FSClac globalClac(MPI_COMM_WORLD);
+  FS_intT meshID = globalClac.GetProcID();
+  FSClac clac;
+  globalClac.DivideIntoGroups(meshID, clac);
+
+  FSMesh mesh;
+  const FS_floatT tol = 1e-6;
+  FS_intT marker = -1;
+
+  if(meshID == 0) {
+    mesh = LoadMeshWithClac(clac, MeshPath("input/mesh_cylinder_1.grid"));
+    marker = 1;
+  }
+
+  if(meshID == 1) {
+    mesh = LoadMeshWithClac(clac, MeshPath("input/mesh_cylinder_2.grid"));
+    marker = 1;
+  }
+
+  FSClippingInterfacePar clip(globalClac, clac, tol, marker);
+  FSMesh meshClipped = clip.BuildVolumeInterface(mesh);
+
+  if(meshID == 0 || meshID == 1) {
+    FSMeshData* ptr = meshClipped.GetMeshData();
+    CheckMesh(clac, ptr);
+    polyMeshRepartition(&clac, ptr);
+  }
+}
+
 _FS_END_NAMESPACE

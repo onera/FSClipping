@@ -1,6 +1,10 @@
 #include "FSClipping/FSClippingUtil.h"
 #include "FSClipping/FSFaceMatcher.h"
 
+#include <algorithm>
+#include <unordered_map>
+#include <unordered_set>
+
 _FS_BEGIN_NAMESPACE
 FSClac::sizeT FSFaceMatch::GetBufSize(FSClac& clac) const
 {
@@ -133,6 +137,7 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1, const FSClippingFace&
   if(FSClippingUtil::AreFacesIdentical(f1, f2, tol_)) {
     out.type = FSFaceMatch::IDENTICAL;
     out.clippedPoly2D = f1.projected2D();
+    out.intersectedArea = std::abs(FSClippingUtil::PolygonSignedArea(out.clippedPoly2D));
     return true;
   }
 
@@ -188,8 +193,6 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
     }
     FS_intT n = bvhClipped_.FindBoxesIntersectingWithBox(expandedBox, outIndicesBVHTree);
     FS_intT faceIndexSubject = subject.faceIndex();
-    FS_floatT totalAreaClipped = 0.0;
-    FS_floatT initArea = FSClippingUtil::PolygonSignedArea(subject.projected2D());
 
     for(FS_intT k = 0; k < n; ++k) {
       FS_intT faceIndexClippedBVHTree = outIndicesBVHTree(k);
@@ -212,7 +215,6 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
 
       if(ComputeMatch(subject, clippedFaces_[faceIndexClippedBVHTree], match)) {
         match.clippedPoly3D = FSClippingUtil::ProjectPoly2DTo3D(subject, match.clippedPoly2D);
-        totalAreaClipped += match.intersectedArea;
         // Compute the intersection polygon in the clipped face's own frame by
         // running the clipping algorithm with roles swapped. This ensures that
         // vertices of the clipped face appear with their exact projected2D()
@@ -227,24 +229,73 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
         outMatches.emplace_back(std::move(match));
       }
     }
-    // If the total area of all clipped polygon is inferior to the then we have a hole. So we keep the original faces
-    if(std::abs(totalAreaClipped - initArea) > tol_) {
-      outMatches.resize(outMatches.size() - (n - 1));
-      auto& last = outMatches.back();
-      last.clippedPoly2D = subject.projected2D();
-      last.clippedPoly3D = subject.vertices();
-      // last.type = FSFaceMatch::UNKNOWN;
-      // last.clippedPoly3D_face2 = clippedFaces_[0].vertices();
-      last.intersectedArea = initArea;
+  }
 
-      std::cout << "Resulting clipped of face " << subject.faceIndex() << " have a hole " << std::endl;
+  // Keep the raw intersections so that ComputeInvertedMatches can apply the
+  // coverage criterion independently on the clipped side.
+  rawMatches_ = outMatches;
+
+  PreserveUncoveredFaces(outMatches, subjectFaces_);
+}
+
+void FSFaceMatcher::PreserveUncoveredFaces(std::vector<FSFaceMatch>& matches,
+                                           const std::vector<FSClippingFace>& faces) const
+{
+  // Sum of the intersection areas per face (the face is identified by face1)
+  std::unordered_map<FS_intT, FS_floatT> coveredArea;
+  for(const auto& m : matches)
+    coveredArea[m.face1] += m.intersectedArea;
+
+  // A face whose clipped polygons do not cover its whole area would leave a
+  // hole in the rebuilt surface (e.g. rim faces of two cylinders in relative
+  // rotation, only partially covered by the other mesh).
+  std::unordered_set<FS_intT> uncovered;
+  for(const auto& face : faces) {
+    const FS_floatT faceArea = std::abs(FSClippingUtil::PolygonSignedArea(face.projected2D()));
+    const auto it = coveredArea.find(face.faceIndex());
+    const FS_floatT covered = (it == coveredArea.end()) ? 0.0 : it->second;
+    if(std::abs(covered - faceArea) > tol_)
+      uncovered.insert(face.faceIndex());
+  }
+
+  if(uncovered.empty())
+    return;
+
+  // Drop the partial clips of the uncovered faces...
+  matches.erase(std::remove_if(matches.begin(), matches.end(),
+                               [&uncovered](const FSFaceMatch& m) { return uncovered.contains(m.face1); }),
+                matches.end());
+
+  // ...and keep each uncovered face whole, as a single NOT_COVERED match
+  // carrying the original face polygon.
+  for(const auto& face : faces) {
+    if(!uncovered.contains(face.faceIndex()))
+      continue;
+
+    FSFaceMatch match;
+    match.face1 = face.faceIndex();
+    if(face.topo()._faceFSDM) {
+      match.elemOwner1 = face.topo().GetOwnerCellFSDMIndex();
+      match.faceOwner1 = face.topo().GetNeighborCellFSDMIndex();
+      match.elemOwnerType1 = face.topo()._faceFSDM->mOwner.mCellType;
+      match.faceOwnerType1 = face.topo()._faceFSDM->mNeighbor.mCellType;
     }
+    match.type = FSFaceMatch::NOT_COVERED;
+    match.intersectedArea = std::abs(FSClippingUtil::PolygonSignedArea(face.projected2D()));
+    match.clippedPoly2D = face.projected2D();
+    match.clippedPoly3D = face.vertices();
+    matches.emplace_back(std::move(match));
   }
 }
 
-void FSFaceMatcher::InvertMatches(std::vector<FSFaceMatch>& matches)
+void FSFaceMatcher::ComputeInvertedMatches(std::vector<FSFaceMatch>& outMatches) const
 {
-  for(auto& m : matches) {
+  // Start from the raw matches, not from the subject-side list: a partial clip
+  // dropped because its subject face is NOT_COVERED is still a valid
+  // intersection for the clipped face it belongs to.
+  outMatches = rawMatches_;
+
+  for(auto& m : outMatches) {
     std::swap(m.face1, m.face2);
     std::swap(m.elemOwner1, m.elemOwner2);
     std::swap(m.elemOwnerType1, m.elemOwnerType2);
@@ -252,6 +303,8 @@ void FSFaceMatcher::InvertMatches(std::vector<FSFaceMatch>& matches)
     std::swap(m.faceOwnerType1, m.faceOwnerType2);
     std::swap(m.clippedPoly3D, m.clippedPoly3D_face2);
   }
+
+  PreserveUncoveredFaces(outMatches, clippedFaces_);
 }
 
 _FS_END_NAMESPACE

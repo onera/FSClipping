@@ -20,7 +20,7 @@ dm = FSDataManager(globalClac)
 # --- load meshes on their respective processes
 if meshID == 0:
     fsmeshOrig1 = dm.GetMesh("original1", clac)
-    meshOps = (("ImportMeshTAU", {"MeshFilename": "test/Mesh/input/cube_hexa_coarse.grid"}),
+    meshOps = (("ImportMeshTAU", {"MeshFilename": "test/Mesh/input/mesh_cylinder_1.grid"}),
                "CreateLocalNumbering",
                "PrintInfo",
                "Check",
@@ -29,7 +29,7 @@ if meshID == 0:
 
 if meshID == 1:
     fsmeshOrig2 = dm.GetMesh("original2", clac)
-    meshOps = (("ImportMeshTAU", {"MeshFilename": "test/Mesh/input/cube_hexa_fine.grid"}),
+    meshOps = (("ImportMeshTAU", {"MeshFilename": "test/Mesh/input/mesh_cylinder_2.grid"}),
                "CreateLocalNumbering",
                "PrintInfo",
                "Check",
@@ -42,7 +42,7 @@ dataManagerOps = (("ClippedMesh", {"MeshKeyOrig1"      : "original1",
                                    "MeshKeyOrig2"      : "original2",
                                    "MeshKeyClipped1"   : "clippedMesh1",
                                    "MeshKeyClipped2"   : "clippedMesh2",
-                                   "ClippedMarker1"    : 2,
+                                   "ClippedMarker1"    : 1,
                                    "ClippedMarker2"    : 1,
                                    "Tolerance"         : 1e-8,
                                 }),)
@@ -52,7 +52,7 @@ dm.DoOps(dataManagerOps) or FSError.PrintAndExit()
 if meshID == 0:
    if(dm.HasMesh("clippedMesh1")):
        clippedMesh1 = dm.GetMesh("clippedMesh1", False)
-       meshOps = ( "PrintInfo", ("ExportMeshHDF5", {"MeshFilename" : "test/Mesh/output/cube_hexa_coarse_clipped.h5"}),)
+       meshOps = ( "PrintInfo", ("ExportMeshHDF5", {"MeshFilename" : "test/Mesh/output/mesh_cylinder_1_clipped.h5"}),)
        clippedMesh1.DoOps(meshOps) or FSError.PrintAndExit() 
    else:
       FSError.PrintAndExit()
@@ -60,9 +60,29 @@ if meshID == 0:
 if meshID == 1:
    if(dm.HasMesh("clippedMesh2")):
        clippedMesh2 = dm.GetMesh("clippedMesh2", False)
-       meshOps = ( "PrintInfo", ("ExportMeshHDF5", {"MeshFilename" : "test/Mesh/output/cube_hexa_fine_clipped.h5"}),)
+       meshOps = ( "PrintInfo", ("ExportMeshHDF5", {"MeshFilename" : "test/Mesh/output/mesh_cylinder_2_clipped.h5"}),)
        clippedMesh2.DoOps(meshOps) or FSError.PrintAndExit() 
    else:
       FSError.PrintAndExit()
 
+if meshID == 0:
+    meshOps = (("ExportMeshVTK", {"Filename"            : "test/Mesh/output/mesh_clipped_cylinder_1",
+                              "Format"            : "RAW",
+                              "FilePerProcess"    : True,
+                              "PrefixDatasetName" : True,
+                              "SplitDataset"      : True,
+                              "ExtractVectors"    : True}),)
 
+    if not clippedMesh1.DoOps(meshOps):
+        FSError.PrintAndExit()
+        
+if meshID == 1:
+    meshOps = (("ExportMeshVTK", {"Filename"          : "test/Mesh/output/mesh_clipped_cylinder_2",
+                              "Format"            : "RAW",
+                              "FilePerProcess"    : True,
+                              "PrefixDatasetName" : True,
+                              "SplitDataset"      : True,
+                              "ExtractVectors"    : True}),)
+
+    if not clippedMesh2.DoOps(meshOps):
+        FSError.PrintAndExit()

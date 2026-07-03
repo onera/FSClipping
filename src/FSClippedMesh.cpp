@@ -129,7 +129,7 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId, FSClac& meshClac)
     std::vector<FSFaceMatch> matches;
     matcher.ComputeMatches(matches);
     FSMatchExchange::Send(*mClac, 0, matches);
-    matcher.InvertMatches(matches);
+    matcher.ComputeInvertedMatches(matches);
     FSMatchExchange::Send(*mClac, 1, matches);
   }
 

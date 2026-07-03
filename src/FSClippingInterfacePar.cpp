@@ -43,7 +43,7 @@ FSMesh FSClippingInterfacePar::BuildSurfaceInterface(FSMesh& mesh)
     matcher.ComputeMatches(matches);
 
     FSMatchExchange::Send(globalClac_, 0, matches);
-    matcher.InvertMatches(matches);
+    matcher.ComputeInvertedMatches(matches);
     FSMatchExchange::Send(globalClac_, 1, matches);
   }
 
@@ -110,7 +110,7 @@ FSMesh FSClippingInterfacePar::BuildVolumeInterface(FSMesh& mesh)
     matcher.ComputeMatches(matches);
 
     FSMatchExchange::Send(globalClac_, 0, matches);
-    matcher.InvertMatches(matches);
+    matcher.ComputeInvertedMatches(matches);
     FSMatchExchange::Send(globalClac_, 1, matches);
   }
 

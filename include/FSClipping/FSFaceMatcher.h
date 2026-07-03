@@ -11,24 +11,33 @@ _FS_BEGIN_NAMESPACE
 struct FSFaceMatch {
 
   // --- Identification of the two faces (local indices in their arrays) ---
-  FS_intT face1; // index in the FSClippingFace list of mesh 1
-  FS_intT face2; // index in the FSClippingFace list of mesh 2
+  FS_intT face1 = -1; // index in the FSClippingFace list of mesh 1
+  FS_intT face2 = -1; // index in the FSClippingFace list of mesh 2 (-1 for NOT_COVERED matches)
 
   // --- Ownership information (already known from FSDM / MPI) ---
-  FS_intT elemOwner1; // element owner of the face 1
-  FS_intT elemOwner2; // element owner of the face 2
+  FS_intT elemOwner1 = -1; // element owner of the face 1
+  FS_intT elemOwner2 = -1; // element owner of the face 2
 
-  FS_intT faceOwner1; // face owner of the face 1
-  FS_intT faceOwner2; // face owner of the face 2
+  FS_intT faceOwner1 = -1; // face owner of the face 1
+  FS_intT faceOwner2 = -1; // face owner of the face 2
 
-  FSMeshEnums::CellType elemOwnerType1;
-  FSMeshEnums::CellType elemOwnerType2;
+  FSMeshEnums::CellType elemOwnerType1 = FSMeshEnums::CT_Undefined;
+  FSMeshEnums::CellType elemOwnerType2 = FSMeshEnums::CT_Undefined;
 
-  FSMeshEnums::CellType faceOwnerType1;
-  FSMeshEnums::CellType faceOwnerType2;
+  FSMeshEnums::CellType faceOwnerType1 = FSMeshEnums::CT_Undefined;
+  FSMeshEnums::CellType faceOwnerType2 = FSMeshEnums::CT_Undefined;
 
   // --- Type of geometric relation ---
-  enum MatchType : FS_intT { UNKNOWN = 0, IDENTICAL = 1, INCLUDED = 2, INTERSECTING = 3 } type = UNKNOWN;
+  // NOT_COVERED: the subject face is not entirely covered by the clipped mesh
+  // (e.g. rim faces of two cylinders in relative rotation). The face is kept
+  // unclipped: the match carries the original face polygon and has no face2.
+  enum MatchType : FS_intT {
+    UNKNOWN = 0,
+    IDENTICAL = 1,
+    INCLUDED = 2,
+    INTERSECTING = 3,
+    NOT_COVERED = 4
+  } type = UNKNOWN;
 
   // --- Geometric measure ---
   FS_floatT intersectedArea = 0.0;
@@ -41,8 +50,8 @@ struct FSFaceMatch {
   std::vector<FSVec3> clippedPoly3D;
 
   // Intersection polygon re-projected in 3D in the frame of face2.
-  // InvertMatches swaps the two so that clippedPoly3D always refers to the
-  // current face1 frame. This ensures consistent float values when the
+  // ComputeInvertedMatches swaps the two so that clippedPoly3D always refers
+  // to the current face1 frame. This ensures consistent float values when the
   // same geometric vertex appears in multiple matches for the same cell.
   std::vector<FSVec3> clippedPoly3D_face2;
 
@@ -71,9 +80,17 @@ public:
       FSError.SetAndPrintAndExit("Failed to build BVH for clipped face");
   }
 
+  // Computes the match list for the subject side: raw face-pair intersections,
+  // then subject faces not fully covered by the clipped mesh are kept whole as
+  // single NOT_COVERED matches (see PreserveUncoveredFaces).
   void ComputeMatches(std::vector<FSFaceMatch>& outMatches);
 
-  void InvertMatches(std::vector<FSFaceMatch>& matches);
+  // Computes the match list for the clipped side (face1/face2 roles swapped).
+  // Rebuilt from the raw matches — not from the subject-side list — so that the
+  // coverage decision is made independently on each side: a partial clip
+  // dropped for an uncovered subject face is still a valid intersection for
+  // the clipped face it belongs to. Requires ComputeMatches to have run.
+  void ComputeInvertedMatches(std::vector<FSFaceMatch>& outMatches) const;
 
 private:
   const std::vector<FSClippingFace>& subjectFaces_;
@@ -82,7 +99,16 @@ private:
   FSBVHTree bvhClipped_;
   FS_floatT tol_;
 
+  // All face-pair intersections, before any coverage filtering. Kept so that
+  // ComputeInvertedMatches can apply the coverage criterion on the clipped side.
+  std::vector<FSFaceMatch> rawMatches_;
+
   bool ComputeMatch(const FSClippingFace& f1, const FSClippingFace& f2, FSFaceMatch& out) const;
+
+  // For every face of `faces` whose matches (identified via face1) do not sum
+  // up to the full face area, drops the partial clips and appends one
+  // NOT_COVERED match carrying the original face polygon instead.
+  void PreserveUncoveredFaces(std::vector<FSFaceMatch>& matches, const std::vector<FSClippingFace>& faces) const;
 };
 
 _FS_END_NAMESPACE
