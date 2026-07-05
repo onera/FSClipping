@@ -4,6 +4,7 @@
 #include <FSMesh.h>
 
 #include "FSClipping/FSBoundaryFaceProvider.h"
+#include "FSClipping/FSClippingEngine.h"
 
 _FS_BEGIN_NAMESPACE
 
@@ -18,6 +19,8 @@ public:
   FSMesh BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh2);
 
 private:
+  FSMesh BuildInterface(FSMesh& mesh1, FSMesh& mesh2, FSClippingEngine::Mode mode);
+
   FSClac& clac1_;
   FSClac& clac2_;
   FS_floatT tol_;

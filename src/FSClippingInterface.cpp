@@ -1,13 +1,21 @@
 #include "FSClipping/FSClippingInterface.h"
 #include "FSClipping/FSBoundaryFaceProvider.h"
+#include "FSClipping/FSClippingEngine.h"
 #include "FSClipping/FSFaceMatcher.h"
-#include "FSClipping/FSMeshReconstruction.h"
-#include "FSClipping/FSTopologyAssembler.h"
-#include <FSMeshData.h>
 
 _FS_BEGIN_NAMESPACE
 
 FSMesh FSClippingInterface::BuildSurfaceInterface(FSMesh& mesh1, FSMesh& mesh2)
+{
+  return BuildInterface(mesh1, mesh2, FSClippingEngine::Mode::Surface);
+}
+
+FSMesh FSClippingInterface::BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh2)
+{
+  return BuildInterface(mesh1, mesh2, FSClippingEngine::Mode::Volume);
+}
+
+FSMesh FSClippingInterface::BuildInterface(FSMesh& mesh1, FSMesh& mesh2, FSClippingEngine::Mode mode)
 {
   // 1. Extract boundary faces
   FSMeshFaceExtractor extractor1, extractor2;
@@ -15,77 +23,15 @@ FSMesh FSClippingInterface::BuildSurfaceInterface(FSMesh& mesh1, FSMesh& mesh2)
   auto boundaryExtraction1 = FSBoundaryFaceProvider::Extract(mesh1, extractor1, boundaryMarkerMesh1_, tol_);
   auto boundaryExtraction2 = FSBoundaryFaceProvider::Extract(mesh2, extractor2, boundaryMarkerMesh2_, tol_);
 
-  auto clipFaces1 = boundaryExtraction1.faces;
-  auto clipFaces2 = boundaryExtraction2.faces;
-
   // 2. Compute geometric matches between boundary faces
-  FSFaceMatcher matcher(clac2_, clipFaces1, clipFaces2, tol_);
+  FSFaceMatcher matcher(clac2_, boundaryExtraction1.faces, boundaryExtraction2.faces, tol_);
   std::vector<FSFaceMatch> matches;
   matcher.ComputeMatches(matches);
 
-  // 3. Build surface topology from matches
-  FSTopologyAssembler topologyAssembler(tol_);
-  FSTopologyData surfaceTopology = topologyAssembler.BuildSurfaceTopo(matches, boundaryExtraction1.faceKeys);
-
-  // 4. Reconstruct surface mesh
-  FSMeshReconstruction meshReconstruction(clac1_);
-  return meshReconstruction.Build(mesh1.GetMeshData()->GetUnstructCells(), surfaceTopology);
-}
-
-FSMesh FSClippingInterface::BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh2)
-{
-  // 1. Boundary extraction
-  FSMeshFaceExtractor ex1, ex2;
-  FSTopologyData volumeTopology;
-
-  auto boundaryExtraction1 = FSBoundaryFaceProvider::Extract(mesh1, ex1, boundaryMarkerMesh1_, tol_);
-  auto boundaryExtraction2 = FSBoundaryFaceProvider::Extract(mesh2, ex2, boundaryMarkerMesh2_, tol_);
-
-  auto clipFaces1 = boundaryExtraction1.faces;
-  auto clipFaces2 = boundaryExtraction2.faces;
-
-  auto bdry3DCellsType1 = boundaryExtraction1.volumeCells;
-  auto bdry3DCellsType2 = boundaryExtraction2.volumeCells;
-
-  auto bdry2DCellsType1 = boundaryExtraction1.surfaceCells;
-  auto bdry2DCellsType2 = boundaryExtraction2.surfaceCells;
-
-  // 2. Compute matches and the corresponding intersections
-  FSFaceMatcher matcher(clac2_, clipFaces1, clipFaces2, tol_);
-  std::vector<FSFaceMatch> matches;
-  matcher.ComputeMatches(matches);
-
-  FSFloatArrayT oldCoords;
-  FS_intT nodeOffset;
-  FSQuantityDescArrayT coordDesc;
-  mesh1.GetMeshData()->GetUnstructCells().GetCoordinates3D(coordDesc, oldCoords, nodeOffset);
-
-  // 3. Build the new surface topology of the border
-  FSTopologyAssembler topologyAssembler(tol_);
-  FSTopologyData surfaceTopology = topologyAssembler.BuildSurfaceTopo(matches, boundaryExtraction1.faceKeys);
-
-  // 4. Build the topology for all volume cells
-  const auto& cellType = mesh1.GetCellTypes();
-  for(const auto& t : cellType) {
-    if(FSMeshEnums::IsUnstructVolumeCellType(t)) {
-      const auto& cell2Node1 = mesh1.GetCell2Node(t);
-      const auto& cellPool1 = mesh1.GetMeshData()->GetUnstructCells().GetCellPool(t);
-      const auto& bdryCellPool1 = bdry3DCellsType1.at(t);
-
-      topologyAssembler.BuildVolumeTopo(cell2Node1, bdryCellPool1, *cellPool1, oldCoords, volumeTopology);
-    }
-  }
-
-  topologyAssembler.AppendUnclippedSurfaces(mesh1, bdry2DCellsType1, oldCoords, volumeTopology);
-
-  volumeTopology.cellParent[FSMeshEnums::CellType::CT_Poly2D] =
-    surfaceTopology.cellParent[FSMeshEnums::CellType::CT_Poly2D];
-  volumeTopology.cellParentType[FSMeshEnums::CellType::CT_Poly2D] =
-    surfaceTopology.cellParentType[FSMeshEnums::CellType::CT_Poly2D];
-
-  // 5. Reconstruct the new mesh
-  FSMeshReconstruction FSMeshReconstruction(clac1_);
-  return FSMeshReconstruction.Build(mesh1.GetMeshData()->GetUnstructCells(), volumeTopology);
+  // 3. Build topology and reconstruct the mesh
+  FSClippingEngine engine(tol_);
+  FSTopologyData topology = engine.BuildTopology(mesh1, boundaryExtraction1, matches, mode);
+  return engine.Reconstruct(clac1_, mesh1, topology);
 }
 
 _FS_END_NAMESPACE

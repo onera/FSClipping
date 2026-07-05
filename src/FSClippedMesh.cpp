@@ -1,12 +1,10 @@
 #include "FSClipping/FSClippedMesh.h"
 #include "FSClipping/FSClippedMeshParams.h"
 
+#include "FSClipping/FSClippingEngine.h"
 #include "FSClipping/FSFaceExchange.h"
-#include "FSClipping/FSFaceMatcher.h"
-#include "FSClipping/FSMeshReconstruction.h"
 #include "FSDataManagerData.h"
 #include "FSTimer.h"
-#include <FSMeshData.h>
 
 
 _FS_BEGIN_NAMESPACE
@@ -108,11 +106,9 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId, FSClac& meshClac)
     FSFaceExchange::Send(*mClac, 2, be.faces);
     const std::vector<FSFaceMatch> matches = FSMatchExchange::Receive(*mClac, 2);
 
-    FSTopologyData meshClippedTopo;
-    if(!GenerateMeshClippedTopo(*mesh, be, matches, meshClippedTopo))
-      return false;
-    if(!GenerateMesh(*mesh, meshClippedTopo, *meshClipped))
-      return false;
+    FSClippingEngine engine(mParams.mTol);
+    FSTopologyData meshClippedTopo = engine.BuildTopology(*mesh, be, matches, FSClippingEngine::Mode::Volume);
+    *meshClipped = engine.Reconstruct(*mesh->GetClac(), *mesh, meshClippedTopo, true);
 #ifdef FS_SAFETYCHECKS
     if(!meshClipped->Check()) {
       FSError("FSClippedMesh: resulting mesh of sub-elements is invalid.");
@@ -121,16 +117,7 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId, FSClac& meshClac)
 #endif
 
   } else { // meshId == 2
-
-    auto subjectReceived = FSFaceExchange::Receive(*mClac, 0);
-    auto clippedReceived = FSFaceExchange::Receive(*mClac, 1);
-
-    FSFaceMatcher matcher(meshClac, subjectReceived.faces, clippedReceived.faces, mParams.mTol);
-    std::vector<FSFaceMatch> matches;
-    matcher.ComputeMatches(matches);
-    FSMatchExchange::Send(*mClac, 0, matches);
-    matcher.ComputeInvertedMatches(matches);
-    FSMatchExchange::Send(*mClac, 1, matches);
+    FSClippingEngine::RunMatcherProc(*mClac, meshClac, mParams.mTol);
   }
 
   return true;
@@ -153,48 +140,4 @@ bool FSClippedMesh::ExtractBoundaryFaces(FSMesh& mesh, FS_intT marker, BoundaryE
   return true;
 }
 
-//-----------------------------------------------------------------------------
-//
-//  GenerateMeshClippedTopo
-//
-
-bool FSClippedMesh::GenerateMeshClippedTopo(FSMesh& mesh, const BoundaryExtraction& be1,
-                                            const std::vector<FSFaceMatch>& matches, FSTopologyData& meshClippedTopo)
-{
-  FSTopologyAssembler topologyAssembler(mParams.mTol);
-  FSTopologyData surfaceClippedTopo = topologyAssembler.BuildSurfaceTopo(matches, be1.faceKeys);
-
-  FSUnstructMeshData& meshData = mesh.GetMeshData()->GetUnstructCells();
-  FSFloatArrayT oldCoords;
-  FS_intT nodeOffset;
-  FSQuantityDescArrayT coordDesc;
-  meshData.GetCoordinates3D(coordDesc, oldCoords, nodeOffset);
-
-  for(const auto& t : mesh.GetCellTypes()) {
-    if(FSMeshEnums::IsUnstructVolumeCellType(t)) {
-      const auto& cell2Node = mesh.GetCell2Node(t);
-      const auto& cellPool = meshData.GetCellPool(t);
-      const auto& bdryPool = be1.volumeCells.at(t);
-      topologyAssembler.BuildVolumeTopo(cell2Node, bdryPool, *cellPool, oldCoords, meshClippedTopo);
-    }
-  }
-
-  topologyAssembler.AppendUnclippedSurfaces(mesh, be1.surfaceCells, oldCoords, meshClippedTopo);
-
-  meshClippedTopo.cellParent[FSMeshEnums::CellType::CT_Poly2D] =
-    surfaceClippedTopo.cellParent[FSMeshEnums::CellType::CT_Poly2D];
-  meshClippedTopo.cellParentType[FSMeshEnums::CellType::CT_Poly2D] =
-    surfaceClippedTopo.cellParentType[FSMeshEnums::CellType::CT_Poly2D];
-
-  return true;
-}
-
-bool FSClippedMesh::GenerateMesh(FSMesh& meshOriginal1, FSTopologyData& meshClippedTopo, FSMesh& clippedMesh)
-{
-  FSClac* originalClac = meshOriginal1.GetClac();
-  FSUnstructMeshData& meshDataOrig1 = meshOriginal1.GetMeshData()->GetUnstructCells();
-  FSMeshReconstruction meshReconstruction(*originalClac);
-  clippedMesh = meshReconstruction.Build(meshDataOrig1, meshClippedTopo);
-  meshReconstruction.CopyAttributes(meshOriginal1, clippedMesh);
-  return true;
-}
+_FS_END_NAMESPACE

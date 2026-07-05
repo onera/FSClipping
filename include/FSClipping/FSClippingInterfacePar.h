@@ -3,6 +3,8 @@
 
 #include <FSMesh.h>
 
+#include "FSClipping/FSClippingEngine.h"
+
 
 _FS_BEGIN_NAMESPACE
 
@@ -17,6 +19,8 @@ public:
   FSMesh BuildVolumeInterface(FSMesh& mesh);
 
 private:
+  FSMesh BuildInterface(FSMesh& mesh, FSClippingEngine::Mode mode, bool matchRemoteFaces);
+
   FSClac& globalClac_;
   FSClac& clac_;
   FS_floatT tol_;

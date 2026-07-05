@@ -3,7 +3,6 @@
 
 #include "FSClipping/FSBoundaryFaceProvider.h"
 #include "FSClipping/FSClippedMeshParams.h"
-#include "FSClipping/FSTopologyAssembler.h"
 #include "FSDataManagerOp.h"
 #include <FSMesh.h>
 #include <FSMeshFaceExtractor.h>
@@ -41,13 +40,6 @@ protected:
 
   //! Extract boundary faces for the given mesh and boundary marker.
   bool ExtractBoundaryFaces(FSMesh& mesh, FS_intT marker, BoundaryExtraction& be);
-
-  //! Build the clipped topology of mesh1 from pre-computed face matches.
-  bool GenerateMeshClippedTopo(FSMesh& mesh1, const BoundaryExtraction& be1, const std::vector<FSFaceMatch>& matches,
-                               FSTopologyData& meshClippedTopo);
-
-  //! Reconstruct the final clipped mesh from the topology data.
-  bool GenerateMesh(FSMesh& meshOriginal1, FSTopologyData& meshClippedTopo, FSMesh& clippedMesh);
 
   // --- Members ---
 
