@@ -15,7 +15,7 @@ inline FSMesh LoadMeshWithClac(FSClac& clac, const FSString& filename)
   params.mMeshFilename = filename;
   FSMesh mesh(&clac);
   EXPECT_TRUE(mesh.ImportMesh(&params));
-  mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+  // mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
   return mesh;
 }
 

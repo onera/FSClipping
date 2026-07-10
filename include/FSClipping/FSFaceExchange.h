@@ -26,12 +26,33 @@ struct ReceivedFaces {
   std::vector<FSFaceConnectivity> connectivity; // parallel to faces
 };
 
+// GatheredFaces aggregates all faces from one mesh group.
+// cellToGlobalProc maps each volume cell ID to the global proc that owns it,
+// allowing ScatterSend to route matches back without storing per-face proc IDs.
+// localToGlobal maps sub-comm proc IDs to global proc IDs (populated even for
+// procs that sent 0 faces so that ScatterSend can send empty match lists).
+struct GatheredFaces {
+  ReceivedFaces faces;
+  std::map<FS_intT, FS_intT> cellToGlobalProc; // volume cell ID → global proc ID
+  std::map<FS_intT, FS_intT> localToGlobal;    // local proc ID → global proc ID
+};
+
+// Clipper receives from both mesh groups in one call.
+struct AllGatheredFaces {
+  GatheredFaces meshA; // faces from procs that sent meshID == 1
+  GatheredFaces meshB; // faces from procs that sent meshID == 2
+};
+
 // Pack face geometry + FSDM connectivity into clac's send buffer and transmit
 // to destProc. destProc must call Receive(clac, thisProc).
 void Send(FSClac& clac, FS_intT destProc, const std::vector<FSClippingFace>& faces);
 
+void GatherSend(FSClac& clac, FS_intT clipperProc, FS_intT meshID, const std::vector<FSClippingFace>& faces);
+
 // Receive and unpack faces and their FSDM connectivity from sourceProc.
 ReceivedFaces Receive(FSClac& clac, FS_intT sourceProc);
+
+AllGatheredFaces GatherReceiveAll(FSClac& clac);
 
 } // namespace FSFaceExchange
 
@@ -43,6 +64,12 @@ void Send(FSClac& clac, FS_intT destProc, const std::vector<FSFaceMatch>& matche
 
 // Receive and unpack faces and their FSDM connectivity from sourceProc.
 std::vector<FSFaceMatch> Receive(FSClac& clac, FS_intT sourceProc);
+
+static FSFaceMatch InvertSingle(const FSFaceMatch& m);
+
+void ScatterSend(FSClac& clac, const std::vector<FSFaceMatch>& matches, const FSFaceExchange::GatheredFaces& gatheredA);
+
+std::vector<FSFaceMatch> ScatterReceive(FSClac& clac, FS_intT clipperProc);
 
 } // namespace FSMatchExchange
 

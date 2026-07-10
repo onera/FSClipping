@@ -254,6 +254,7 @@ void FSFaceMatcher::PreserveUncoveredFaces(std::vector<FSFaceMatch>& matches,
     const FS_floatT faceArea = std::abs(FSClippingUtil::PolygonSignedArea(face.projected2D()));
     const auto it = coveredArea.find(face.faceIndex());
     const FS_floatT covered = (it == coveredArea.end()) ? 0.0 : it->second;
+
     if(std::abs(covered - faceArea) > tol_)
       uncovered.insert(face.faceIndex());
   }

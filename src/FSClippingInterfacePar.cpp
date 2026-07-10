@@ -4,39 +4,39 @@
 
 _FS_BEGIN_NAMESPACE
 
-FSMesh FSClippingInterfacePar::BuildSurfaceInterface(FSMesh& mesh)
+FSMesh FSClippingInterfacePar::BuildSurfaceInterface(FSMesh& mesh, FS_intT meshID)
 {
-  return BuildInterface(mesh, FSClippingEngine::Mode::Surface, false);
+  return BuildInterface(mesh, FSClippingEngine::Mode::Surface, true, meshID);
 }
 
-FSMesh FSClippingInterfacePar::BuildVolumeInterface(FSMesh& mesh)
+FSMesh FSClippingInterfacePar::BuildVolumeInterface(FSMesh& mesh, FS_intT meshID)
 {
-  return BuildInterface(mesh, FSClippingEngine::Mode::Volume, true);
+  return BuildInterface(mesh, FSClippingEngine::Mode::Volume, true, meshID);
 }
 
-FSMesh FSClippingInterfacePar::BuildInterface(FSMesh& mesh, FSClippingEngine::Mode mode, bool matchRemoteFaces)
+FSMesh FSClippingInterfacePar::BuildInterface(FSMesh& mesh, FSClippingEngine::Mode mode, bool matchRemoteFaces,
+                                              const FS_intT meshID)
 {
-  if(globalClac_.GetNProcs() != 3)
-    FSError.SetAndPrintAndExit("3 MPI processes are required");
-
-  const FS_intT meshId = globalClac_.GetProcID();
-
-  // proc 2: matcher role (clac_ is 1-proc → BVH purely local)
-  if(meshId == 2) {
+  // proc 0: matcher role (clac_ is 1-proc → BVH purely local)
+  if(meshID == 0) {
     FSClippingEngine::RunMatcherProc(globalClac_, clac_, tol_);
     return FSMesh(&clac_);
   }
 
-  // procs 0 and 1: extract, exchange with the matcher, rebuild
   FSMeshFaceExtractor extractor;
-  auto boundaryExtraction = FSBoundaryFaceProvider::Extract(mesh, extractor, boundaryMarkerMesh_, tol_, matchRemoteFaces);
+  auto boundaryExtraction =
+    FSBoundaryFaceProvider::Extract(mesh, extractor, boundaryMarkerMesh_, tol_, matchRemoteFaces);
 
-  FSFaceExchange::Send(globalClac_, 2, boundaryExtraction.faces);
-  std::vector<FSFaceMatch> matches = FSMatchExchange::Receive(globalClac_, 2);
 
+
+  FSFaceExchange::GatherSend(globalClac_, 0, meshID, boundaryExtraction.faces);
+  std::vector<FSFaceMatch> matches = FSMatchExchange::ScatterReceive(globalClac_, 0);
+  FS_intT ProcID = mesh.GetClac()->GetWorldProcID();
+  std::cout << "Proc ID : " << ProcID << " receive : " << matches.size() << " matches " << std::endl;
   FSClippingEngine engine(tol_);
   FSTopologyData topology = engine.BuildTopology(mesh, boundaryExtraction, matches, mode);
   return engine.Reconstruct(clac_, mesh, topology);
+  // return mesh;
 }
 
 _FS_END_NAMESPACE

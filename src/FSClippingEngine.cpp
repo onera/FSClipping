@@ -66,16 +66,25 @@ FSMesh FSClippingEngine::Reconstruct(FSClac& clac, FSMesh& meshOriginal, FSTopol
 
 void FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_floatT tol)
 {
-  auto subjectReceived = FSFaceExchange::Receive(globalClac, 0);
-  auto clippedReceived = FSFaceExchange::Receive(globalClac, 1);
+  auto allGathered = FSFaceExchange::GatherReceiveAll(globalClac);
+  std::cout << "Nb faces receive mesh A : " << allGathered.meshA.faces.faces.size() << std::endl;
+  std::cout << "Nb faces receive mesh B : " << allGathered.meshB.faces.faces.size() << std::endl;
 
-  FSFaceMatcher matcher(localClac, subjectReceived.faces, clippedReceived.faces, tol);
+  FSFaceMatcher matcher(localClac, allGathered.meshA.faces.faces, allGathered.meshB.faces.faces, tol);
   std::vector<FSFaceMatch> matches;
   matcher.ComputeMatches(matches);
 
-  FSMatchExchange::Send(globalClac, 0, matches);
+
+  // for(const auto& m : matches) {
+  //   std::cout << "Matches " << m.type << " own by elem1 " << m.elemOwner1 << " and elem2 :  " << m.elemOwner2
+  //             << std::endl;
+  // }
+  //   ScatterSend routes original matches to mesh A procs and InvertSingle(match) to mesh B procs.
+  //   InvertSingle swaps owners and clippedPoly3D <-> clippedPoly3D_face2, equivalent to InvertMatches.
+  FSMatchExchange::ScatterSend(globalClac, matches, allGathered.meshA);
   matcher.ComputeInvertedMatches(matches);
-  FSMatchExchange::Send(globalClac, 1, matches);
+  std::cout << "Nb matches extract final : " << matches.size() << std::endl;
+  FSMatchExchange::ScatterSend(globalClac, matches, allGathered.meshB);
 }
 
 _FS_END_NAMESPACE
