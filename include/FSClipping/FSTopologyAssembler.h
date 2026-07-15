@@ -28,6 +28,12 @@ struct FSTopologyData {
   FSCellType2IntArrayT cellParent;
   FSCellType2IntArrayT cellParentType;
 
+  // Global numbering assigned by the clipper proc (level 2 parallelism).
+  // Empty in sequential mode — FSMeshReconstruction then falls back to a
+  // local 0..N-1 numbering.
+  FSIntArrayT nodeGlobalNumbers;   // parallel to globalCoords
+  FSIntArrayT poly2DGlobalNumbers; // parallel to the Poly2D cells (match order)
+
   void Send(FSClac& clac, FS_intT destProc);
   void Received(FSClac& clac, FS_intT sourceProc);
 };

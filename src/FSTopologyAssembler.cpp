@@ -23,14 +23,28 @@ FSTopologyData FSTopologyAssembler::BuildSurfaceTopo(const std::vector<FSFaceMat
 
     cell2NodeBuilder_.AddCellNodes(elemIndex, cellType);
 
-    if(f.type != FSFaceMatch::UNKNOWN)
-      cell2NodeBuilder_.AddClippedPolygon(elemIndex, f.clippedPoly3D);
+    if(f.type != FSFaceMatch::UNKNOWN) {
+      if(!f.nodeGlobalIds.empty())
+        cell2NodeBuilder_.AddClippedPolygon(elemIndex, f.clippedPoly3D, f.nodeGlobalIds);
+      else
+        cell2NodeBuilder_.AddClippedPolygon(elemIndex, f.clippedPoly3D);
+    }
   }
   cell2NodeBuilder_.SetAllCellOnTheBorder();
   cell2NodeBuilder_.BuildGlobalNumbering();
 
   result.globalCoords = cell2NodeBuilder_.GlobalCoords();
   result.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly3D();
+
+  // Global numbering assigned by the clipper (level 2): expose it to
+  // FSMeshReconstruction so that procs of the same mesh sub-communicator
+  // agree on shared interface nodes. Absent in sequential mode.
+  const bool hasGlobalIds = matches.front().globalCellId >= 0;
+  if(hasGlobalIds) {
+    result.nodeGlobalNumbers = cell2NodeBuilder_.NodeGlobalNumbers();
+    for(const auto& f : matches)
+      result.poly2DGlobalNumbers.Append(f.globalCellId);
+  }
 
   // -------------------------------------------------
   // 2. Build polygonal faces

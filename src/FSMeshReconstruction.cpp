@@ -42,12 +42,26 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
   if(!success)
     FSError.SetAndPrintAndExit("FSMeshReconstruction : Error while set coordinates");
 
-  FS_intT currentOffset = 0;
-  FSIntArrayT cellTypeArray_2 = meshDataClippedPtr->GetUnstructCells().GetCellTypesArray();
-  for(FSIntArrayT::ConstIterator cellType = cellTypeArray_2.BeginConst(); cellType.IsValid(); cellType.Next()) {
-    if(*cellType == FSMeshEnums::CellType::CT_Node) {
-      meshDataClippedPtr->GetUnstructCells().InitGlobalCellNumber((FSMeshEnums::CellType)*cellType, currentOffset);
-      currentOffset += meshDataClippedPtr->GetUnstructCells().GetNCells((FSMeshEnums::CellType)*cellType);
+  if(!topologyData.nodeGlobalNumbers.IsEmpty()) {
+    // Level 2 parallelism: global numbers were assigned by the clipper proc and
+    // are consistent across all procs of this mesh's sub-communicator — two
+    // procs sharing an interface node hold the same GlobalNumber. A local
+    // 0..N-1 numbering per proc would collide across procs and make FSDM merge
+    // physically different nodes.
+    const FSString globalNumberName = FSMeshEnums::AttributeTypeToString(FSMeshEnums::AT_GlobalNumber);
+    unstructMeshData.InitCellAttribute(globalNumberName, FSMeshEnums::CT_Node, topologyData.nodeGlobalNumbers);
+    if(!topologyData.poly2DGlobalNumbers.IsEmpty())
+      unstructMeshData.InitCellAttribute(globalNumberName, FSMeshEnums::CT_Poly2D,
+                                         topologyData.poly2DGlobalNumbers);
+  } else {
+    // Sequential mode: local numbering is globally valid.
+    FS_intT currentOffset = 0;
+    FSIntArrayT cellTypeArray_2 = meshDataClippedPtr->GetUnstructCells().GetCellTypesArray();
+    for(FSIntArrayT::ConstIterator cellType = cellTypeArray_2.BeginConst(); cellType.IsValid(); cellType.Next()) {
+      if(*cellType == FSMeshEnums::CellType::CT_Node) {
+        meshDataClippedPtr->GetUnstructCells().InitGlobalCellNumber((FSMeshEnums::CellType)*cellType, currentOffset);
+        currentOffset += meshDataClippedPtr->GetUnstructCells().GetNCells((FSMeshEnums::CellType)*cellType);
+      }
     }
   }
 
