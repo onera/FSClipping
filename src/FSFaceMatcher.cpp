@@ -1,5 +1,6 @@
 #include "FSClipping/FSClippingUtil.h"
 #include "FSClipping/FSFaceMatcher.h"
+#include "FSClipping/FSCell2NodeBuilder.h" // NodeKey
 
 #include <algorithm>
 #include <unordered_map>
@@ -22,6 +23,10 @@ FSClac::sizeT FSFaceMatch::GetBufSize(FSClac& clac) const
   // clippedPoly3D_face2 (face2 frame): size + n * 3 coords
   s += clac.GetBufSizeInt32(1);
   s += clac.GetBufSizeFloat64(static_cast<FSClac::intT>(clippedPoly3D_face2.size()) * 3);
+  // nodeGlobalIds: size + n ints ; globalCellId: 1 int
+  s += clac.GetBufSizeInt32(1);
+  s += clac.GetBufSizeInt32(static_cast<FSClac::intT>(nodeGlobalIds.size()));
+  s += clac.GetBufSizeInt32(1);
   return s;
 }
 
@@ -71,6 +76,12 @@ void FSFaceMatch::Pack(FSClac& clac)
     clac.Pack(&y);
     clac.Pack(&z);
   }
+
+  FS_intT nIds = static_cast<FS_intT>(nodeGlobalIds.size());
+  clac.Pack(&nIds);
+  for(auto& id : nodeGlobalIds)
+    clac.Pack(&id);
+  clac.Pack(&globalCellId);
 }
 
 void FSFaceMatch::Unpack(FSClac& clac)
@@ -129,6 +140,13 @@ void FSFaceMatch::Unpack(FSClac& clac)
     clac.Unpack(&z);
     p = FSVec3(x, y, z);
   }
+
+  FS_intT nIds;
+  clac.Unpack(&nIds);
+  nodeGlobalIds.resize(nIds);
+  for(auto& id : nodeGlobalIds)
+    clac.Unpack(&id);
+  clac.Unpack(&globalCellId);
 }
 
 bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1, const FSClippingFace& f2, FSFaceMatch& out) const
@@ -287,6 +305,28 @@ void FSFaceMatcher::PreserveUncoveredFaces(std::vector<FSFaceMatch>& matches,
     match.clippedPoly3D = face.vertices();
     matches.emplace_back(std::move(match));
   }
+}
+
+FS_intT FSFaceMatcher::AssignGlobalNodeIds(std::vector<FSFaceMatch>& matches, FS_floatT tol)
+{
+  std::unordered_map<NodeKey, FS_intT> nodeIds;
+  FS_intT nextId = 0;
+
+  for(std::size_t m = 0; m < matches.size(); ++m) {
+    auto& match = matches[m];
+    match.globalCellId = static_cast<FS_intT>(m);
+
+    match.nodeGlobalIds.resize(match.clippedPoly3D.size());
+    for(std::size_t i = 0; i < match.clippedPoly3D.size(); ++i) {
+      NodeKey key(match.clippedPoly3D[i], tol);
+      auto [it, inserted] = nodeIds.try_emplace(key, nextId);
+      if(inserted)
+        ++nextId;
+      match.nodeGlobalIds[i] = it->second;
+    }
+  }
+
+  return nextId;
 }
 
 void FSFaceMatcher::ComputeInvertedMatches(std::vector<FSFaceMatch>& outMatches) const

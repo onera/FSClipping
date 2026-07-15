@@ -68,7 +68,16 @@ public:
 
   void AddClippedPolygon(FS_intT cellId, const std::vector<FSVec3>& poly);
 
+  // Same as above but also records the clipper-assigned global node IDs
+  // (level 2 parallelism). globalIds is parallel to poly.
+  void AddClippedPolygon(FS_intT cellId, const std::vector<FSVec3>& poly, const std::vector<FS_intT>& globalIds);
+
   void BuildGlobalNumbering();
+
+  // For each local node index (in GlobalCoords order), the clipper-assigned
+  // global ID, or -1 if the node was never fed through the globalIds overload.
+  // Requires BuildGlobalNumbering to have run.
+  FSIntArrayT NodeGlobalNumbers() const;
 
   void SetAllCellOnTheBorder();
 
@@ -99,6 +108,7 @@ private:
 
   std::vector<FSVec3> globalCoords_;                 // deduplicated list of all node coordinates
   std::unordered_map<NodeKey, FS_intT> coordToNode_; // coord → index in globalCoords_
+  std::unordered_map<NodeKey, FS_intT> keyToGlobalId_; // coord → clipper-assigned global node ID
 
   bool exists(const std::vector<FSVec3>& nodes, const FSVec3& p) const;
 

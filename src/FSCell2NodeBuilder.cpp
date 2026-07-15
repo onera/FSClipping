@@ -45,7 +45,9 @@ FS_intT FSCell2NodeBuilder::LocalCellIndex(FS_intT globalId) const
 {
   auto it = cellId2L_.find(globalId);
   if(it == cellId2L_.end()) {
-    FSError.SetAndPrintAndExit("FSCell2NodeBuilder : Unknown cellId : " + globalId);
+    FSString msg = "FSCell2NodeBuilder : Unknown cellId : ";
+    msg.Add(globalId);
+    FSError.SetAndPrintAndExit(msg.c_str());
   }
   return it->second;
 }
@@ -77,6 +79,29 @@ void FSCell2NodeBuilder::AddClippedPolygon(FS_intT cellId, const std::vector<FSV
     if(!exists(nodes, p))
       nodes.push_back(p);
   }
+}
+
+void FSCell2NodeBuilder::AddClippedPolygon(FS_intT cellId, const std::vector<FSVec3>& poly,
+                                           const std::vector<FS_intT>& globalIds)
+{
+  AddClippedPolygon(cellId, poly);
+
+  for(std::size_t i = 0; i < poly.size() && i < globalIds.size(); ++i)
+    keyToGlobalId_.try_emplace(NodeKey(poly[i], tol_), globalIds[i]);
+}
+
+FSIntArrayT FSCell2NodeBuilder::NodeGlobalNumbers() const
+{
+  FSIntArrayT numbers(static_cast<FS_intT>(globalCoords_.size()));
+  for(FS_intT i = 0; i < numbers.Size(); ++i)
+    numbers[i] = -1;
+
+  for(const auto& [key, localIdx] : coordToNode_) {
+    auto it = keyToGlobalId_.find(key);
+    if(it != keyToGlobalId_.end())
+      numbers[localIdx] = it->second;
+  }
+  return numbers;
 }
 
 void FSCell2NodeBuilder::BuildGlobalNumbering()

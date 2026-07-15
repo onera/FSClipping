@@ -55,6 +55,13 @@ struct FSFaceMatch {
   // same geometric vertex appears in multiple matches for the same cell.
   std::vector<FSVec3> clippedPoly3D_face2;
 
+  // --- Global numbering (level 2 parallelism) ---
+  // Assigned by the clipper proc (AssignGlobalNodeIds) before scattering the
+  // matches, so that two mesh procs sharing a node at their partition
+  // interface receive the same global node ID by construction.
+  std::vector<FS_intT> nodeGlobalIds; // parallel to clippedPoly3D
+  FS_intT globalCellId = -1;          // global ID of the future Poly2D cell
+
   FSClac::sizeT GetBufSize(FSClac& clac) const;
   void Pack(FSClac& clac);
   void Unpack(FSClac& clac);
@@ -91,6 +98,16 @@ public:
   // dropped for an uncovered subject face is still a valid intersection for
   // the clipped face it belongs to. Requires ComputeMatches to have run.
   void ComputeInvertedMatches(std::vector<FSFaceMatch>& outMatches) const;
+
+  // Assigns a globally consistent numbering across one mesh side:
+  //  - nodeGlobalIds: geometric deduplication (NodeKey, tol) of every point of
+  //    every clippedPoly3D — two points within tol get the same ID, IDs are
+  //    contiguous 0..K-1;
+  //  - globalCellId: match index 0..n-1 (global ID of the future Poly2D cell).
+  // Called by the clipper on each side's final match list before scattering,
+  // so procs sharing an interface node receive the same ID by construction.
+  // Returns the number of unique node IDs assigned (K).
+  static FS_intT AssignGlobalNodeIds(std::vector<FSFaceMatch>& matches, FS_floatT tol);
 
 private:
   const std::vector<FSClippingFace>& subjectFaces_;

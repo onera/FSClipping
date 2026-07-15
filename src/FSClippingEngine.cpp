@@ -15,7 +15,6 @@ FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtra
 {
   FSTopologyAssembler topologyAssembler(tol_);
   FSTopologyData surfaceTopology = topologyAssembler.BuildSurfaceTopo(matches, be.faceKeys);
-
   if(mode == Mode::Surface)
     return surfaceTopology;
 
@@ -74,16 +73,13 @@ void FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_
   std::vector<FSFaceMatch> matches;
   matcher.ComputeMatches(matches);
 
-
-  // for(const auto& m : matches) {
-  //   std::cout << "Matches " << m.type << " own by elem1 " << m.elemOwner1 << " and elem2 :  " << m.elemOwner2
-  //             << std::endl;
-  // }
-  //   ScatterSend routes original matches to mesh A procs and InvertSingle(match) to mesh B procs.
-  //   InvertSingle swaps owners and clippedPoly3D <-> clippedPoly3D_face2, equivalent to InvertMatches.
+  // Each side gets its own global numbering (nodes + Poly2D cells), assigned
+  // here once so that mesh procs sharing an interface node receive the same ID.
+  FSFaceMatcher::AssignGlobalNodeIds(matches, tol);
   FSMatchExchange::ScatterSend(globalClac, matches, allGathered.meshA);
+
   matcher.ComputeInvertedMatches(matches);
-  std::cout << "Nb matches extract final : " << matches.size() << std::endl;
+  FSFaceMatcher::AssignGlobalNodeIds(matches, tol);
   FSMatchExchange::ScatterSend(globalClac, matches, allGathered.meshB);
 }
 
