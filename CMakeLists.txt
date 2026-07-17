@@ -3,6 +3,13 @@
 # --------------------------------------------------------------
 cmake_minimum_required(VERSION 3.20)
 
+if(NOT CMAKE_CXX_COMPILER)
+    find_program(MPICXX mpicxx)
+    if(MPICXX)
+        set(CMAKE_CXX_COMPILER "${MPICXX}" CACHE FILEPATH "MPI C++ wrapper")
+    endif()
+endif()
+
 project(FSClipping
         VERSION 0.1.0
         LANGUAGES CXX
@@ -12,6 +19,12 @@ project(FSClipping
 # Options 
 # --------------------------------------------------------------
 option(FSCLIPPING_BUILD_TESTS "Compile unit tests" OFF)
+
+# Installation directory prefix
+# Users can override this via -DCMAKE_INSTALL_PREFIX=/path at configure time
+if(NOT CMAKE_INSTALL_PREFIX)
+    set(CMAKE_INSTALL_PREFIX "${HOME}" CACHE PATH "Installation directory prefix" FORCE)
+endif()
 
 # --------------------------------------------------------------
 # Compiler settings
