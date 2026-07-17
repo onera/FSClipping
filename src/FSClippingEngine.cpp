@@ -66,8 +66,6 @@ FSMesh FSClippingEngine::Reconstruct(FSClac& clac, FSMesh& meshOriginal, FSTopol
 void FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_floatT tol)
 {
   auto allGathered = FSFaceExchange::GatherReceiveAll(globalClac);
-  std::cout << "Nb faces receive mesh A : " << allGathered.meshA.faces.faces.size() << std::endl;
-  std::cout << "Nb faces receive mesh B : " << allGathered.meshB.faces.faces.size() << std::endl;
 
   FSFaceMatcher matcher(localClac, allGathered.meshA.faces.faces, allGathered.meshB.faces.faces, tol);
   std::vector<FSFaceMatch> matches;

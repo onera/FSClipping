@@ -208,12 +208,12 @@ TEST(FSCLippingTestInterfacePar, SurfaceInterface)
   }
   if(meshID == 1) {
     FSMeshData* ptr = meshClipped.GetMeshData();
-    polyMeshExportImport(&clac, ptr, MeshPath("output/cube_clipped_coarse"), 1, false);
+    polyMeshExportImport(&clac, ptr, MeshPath("output/cube_clipped_coarse_par"), 1, false);
   }
 
   if(meshID == 2) {
     FSMeshData* ptr = meshClipped.GetMeshData();
-    polyMeshExportImport(&clac, ptr, MeshPath("output/cube_clipped_fine"), 1, false);
+    polyMeshExportImport(&clac, ptr, MeshPath("output/cube_clipped_fine_par"), 1, false);
   }
 }
 
