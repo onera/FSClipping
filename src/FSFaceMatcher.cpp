@@ -179,13 +179,20 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1, const FSClippingFace&
   if(FSClippingUtil::ArePointsColinear2D(clip, tol_))
     return false;
 
-  if(areaClip < tol_)
+  // Mean width of the clip polygon (2*area/perimeter) below tol means the
+  // intersection is a sliver of negligible thickness. Comparing the raw area
+  // (length^2) against tol (length) was scale-dependent and rejected real
+  // intersections on small meshes.
+  const FS_floatT perimClip = FSClippingUtil::PolygonPerimeter(clip);
+  if(2.0 * areaClip < tol_ * perimClip)
     return false;
 
   // Inclusion is detected via area equality after clipping — no dedicated
   // pre-check is needed. A separate inclusion branch was removed because it
   // was orientation-sensitive and produced incorrect results in edge cases.
-  if(std::abs(areaClip - area2) < tol_)
+  // The missing strip between clip and poly2 has area ~= width * perimeter/2,
+  // so the threshold is expressed with the same dimensions.
+  if(std::abs(areaClip - area2) < tol_ * 0.5 * FSClippingUtil::PolygonPerimeter(poly2))
     out.type = FSFaceMatch::INCLUDED;
   else
     out.type = FSFaceMatch::INTERSECTING;
@@ -273,7 +280,10 @@ void FSFaceMatcher::PreserveUncoveredFaces(std::vector<FSFaceMatch>& matches,
     const auto it = coveredArea.find(face.faceIndex());
     const FS_floatT covered = (it == coveredArea.end()) ? 0.0 : it->second;
 
-    if(std::abs(covered - faceArea) > tol_)
+    // An uncovered strip of width tol along the face boundary has area
+    // ~= tol * perimeter/2 — dimensionally consistent threshold (see ComputeMatch).
+    const FS_floatT perimeter = FSClippingUtil::PolygonPerimeter(face.projected2D());
+    if(std::abs(covered - faceArea) > tol_ * 0.5 * perimeter)
       uncovered.insert(face.faceIndex());
   }
 
