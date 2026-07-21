@@ -318,6 +318,43 @@ clippée vide, soit côté FSDM.
 
 ---
 
+## Lancer les tests parallèles (3 / 5 / 7 procs)
+
+Chaque test parallèle est écrit pour un **layout de procs précis** et se
+**skippe** proprement (`GTEST_SKIP`, via `SKIP_UNLESS_EXACT_PROCS` /
+`SKIP_UNLESS_MIN_PROCS` dans `TestUtilsParallel.hpp`) quand le nombre de procs
+courant ne correspond pas — plus aucun crash/deadlock quand on lance au mauvais
+nombre.
+
+| Test | Layout | Procs (CTest) |
+|---|---|---|
+| `FSClippingTestMatchesPar.*` | 3 fixes | exactement 3 |
+| `SurfaceInterface` / `VolumeInterface` (cubes) | parité | exactement 3 |
+| `VolumeInterface2Cylinders` (symétrique) | parité | exactement 5 — 9 en manuel |
+| `SurfaceInterface2CylindersAsymNoAttr` / `VolumeInterface2CylindersAsymNoAttr` | 4+2+1 | exactement 7 |
+
+Les tests pinés à un proc-count exact le sont parce que leur teardown
+export/import HDF5 déclenche le hang I/O à haut nombre de procs (> ~5, cf.
+« Limitations ») ; on les exécute donc uniquement là où ils terminent. Les tests
+asym (7 procs) n'ont pas ce problème : leur teardown est restreint à `CheckMesh`
+(pas d'export/import).
+
+Le même code de test est enregistré dans CTest à **3, 5 et 7 procs** (une
+`OBJECT` library partagée, un exécutable par proc-count :
+`FSClippingParallelTest{3,5,7}`, préfixes CTest `np3.` / `np5.` / `np7.`). Ainsi
+**un simple « Run all tests » dans VSCode** exécute les trois configurations, et
+chaque test tourne uniquement là où il a un sens (les autres `SKIPPED`).
+
+Lancement manuel d'un proc-count donné :
+
+```bash
+mpirun -np 3 ./test/FSClippingParallelTest3   # match send/receive + interface cubes
+mpirun -np 5 ./test/FSClippingParallelTest5   # + cylindres symétrique
+mpirun -np 7 ./test/FSClippingParallelTest7   # + cylindres asymétrique 4+2+1
+```
+
+---
+
 ## Limitations connues / suite
 
 - Les tests parallèles `FSClippingTestMatchesPar.Intersection` et `.Included`
