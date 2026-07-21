@@ -10,7 +10,7 @@ _FS_BEGIN_NAMESPACE
 class FSMeshReconstruction
 {
 public:
-  explicit FSMeshReconstruction(FSClac& clac) : clac_(clac){};
+  explicit FSMeshReconstruction(FSClac& clac, FS_floatT tol = 1e-12) : clac_(clac), tol_(tol){};
 
   FSMesh Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData);
 
@@ -24,17 +24,19 @@ private:
   /*!
     FSDM's global-numbering contract: each node is owned by exactly one proc
     (contiguous ranges per proc) and cell2node references those global numbers.
-    This routine uses the clipper-assigned IDs (topo.nodeGlobalNumbers) as merge
-    key to (1) decide ownership of nodes shared across procs, (2) compute the
-    contiguous distributed numbering, (3) remap cell2NodePoly2D/Poly3D in place.
+    This routine merges nodes geometrically (coordinates quantized by tol_ —
+    covers clipped-surface and volume nodes alike) to (1) decide ownership of
+    nodes shared across procs, (2) compute the contiguous distributed
+    numbering, (3) remap cell2NodePoly2D/Poly3D/cell2NodeInner in place.
     \param[in,out] topo             topology whose connectivity gets remapped.
     \param[out] ownedLocalRows      local row indices (into globalCoords) of the owned nodes, in contiguous-ID order.
-    \param[out] ownedGlobalNumbers  clipper IDs of the owned nodes (stable GlobalNumber attribute).
+    \param[out] ownedGlobalNumbers  distributed global numbers of the owned nodes (GlobalNumber attribute).
   */
   void RemapToDistributedNumbering(FSTopologyData& topo, std::vector<FS_intT>& ownedLocalRows,
                                    FSIntArrayT& ownedGlobalNumbers);
 
   FSClac& clac_;
+  FS_floatT tol_;
 };
 
 

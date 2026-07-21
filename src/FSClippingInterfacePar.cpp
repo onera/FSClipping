@@ -27,12 +27,8 @@ FSMesh FSClippingInterfacePar::BuildInterface(FSMesh& mesh, FSClippingEngine::Mo
   auto boundaryExtraction =
     FSBoundaryFaceProvider::Extract(mesh, extractor, boundaryMarkerMesh_, tol_, matchRemoteFaces);
 
-
-
   FSFaceExchange::GatherSend(globalClac_, 0, meshID, boundaryExtraction.faces);
   std::vector<FSFaceMatch> matches = FSMatchExchange::ScatterReceive(globalClac_, 0);
-  FS_intT ProcID = mesh.GetClac()->GetWorldProcID();
-  std::cout << "Proc ID : " << ProcID << " receive : " << matches.size() << " matches " << std::endl;
   FSClippingEngine engine(tol_);
   FSTopologyData topology = engine.BuildTopology(mesh, boundaryExtraction, matches, mode);
   return engine.Reconstruct(clac_, mesh, topology);

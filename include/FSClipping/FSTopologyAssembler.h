@@ -55,8 +55,9 @@ public:
   void AppendUnclippedSurfaces(FSMesh& mesh, const std::unordered_map<FS_intT, std::set<FS_intT> >& bdry2DCells,
                                const FSFloatArrayT& oldCoords, FSTopologyData& topo);
 
-  FSIntArrayT UpdateOldCell2Node(const FSIntArrayT& oldCell2Node, const FSFloatArrayT& oldCoords,
-                                 const std::set<FS_intT>& bdry2DCells, FSIntArrayT& cellParent);
+  FSIntArrayT UpdateOldCell2Node(const FSIntArrayT& oldCell2Node, const FSCellPool& cellPool,
+                                 const FSFloatArrayT& oldCoords, const std::set<FS_intT>& bdry2DCells,
+                                 FSIntArrayT& cellParent);
 
 private:
   void CheckSurfaceWasBuilt() const;
