@@ -31,6 +31,12 @@ public:
 
   FS_intT LocalCellIndex(FS_intT globalId) const;
 
+  //! Whether a cell (global id) is known to the builder, i.e. it carries a
+  //! clipped-surface match. Boundary cells without a match (possible in
+  //! parallel: the local marker face has no counterpart in the other mesh)
+  //! are absent and must not have inner faces built.
+  bool HasCell(FS_intT globalId) const;
+
   const std::vector<std::vector<FaceData> >& CellFaces() const noexcept { return cellFaces_; };
 
   FSIntRegisterT Cell2NodePoly2D();

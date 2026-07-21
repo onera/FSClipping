@@ -58,7 +58,6 @@ void GatherSend(FSClac& clac, FS_intT clipperProc, FS_intT meshID, const std::ve
   clac.InitSendBuffer(bufSize);
   clac.Pack(&worldProcID, 1);
   clac.Pack(&localProcID, 1);
-  std::cout << "MeshID : " << meshID << std::endl;
   clac.Pack(&meshID, 1);
   FS_intT n = static_cast<FS_intT>(faces.size());
   clac.Pack(&n, 1);

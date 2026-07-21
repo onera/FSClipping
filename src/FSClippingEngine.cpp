@@ -24,11 +24,16 @@ FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtra
   mesh.GetMeshData()->GetUnstructCells().GetCoordinates3D(coordDesc, oldCoords, nodeOffset);
 
   FSTopologyData volumeTopology;
+  // A proc whose partition has no boundary face of a given type has no entry
+  // in be.volumeCells — BuildVolumeTopo with an empty pool passes all cells
+  // of that type through unclipped.
+  static const std::set<FS_intT> kEmptyPool;
   for(const auto& t : mesh.GetCellTypes()) {
     if(FSMeshEnums::IsUnstructVolumeCellType(t)) {
       const auto& cell2Node = mesh.GetCell2Node(t);
       const auto& cellPool = mesh.GetMeshData()->GetUnstructCells().GetCellPool(t);
-      const auto& bdryCellPool = be.volumeCells.at(t);
+      const auto it = be.volumeCells.find(t);
+      const auto& bdryCellPool = (it != be.volumeCells.end()) ? it->second : kEmptyPool;
 
       topologyAssembler.BuildVolumeTopo(cell2Node, bdryCellPool, *cellPool, oldCoords, volumeTopology);
     }
@@ -40,6 +45,7 @@ FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtra
     surfaceTopology.cellParent[FSMeshEnums::CellType::CT_Poly2D];
   volumeTopology.cellParentType[FSMeshEnums::CellType::CT_Poly2D] =
     surfaceTopology.cellParentType[FSMeshEnums::CellType::CT_Poly2D];
+  volumeTopology.poly2DGlobalNumbers = surfaceTopology.poly2DGlobalNumbers;
 
   return volumeTopology;
 }
@@ -51,7 +57,7 @@ FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtra
 
 FSMesh FSClippingEngine::Reconstruct(FSClac& clac, FSMesh& meshOriginal, FSTopologyData& topo, bool copyAttributes)
 {
-  FSMeshReconstruction meshReconstruction(clac);
+  FSMeshReconstruction meshReconstruction(clac, tol_);
   FSMesh clippedMesh = meshReconstruction.Build(meshOriginal.GetMeshData()->GetUnstructCells(), topo);
   if(copyAttributes)
     meshReconstruction.CopyAttributes(meshOriginal, clippedMesh);
