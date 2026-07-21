@@ -5,6 +5,7 @@
 #include "FSClipping/FSFaceMatcher.h"
 #include "FSClipping/FSFaceExchange.h"
 #include "FSClipping/FSClippingFace.h"
+#include "TestUtilsParallel.hpp"
 
 // The identity square [-1,1]x[-1,1] is split into four QUAD4 faces.
 struct IdentitySquare {
@@ -144,7 +145,7 @@ static void RunParallelMatchTest(FSClac& globalClac,
 TEST(FSClippingTestMatchesPar, Identical)
 {
   FSClac globalClac(MPI_COMM_WORLD);
-  ASSERT_EQ(globalClac.GetNProcs(), 3) << "This test requires exactly 3 MPI processes";
+  SKIP_UNLESS_EXACT_PROCS(globalClac, 3);
 
   FS_intT meshID = globalClac.GetProcID();
   FSClac localClac;
@@ -184,7 +185,7 @@ TEST(FSClippingTestMatchesPar, Intersection)
 {
 
   FSClac globalClac(MPI_COMM_WORLD);
-  ASSERT_EQ(globalClac.GetNProcs(), 3) << "This test requires exactly 3 MPI processes";
+  SKIP_UNLESS_EXACT_PROCS(globalClac, 3);
 
   FS_intT meshID = globalClac.GetProcID();
   FSClac localClac;
@@ -232,7 +233,7 @@ TEST(FSClippingTestMatchesPar, Intersection)
 TEST(FSClippingTestMatchesPar, Included)
 {
   FSClac globalClac(MPI_COMM_WORLD);
-  ASSERT_EQ(globalClac.GetNProcs(), 3) << "This test requires exactly 3 MPI processes";
+  SKIP_UNLESS_EXACT_PROCS(globalClac, 3);
 
   FS_intT meshID = globalClac.GetProcID();
   FSClac localClac;
