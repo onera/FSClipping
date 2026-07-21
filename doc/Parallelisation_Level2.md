@@ -353,6 +353,23 @@ mpirun -np 5 ./test/FSClippingParallelTest5   # + cylindres symétrique
 mpirun -np 7 ./test/FSClippingParallelTest7   # + cylindres asymétrique 4+2+1
 ```
 
+### Export VTK par proc (visualisation)
+
+Chaque test exporte les maillages en VTK (`exportMeshVTK`, `mFilePerProcess`) :
+le **maillage original** (`*_orig_*`) et le **maillage clippé** (`*_clipped_*_view`),
+avant/après clipping.
+
+- **Maillage original** : bien réparti, **un fichier `.vtu` par proc**
+  (`prefix_<procID>.vtu` ; le proc 0 sort `prefix_` sans suffixe numérique).
+- **Maillage clippé** : le filtre l'écrit comme **une seule pièce sur le proc 0**
+  (le maillage reconstruit porte une numérotation globale distribuée mais pas le
+  `cell2Proc` local sur lequel `mFilePerProcess` s'appuie pour séparer les
+  partitions). Le fichier contient donc tout le maillage clippé du groupe, non
+  découpé par proc — à améliorer si l'on veut la partition par proc du clippé.
+- Pour le **volume asymétrique**, le maillage clippé n'est pas exporté du tout :
+  un proc y détient une partition poly vide et l'export collectif s'y bloque
+  (même cause que le hang I/O ci-dessous).
+
 ---
 
 ## Limitations connues / suite
