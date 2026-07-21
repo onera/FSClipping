@@ -16,13 +16,15 @@ void polyMeshExportImport(FSClac* clac, FSMeshData* meshDataPtr, const FSString 
                           bool partitionIndependent)
 {
   FS_intT nProcs = FSCLAC_NPROCS(clac);
+  FS_intT procID = FSCLAC_PROCID(clac);
   bool success;
 
   // export mesh as vtk
   FSMeshExportFilterVTK exportFilterVTK(clac);
   FSMeshExportParamsVTK exportParamsVTK;
-  exportParamsVTK.mMeshFilename = filename_prefix + FSString(".vtk");
+  exportParamsVTK.mMeshFilename = filename_prefix + FSString("_") + procID + FSString(".vtk");
   exportParamsVTK.mFormatType = FSVtkEnums::FT_ASCII;
+  exportParamsVTK.mFilePerProcess = true;
   success = exportFilterVTK.DoOp(meshDataPtr, &exportParamsVTK);
   if(!(success)) {
     FSError.Print();
@@ -48,7 +50,6 @@ void polyMeshExportImport(FSClac* clac, FSMeshData* meshDataPtr, const FSString 
   FSMeshImportFilterHDF5 importFilterHDF5(clac);
   FSMeshImportParamsHDF5 importParamsHDF5;
   importParamsHDF5.mImportPartitionIndependent = partitionIndependent;
-
   importParamsHDF5.mMeshFilename = filenameExport;
   // ASSERT_TRUE(FileExists(filenameExport));
   FSMeshData meshDataImp = FSMeshData(clac);
@@ -58,7 +59,7 @@ void polyMeshExportImport(FSClac* clac, FSMeshData* meshDataPtr, const FSString 
     FSError.Print();
   }
   ASSERT_TRUE(success);
-  FS_intT procID = FSCLAC_PROCID(clac);
+
   FSLog(clac, procID, "################## PrintInfo ###################################\n", logLevel);
   FSMeshPrintInfo printInfo(clac);
   FSMeshOpParams dummy;
@@ -77,6 +78,23 @@ void polyMeshExportImport(FSClac* clac, FSMeshData* meshDataPtr, const FSString 
   ASSERT_TRUE(success);
 
   // --- end import mesh ---
+}
+
+// Export the mesh as one VTK (legacy ASCII) file per proc: prefix_<procID>.vtk.
+// Used to visualise the per-proc partition, both the original mesh (before
+// clipping) and the reconstructed mesh (after clipping). No HDF5, no import.
+static void exportMeshVTK(FSClac* clac, FSMeshData* meshDataPtr, const FSString& filenamePrefix)
+{
+  const FS_intT procID = FSCLAC_PROCID(clac);
+  FSMeshExportFilterVTK exportFilterVTK(clac);
+  FSMeshExportParamsVTK exportParamsVTK;
+  exportParamsVTK.mMeshFilename = filenamePrefix + FSString("_") + procID + FSString(".vtk");
+  exportParamsVTK.mFormatType = FSVtkEnums::FT_ASCII;
+  exportParamsVTK.mFilePerProcess = true;
+  bool success = exportFilterVTK.DoOp(meshDataPtr, &exportParamsVTK);
+  if(!success)
+    FSError.Print();
+  ASSERT_TRUE(success);
 }
 
 static void polyMeshRepartition(FSClac* clac, FSMeshData* meshDataPtr)
@@ -167,29 +185,6 @@ static FS_intT AsymMeshID(FS_intT procId, FS_intT nMesh1)
   return 2;
 }
 
-// Remove propagated user cell attributes from the mesh so the reconstruction is
-// exercised without attribute propagation. CADGroupID and GlobalNumber are kept:
-// CADGroupID carries the boundary marker used for face selection, GlobalNumber is
-// the stable distributed ID — stripping either would break face extraction.
-static void StripCellAttributes(FSMeshData* meshDataPtr)
-{
-  const FSString cadGroupID = FSEnums::AttributeTypeToString(FSEnums::AT_CADGroupID);
-  const FSString globalNumber = FSMeshEnums::AttributeTypeToString(FSMeshEnums::AT_GlobalNumber);
-  FSUnstructMeshData& cells = meshDataPtr->GetUnstructCells();
-  FSIntArrayT cellTypes = cells.GetCellTypesArray();
-  for(FSIntArrayT::ConstIterator ct = cellTypes.BeginConst(); ct.IsValid(); ct.Next()) {
-    const FSMeshEnums::CellType cellType = (FSMeshEnums::CellType)*ct;
-    if(cellType == FSMeshEnums::CT_Node)
-      continue;
-    FSStringArrayT attribNames = cells.GetCellAttributes(cellType);
-    for(FSStringArrayT::ConstIterator AI = attribNames.BeginConst(); AI.IsValid(); AI.Next()) {
-      if(*AI == cadGroupID || *AI == globalNumber)
-        continue;
-      cells.RemoveCellAttribute(*AI, cellType);
-    }
-  }
-}
-
 TEST(FSCLippingTestInterfacePar, SurfaceInterface)
 {
   FSClac globalClac(MPI_COMM_WORLD);
@@ -221,7 +216,7 @@ TEST(FSCLippingTestInterfacePar, SurfaceInterface)
     polyMeshRepartition(&clac, mesh.GetMeshData());
     mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
     mesh.PrintInfo();
-    polyMeshExportImport(&clac, mesh.GetMeshData(), MeshPath("output/cube_coarse_par"), 1, true);
+    exportMeshVTK(&clac, mesh.GetMeshData(), MeshPath("output/cube_coarse_orig_surf_par"));
   }
 
   if(meshID == 2) {
@@ -230,7 +225,7 @@ TEST(FSCLippingTestInterfacePar, SurfaceInterface)
     polyMeshRepartition(&clac, mesh.GetMeshData());
     mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
     mesh.PrintInfo();
-    polyMeshExportImport(&clac, mesh.GetMeshData(), MeshPath("output/cube_fine_par"), 1, true);
+    exportMeshVTK(&clac, mesh.GetMeshData(), MeshPath("output/cube_fine_orig_surf_par"));
   }
 
   FSClippingInterfacePar surfaceInterface(globalClac, clac, tol, marker, meshID);
@@ -240,6 +235,8 @@ TEST(FSCLippingTestInterfacePar, SurfaceInterface)
     FSMeshData* ptr = meshClipped.GetMeshData();
 
     CheckMesh(clac, ptr);
+    exportMeshVTK(&clac, ptr, MeshPath(meshID == 1 ? "output/cube_coarse_clipped_surf_par"
+                                                   : "output/cube_fine_clipped_surf_par"));
 
     polyMeshRepartition(&clac, ptr);
 
@@ -283,6 +280,7 @@ TEST(FSCLippingTestInterfacePar, VolumeInterface)
     mesh = LoadMeshWithClac(clac, MeshPath("input/cube_hexa_coarse_par.grid"));
     polyMeshRepartition(&clac, mesh.GetMeshData());
     mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+    exportMeshVTK(&clac, mesh.GetMeshData(), MeshPath("output/cube_coarse_orig_vol_par"));
   }
 
   if(meshID == 2) {
@@ -290,6 +288,7 @@ TEST(FSCLippingTestInterfacePar, VolumeInterface)
     mesh = LoadMeshWithClac(clac, MeshPath("input/cube_hexa_fine_par.grid"));
     polyMeshRepartition(&clac, mesh.GetMeshData());
     mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+    exportMeshVTK(&clac, mesh.GetMeshData(), MeshPath("output/cube_fine_orig_vol_par"));
   }
 
   FSClippingInterfacePar volumeInterface(globalClac, clac, tol, marker, meshID);
@@ -298,6 +297,8 @@ TEST(FSCLippingTestInterfacePar, VolumeInterface)
   if(meshID == 1 || meshID == 2) {
     FSMeshData* ptr = meshClipped.GetMeshData();
     CheckMesh(clac, ptr);
+    exportMeshVTK(&clac, ptr, MeshPath(meshID == 1 ? "output/cube_coarse_clipped_vol_par"
+                                                   : "output/cube_fine_clipped_vol_par"));
     polyMeshRepartition(&clac, ptr);
   }
   if(meshID == 1) {
@@ -344,12 +345,14 @@ TEST(FSCLippingTestInterfacePar, VolumeInterface2Cylinders)
     mesh = LoadMeshWithClac(clac, MeshPath("input/mesh_cylinder_1.grid"));
     polyMeshRepartition(&clac, mesh.GetMeshData());
     mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+    exportMeshVTK(&clac, mesh.GetMeshData(), MeshPath("output/cyl1_orig_vol_par"));
   }
 
   if(meshID == 2) {
     mesh = LoadMeshWithClac(clac, MeshPath("input/mesh_cylinder_2.grid"));
     polyMeshRepartition(&clac, mesh.GetMeshData());
     mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+    exportMeshVTK(&clac, mesh.GetMeshData(), MeshPath("output/cyl2_orig_vol_par"));
   }
 
   FSClippingInterfacePar volumeInterface(globalClac, clac, tol, marker, meshID);
@@ -358,6 +361,9 @@ TEST(FSCLippingTestInterfacePar, VolumeInterface2Cylinders)
   if(meshID == 1 || meshID == 2) {
     FSMeshData* ptr = meshClipped.GetMeshData();
     CheckMesh(clac, ptr);
+    // Export the clipped mesh with its as-clipped partition (one VTK per proc),
+    // before RCB repartitioning changes it.
+    exportMeshVTK(&clac, ptr, MeshPath(meshID == 1 ? "output/cyl1_clipped_vol_view" : "output/cyl2_clipped_vol_view"));
     polyMeshRepartition(&clac, ptr);
   }
   if(meshID == 1) {
@@ -371,9 +377,8 @@ TEST(FSCLippingTestInterfacePar, VolumeInterface2Cylinders)
 }
 
 // Asymmetric layout: 1 clipper + 4 procs for cylinder 1 + 2 procs for cylinder
-// 2 = 7 procs. Surface reconstruction only, WITHOUT cell attributes, to isolate
-// the distributed surface reconstruction from attribute propagation.
-TEST(FSCLippingTestInterfacePar, SurfaceInterface2CylindersAsymNoAttr)
+// 2 = 7 procs, surface reconstruction.
+TEST(FSCLippingTestInterfacePar, SurfaceInterface2CylindersAsym)
 {
   FSClac globalClac(MPI_COMM_WORLD);
   SKIP_UNLESS_EXACT_PROCS(globalClac, 7); // 1 clipper + 4 (cyl1) + 2 (cyl2)
@@ -393,14 +398,14 @@ TEST(FSCLippingTestInterfacePar, SurfaceInterface2CylindersAsymNoAttr)
     mesh = LoadMeshWithClac(clac, MeshPath("input/mesh_cylinder_1.grid"));
     polyMeshRepartition(&clac, mesh.GetMeshData());
     mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-    StripCellAttributes(mesh.GetMeshData());
+    exportMeshVTK(&clac, mesh.GetMeshData(), MeshPath("output/cyl1_orig_surf_asym"));
   }
 
   if(meshID == 2) {
     mesh = LoadMeshWithClac(clac, MeshPath("input/mesh_cylinder_2.grid"));
     polyMeshRepartition(&clac, mesh.GetMeshData());
     mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-    StripCellAttributes(mesh.GetMeshData());
+    exportMeshVTK(&clac, mesh.GetMeshData(), MeshPath("output/cyl2_orig_surf_asym"));
   }
 
   FSClippingInterfacePar surfaceInterface(globalClac, clac, tol, marker, meshID);
@@ -408,16 +413,18 @@ TEST(FSCLippingTestInterfacePar, SurfaceInterface2CylindersAsymNoAttr)
 
   // NOTE: a proc may legitimately own 0 nodes here (its whole boundary is covered
   // by higher-priority procs after min-rank ownership). The group total is > 0 so
-  // InitNodePool is satisfied. Downstream partition-independent I/O is skipped for
-  // now (see the volume test note): it hangs when a proc holds an empty partition.
+  // InitNodePool is satisfied. The clipped mesh is NOT exported: exporting a group
+  // in which a proc holds an empty clipped partition hangs the VTK/HDF5 collective
+  // (same root cause as the HDF5 teardown hang — see "Limitations"). Only the
+  // original mesh is exported above.
   if(meshID == 1 || meshID == 2) {
     FSMeshData* ptr = meshClipped.GetMeshData();
     CheckMesh(clac, ptr);
   }
 }
 
-// Same asymmetric 4+2+1 layout, volume reconstruction WITHOUT cell attributes.
-TEST(FSCLippingTestInterfacePar, VolumeInterface2CylindersAsymNoAttr)
+// Same asymmetric 4+2+1 layout, volume reconstruction.
+TEST(FSCLippingTestInterfacePar, VolumeInterface2CylindersAsym)
 {
   FSClac globalClac(MPI_COMM_WORLD);
   SKIP_UNLESS_EXACT_PROCS(globalClac, 7); // 1 clipper + 4 (cyl1) + 2 (cyl2)
@@ -437,14 +444,14 @@ TEST(FSCLippingTestInterfacePar, VolumeInterface2CylindersAsymNoAttr)
     mesh = LoadMeshWithClac(clac, MeshPath("input/mesh_cylinder_1.grid"));
     polyMeshRepartition(&clac, mesh.GetMeshData());
     mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-    StripCellAttributes(mesh.GetMeshData());
+    exportMeshVTK(&clac, mesh.GetMeshData(), MeshPath("output/cyl1_orig_vol_asym"));
   }
 
   if(meshID == 2) {
     mesh = LoadMeshWithClac(clac, MeshPath("input/mesh_cylinder_2.grid"));
     polyMeshRepartition(&clac, mesh.GetMeshData());
     mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-    StripCellAttributes(mesh.GetMeshData());
+    exportMeshVTK(&clac, mesh.GetMeshData(), MeshPath("output/cyl2_orig_vol_asym"));
   }
 
   FSClippingInterfacePar volumeInterface(globalClac, clac, tol, marker, meshID);
@@ -457,6 +464,10 @@ TEST(FSCLippingTestInterfacePar, VolumeInterface2CylindersAsymNoAttr)
   // CheckMesh here until the empty-partition I/O path is addressed.
   if(meshID == 1 || meshID == 2) {
     FSMeshData* ptr = meshClipped.GetMeshData();
+    // NOTE: the clipped mesh is NOT exported here. In this 4+2+1 layout a proc of
+    // cylinder 1 gets an empty clipped-poly partition (0 Poly2D/Poly3D), and the
+    // VTK/HDF5 export collective hangs on such a proc (same root cause as the HDF5
+    // teardown hang — see "Limitations"). Only the original mesh is exported above.
     CheckMesh(clac, ptr);
   }
 }
