@@ -181,7 +181,6 @@ FSIntArrayT FSTopologyAssembler::UpdateOldCell2Node(const FSIntArrayT& oldCell2N
   }
 
   FSIntArrayT cell2Node(nKept, nCellNodes);
-  const auto& coord2Node = cell2NodeBuilder_.CoordToNode();
   FS_intT iter = 0;
 
   for(FS_intT c = 0; c < nCellOld; c++) {
@@ -193,8 +192,11 @@ FSIntArrayT FSTopologyAssembler::UpdateOldCell2Node(const FSIntArrayT& oldCell2N
     for(FS_intT node = 0; node < nCellNodes; ++node) {
       FS_intT idx = oldCell2Node(cellId, node);
       FSVec3 vecNode{oldCoords(idx, 0), oldCoords(idx, 1), oldCoords(idx, 2)};
-      NodeKey key(vecNode, tol_);
-      cell2Node(iter, node) = coord2Node.at(key);
+      // Register the node if it is unknown: an owned unclipped surface cell may
+      // reference a node that no owned volume cell owns (shared only with volume
+      // ghosts, which BuildVolumeTopo skips). topo.globalCoords is refreshed by
+      // the caller after all surface types are processed.
+      cell2Node(iter, node) = cell2NodeBuilder_.ResolveOrRegisterNode(vecNode);
     }
     iter++;
   }
@@ -220,6 +222,10 @@ void FSTopologyAssembler::AppendUnclippedSurfaces(FSMesh& mesh,
     topo.cell2NodeInner[t] = std::move(cell2Node);
     topo.cellParent[t] = std::move(parent);
   }
+
+  // UpdateOldCell2Node may have appended nodes that no owned volume cell owns.
+  // Refresh globalCoords so the reconstructed mesh has coordinates for them.
+  topo.globalCoords = cell2NodeBuilder_.GlobalCoords();
 }
 
 _FS_END_NAMESPACE

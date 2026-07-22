@@ -74,6 +74,15 @@ public:
 
   void BuildGlobalNumbering();
 
+  // Resolve a coordinate to its global node index, registering it if absent.
+  // Needed by AppendUnclippedSurfaces: an unclipped surface cell may reference a
+  // node that no owned volume cell owns (e.g. a node shared only with volume
+  // ghost cells, which BuildVolumeTopo skips). Such a node was never added to the
+  // deduplicated coordinate list, so looking it up would fail; here we append it
+  // instead. Must run after BuildGlobalNumbering (globalCoords_/coordToNode_
+  // populated). Returns the node's index in GlobalCoords().
+  FS_intT ResolveOrRegisterNode(const FSVec3& p);
+
   // For each local node index (in GlobalCoords order), the clipper-assigned
   // global ID, or -1 if the node was never fed through the globalIds overload.
   // Requires BuildGlobalNumbering to have run.
