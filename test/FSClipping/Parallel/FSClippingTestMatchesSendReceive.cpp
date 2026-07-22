@@ -133,6 +133,17 @@ static void RunParallelMatchTest(FSClac& globalClac,
   }
 }
 
+// FSClippingFace's coordinate-only constructors number faces with a process-wide
+// static counter (s_nextId_) that keeps incrementing across TEST bodies run in
+// the same process. These tests assert on absolute faceIndex values, so the
+// fixture resets the counter before each test — making them independent of run
+// order and of whether they run one-per-process (CTest) or all in one process.
+class FSClippingTestMatchesPar : public ::testing::Test
+{
+protected:
+  void SetUp() override { FSClippingFace::ResetIdCounter(); }
+};
+
 // ─── Test 1 : Identical(parallel) ────────────────────────────────────────────
 // Subject and clipped are the same four faces inserted in the same order.
 // Each face i matches itself → face1 == face2 == i for all 4 matches.
@@ -142,10 +153,9 @@ static void RunParallelMatchTest(FSClac& globalClac,
 //   index 1 → bottomRight  [ 0,-1]x[1,0]
 //   index 2 → topLeft      [-1, 0]x[0,1]
 //   index 3 → topRight     [ 0, 0]x[1,1]
-TEST(FSClippingTestMatchesPar, Identical)
+TEST_F(FSClippingTestMatchesPar, Identical)
 {
   FSClac globalClac(MPI_COMM_WORLD);
-  SKIP_UNLESS_EXACT_PROCS(globalClac, 3);
 
   FS_intT meshID = globalClac.GetProcID();
   FSClac localClac;
@@ -181,11 +191,10 @@ TEST(FSClippingTestMatchesPar, Identical)
 // Subject vector layout: same as Test 1 (index 0..3).
 // Clipped vector layout:
 //   index 0 → centerSquare  [-0.5,-0.5]x[0.5,1]
-TEST(FSClippingTestMatchesPar, Intersection)
+TEST_F(FSClippingTestMatchesPar, Intersection)
 {
 
   FSClac globalClac(MPI_COMM_WORLD);
-  SKIP_UNLESS_EXACT_PROCS(globalClac, 3);
 
   FS_intT meshID = globalClac.GetProcID();
   FSClac localClac;
@@ -230,10 +239,9 @@ TEST(FSClippingTestMatchesPar, Intersection)
 // Subject vector layout: same as Test 1 (index 0..3).
 // Clipped vector layout:
 //   index 0 → includedSquare  [-0.75,-0.75]x[-0.25,-0.25]
-TEST(FSClippingTestMatchesPar, Included)
+TEST_F(FSClippingTestMatchesPar, Included)
 {
   FSClac globalClac(MPI_COMM_WORLD);
-  SKIP_UNLESS_EXACT_PROCS(globalClac, 3);
 
   FS_intT meshID = globalClac.GetProcID();
   FSClac localClac;
