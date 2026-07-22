@@ -141,6 +141,19 @@ void FSCell2NodeBuilder::BuildGlobalNumbering()
   BuildCellIdMapping();
 }
 
+FS_intT FSCell2NodeBuilder::ResolveOrRegisterNode(const FSVec3& p)
+{
+  NodeKey key(p, tol_);
+  auto it = coordToNode_.find(key);
+  if(it != coordToNode_.end())
+    return it->second;
+
+  const FS_intT id = static_cast<FS_intT>(globalCoords_.size());
+  globalCoords_.push_back(p);
+  coordToNode_[key] = id;
+  return id;
+}
+
 void FSCell2NodeBuilder::AddVolumeCellNodes(FS_intT cellId, FSMeshEnums::CellType cellType,
                                             const FSIntArrayT& cell2Node, const FSFloatArrayT& coords)
 {
