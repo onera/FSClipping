@@ -218,7 +218,6 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
     }
     FS_intT n = bvhClipped_.FindBoxesIntersectingWithBox(expandedBox, outIndicesBVHTree);
     FS_intT faceIndexSubject = subject.faceIndex();
-
     for(FS_intT k = 0; k < n; ++k) {
       FS_intT faceIndexClippedBVHTree = outIndicesBVHTree(k);
       FSFaceMatch match;
@@ -255,7 +254,6 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
       }
     }
   }
-
   // Keep the raw intersections so that ComputeInvertedMatches can apply the
   // coverage criterion independently on the clipped side.
   rawMatches_ = outMatches;
@@ -282,8 +280,8 @@ void FSFaceMatcher::PreserveUncoveredFaces(std::vector<FSFaceMatch>& matches,
 
     // An uncovered strip of width tol along the face boundary has area
     // ~= tol * perimeter/2 — dimensionally consistent threshold (see ComputeMatch).
-    const FS_floatT perimeter = FSClippingUtil::PolygonPerimeter(face.projected2D());
-    if(std::abs(covered - faceArea) > tol_ * 0.5 * perimeter)
+    // const FS_floatT perimeter = FSClippingUtil::PolygonPerimeter(face.projected2D());
+    if(std::abs(covered - faceArea) > tol_)
       uncovered.insert(face.faceIndex());
   }
 
