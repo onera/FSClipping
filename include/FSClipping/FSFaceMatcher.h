@@ -18,6 +18,14 @@ struct FSFaceMatch {
   FS_intT elemOwner1 = -1; // element owner of the face 1
   FS_intT elemOwner2 = -1; // element owner of the face 2
 
+  // Proc owning each element, taken from FSCellFace::mCellProcID. Cell IDs are
+  // LOCAL to a proc, so elemOwner alone does not identify a cell: two procs of
+  // the same mesh may use the same ID for two different cells. Routing and
+  // per-cell bookkeeping must therefore key on the (ownerProc, elemOwner) pair.
+  // -1 in sequential runs, where the cell ID is already unique.
+  FS_intT ownerProc1 = -1;
+  FS_intT ownerProc2 = -1;
+
   FS_intT faceOwner1 = -1; // face owner of the face 1
   FS_intT faceOwner2 = -1; // face owner of the face 2
 

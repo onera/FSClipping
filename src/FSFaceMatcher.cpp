@@ -10,8 +10,9 @@ _FS_BEGIN_NAMESPACE
 FSClac::sizeT FSFaceMatch::GetBufSize(FSClac& clac) const
 {
   FSClac::sizeT s = 0;
-  // face1, face2, elemOwner1/2, faceOwner1/2, 4 CellTypes, type → 11 FS_intT
-  s += clac.GetBufSizeInt32(11);
+  // face1, face2, elemOwner1/2, ownerProc1/2, faceOwner1/2, 4 CellTypes, type
+  // → 13 FS_intT
+  s += clac.GetBufSizeInt32(13);
   // intersectedArea → 1 FS_float64T
   s += clac.GetBufSizeFloat64(1);
   // clippedPoly2D: size + n * 2 coords
@@ -36,6 +37,8 @@ void FSFaceMatch::Pack(FSClac& clac)
   clac.Pack(&face2);
   clac.Pack(&elemOwner1);
   clac.Pack(&elemOwner2);
+  clac.Pack(&ownerProc1);
+  clac.Pack(&ownerProc2);
   clac.Pack(&faceOwner1);
   clac.Pack(&faceOwner2);
 
@@ -90,6 +93,8 @@ void FSFaceMatch::Unpack(FSClac& clac)
   clac.Unpack(&face2);
   clac.Unpack(&elemOwner1);
   clac.Unpack(&elemOwner2);
+  clac.Unpack(&ownerProc1);
+  clac.Unpack(&ownerProc2);
   clac.Unpack(&faceOwner1);
   clac.Unpack(&faceOwner2);
 
@@ -224,6 +229,7 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
       match.face1 = faceIndexSubject;
       if(subject.topo()._faceFSDM) {
         match.elemOwner1 = subject.topo().GetOwnerCellFSDMIndex();
+        match.ownerProc1 = subject.topo()._faceFSDM->mOwner.mCellProcID;
         match.faceOwner1 = subject.topo().GetNeighborCellFSDMIndex();
         match.elemOwnerType1 = subject.topo()._faceFSDM->mOwner.mCellType;
         match.faceOwnerType1 = subject.topo()._faceFSDM->mNeighbor.mCellType;
@@ -232,6 +238,7 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
       match.face2 = clippedFaces_[faceIndexClippedBVHTree].faceIndex();
       if(clippedFaces_[faceIndexClippedBVHTree].topo()._faceFSDM) {
         match.elemOwner2 = clippedFaces_[faceIndexClippedBVHTree].topo().GetOwnerCellFSDMIndex();
+        match.ownerProc2 = clippedFaces_[faceIndexClippedBVHTree].topo()._faceFSDM->mOwner.mCellProcID;
         match.faceOwner2 = clippedFaces_[faceIndexClippedBVHTree].topo().GetNeighborCellFSDMIndex();
         match.elemOwnerType2 = clippedFaces_[faceIndexClippedBVHTree].topo()._faceFSDM->mOwner.mCellType;
         match.faceOwnerType2 = clippedFaces_[faceIndexClippedBVHTree].topo()._faceFSDM->mNeighbor.mCellType;
@@ -280,8 +287,10 @@ void FSFaceMatcher::PreserveUncoveredFaces(std::vector<FSFaceMatch>& matches,
 
     // An uncovered strip of width tol along the face boundary has area
     // ~= tol * perimeter/2 — dimensionally consistent threshold (see ComputeMatch).
-    // const FS_floatT perimeter = FSClippingUtil::PolygonPerimeter(face.projected2D());
-    if(std::abs(covered - faceArea) > tol_)
+    // Comparing the area difference against tol alone was scale-dependent and,
+    // on a mesh of extent ~1e-3, so loose that it could never fire.
+    const FS_floatT perimeter = FSClippingUtil::PolygonPerimeter(face.projected2D());
+    if(std::abs(covered - faceArea) > tol_ * 0.5 * perimeter)
       uncovered.insert(face.faceIndex());
   }
 
@@ -303,6 +312,7 @@ void FSFaceMatcher::PreserveUncoveredFaces(std::vector<FSFaceMatch>& matches,
     match.face1 = face.faceIndex();
     if(face.topo()._faceFSDM) {
       match.elemOwner1 = face.topo().GetOwnerCellFSDMIndex();
+      match.ownerProc1 = face.topo()._faceFSDM->mOwner.mCellProcID;
       match.faceOwner1 = face.topo().GetNeighborCellFSDMIndex();
       match.elemOwnerType1 = face.topo()._faceFSDM->mOwner.mCellType;
       match.faceOwnerType1 = face.topo()._faceFSDM->mNeighbor.mCellType;
@@ -347,6 +357,7 @@ void FSFaceMatcher::ComputeInvertedMatches(std::vector<FSFaceMatch>& outMatches)
   for(auto& m : outMatches) {
     std::swap(m.face1, m.face2);
     std::swap(m.elemOwner1, m.elemOwner2);
+    std::swap(m.ownerProc1, m.ownerProc2);
     std::swap(m.elemOwnerType1, m.elemOwnerType2);
     std::swap(m.faceOwner1, m.faceOwner2);
     std::swap(m.faceOwnerType1, m.faceOwnerType2);

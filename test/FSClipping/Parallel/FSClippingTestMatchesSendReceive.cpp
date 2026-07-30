@@ -17,20 +17,16 @@ struct IdentitySquare {
   IdentitySquare()
   {
     bottomLeftArray.Resize(FSMESH_NNODES_QUAD4, FS_3D);
-    FS_floatT bottomLeft[FSMESH_NNODES_QUAD4][FS_3D] = {
-      {-1, -1, 0}, {0, -1, 0}, {0, 0, 0}, {-1, 0, 0}};
+    FS_floatT bottomLeft[FSMESH_NNODES_QUAD4][FS_3D] = {{-1, -1, 0}, {0, -1, 0}, {0, 0, 0}, {-1, 0, 0}};
 
     bottomRightArray.Resize(FSMESH_NNODES_QUAD4, FS_3D);
-    FS_floatT bottomRight[FSMESH_NNODES_QUAD4][FS_3D] = {
-      {0, -1, 0}, {1, -1, 0}, {1, 0, 0}, {0, 0, 0}};
+    FS_floatT bottomRight[FSMESH_NNODES_QUAD4][FS_3D] = {{0, -1, 0}, {1, -1, 0}, {1, 0, 0}, {0, 0, 0}};
 
     topRightArray.Resize(FSMESH_NNODES_QUAD4, FS_3D);
-    FS_floatT topRight[FSMESH_NNODES_QUAD4][FS_3D] = {
-      {0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}};
+    FS_floatT topRight[FSMESH_NNODES_QUAD4][FS_3D] = {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}};
 
     topLeftArray.Resize(FSMESH_NNODES_QUAD4, FS_3D);
-    FS_floatT topLeft[FSMESH_NNODES_QUAD4][FS_3D] = {
-      {-1, 0, 0}, {0, 0, 0}, {0, 1, 0}, {-1, 1, 0}};
+    FS_floatT topLeft[FSMESH_NNODES_QUAD4][FS_3D] = {{-1, 0, 0}, {0, 0, 0}, {0, 1, 0}, {-1, 1, 0}};
 
     for(FS_intT i = 0; i < FSMESH_NNODES_QUAD4; ++i) {
       for(FS_intT d = 0; d < FS_3D; ++d) {
@@ -57,8 +53,7 @@ struct ExpectedMatch {
 // Verifies that the received match list corresponds exactly to the expected list.
 // Matches are sorted by (face1, face2) before comparison so the check
 // is order-independent.
-static void AssertMatches(const std::vector<FSFaceMatch>& matches,
-                          const std::vector<ExpectedMatch>& expected)
+static void AssertMatches(const std::vector<FSFaceMatch>& matches, const std::vector<ExpectedMatch>& expected)
 {
   ASSERT_EQ(matches.size(), expected.size());
 
@@ -93,12 +88,9 @@ static void AssertMatches(const std::vector<FSFaceMatch>& matches,
 // ─── Updated parallel helper ──────────────────────────────────────────────────
 // Same 3-process protocol as before, but now takes the full expected match list
 // instead of just a type + count.
-static void RunParallelMatchTest(FSClac& globalClac,
-                                 FSClac& localClac,
-                                 const std::vector<FSClippingFace>& subjectFaces,
+static void RunParallelMatchTest(FSClac& globalClac, FSClac& localClac, const std::vector<FSClippingFace>& subjectFaces,
                                  const std::vector<FSClippingFace>& clippedFaces,
-                                 const std::vector<ExpectedMatch>& expectedMatches,
-                                 FS_floatT tol = 1e-12)
+                                 const std::vector<ExpectedMatch>& expectedMatches, FS_floatT tol = 1e-12)
 {
   const FS_intT rank = globalClac.GetProcID();
 
@@ -121,10 +113,7 @@ static void RunParallelMatchTest(FSClac& globalClac,
     auto subjectReceived = FSFaceExchange::Receive(globalClac, 0);
     auto clippedReceived = FSFaceExchange::Receive(globalClac, 1);
 
-    FSFaceMatcher matcher(localClac,
-                          subjectReceived.faces,
-                          clippedReceived.faces,
-                          tol);
+    FSFaceMatcher matcher(localClac, subjectReceived.faces, clippedReceived.faces, tol);
     std::vector<FSFaceMatch> matches;
     matcher.ComputeMatches(matches);
 
@@ -144,7 +133,7 @@ protected:
   void SetUp() override { FSClippingFace::ResetIdCounter(); }
 };
 
-// ─── Test 1 : Identical(parallel) ────────────────────────────────────────────
+// ─── Test 1 : Identical (parallel) ────────────────────────────────────────────
 // Subject and clipped are the same four faces inserted in the same order.
 // Each face i matches itself → face1 == face2 == i for all 4 matches.
 //
@@ -179,11 +168,10 @@ TEST_F(FSClippingTestMatchesPar, Identical)
     {FSFaceMatch::IDENTICAL, 4, 4},
   };
 
-  RunParallelMatchTest(globalClac, localClac,
-                       subjectFaces, clippedFaces, expected);
+  RunParallelMatchTest(globalClac, localClac, subjectFaces, clippedFaces, expected);
 }
 
-// ─── Test 2: Intersection (parallel) ─────────────────────────────────────────
+// ─── Test 2: not covered (parallel) ─────────────────────────────────────────
 // One clipped quad (index 0) crosses all four quadrants of the subject mesh.
 // Each subject face (index 0..3) intersects the single clipped face → owner2 is
 // always 0 for every match.
@@ -191,7 +179,7 @@ TEST_F(FSClippingTestMatchesPar, Identical)
 // Subject vector layout: same as Test 1 (index 0..3).
 // Clipped vector layout:
 //   index 0 → centerSquare  [-0.5,-0.5]x[0.5,1]
-TEST_F(FSClippingTestMatchesPar, Intersection)
+TEST_F(FSClippingTestMatchesPar, Not_covered)
 {
 
   FSClac globalClac(MPI_COMM_WORLD);
@@ -209,8 +197,7 @@ TEST_F(FSClippingTestMatchesPar, Intersection)
   subjectFaces.emplace_back(sq.topRightArray);    // owner 8
 
   FSFloatArrayT centerArray(FSMESH_NNODES_QUAD4, FS_3D);
-  FS_floatT centerSquare[FSMESH_NNODES_QUAD4][FS_3D] = {
-    {-0.5, -0.5, 0}, {0.5, -0.5, 0}, {0.5, 0.5, 0}, {-0.5, 1, 0}};
+  FS_floatT centerSquare[FSMESH_NNODES_QUAD4][FS_3D] = {{-0.5, -0.5, 0}, {0.5, -0.5, 0}, {0.5, 0.5, 0}, {-0.5, 1, 0}};
   for(FS_intT i = 0; i < FSMESH_NNODES_QUAD4; ++i)
     for(FS_intT d = 0; d < FS_3D; ++d)
       centerArray(i, d) = centerSquare[i][d];
@@ -227,8 +214,7 @@ TEST_F(FSClippingTestMatchesPar, Intersection)
     {FSFaceMatch::NOT_COVERED, 4, -1}, // topRight    partially covered
   };
 
-  RunParallelMatchTest(globalClac, localClac,
-                       subjectFaces, clippedFaces, expected);
+  RunParallelMatchTest(globalClac, localClac, subjectFaces, clippedFaces, expected);
 }
 
 // ─── Test 3: Included (parallel) ─────────────────────────────────────────────
@@ -276,6 +262,51 @@ TEST_F(FSClippingTestMatchesPar, Included)
     {FSFaceMatch::NOT_COVERED, 4, -1},
   };
 
-  RunParallelMatchTest(globalClac, localClac,
-                       subjectFaces, clippedFaces, expected, 1e-6);
+  RunParallelMatchTest(globalClac, localClac, subjectFaces, clippedFaces, expected, 1e-6);
+}
+
+// ─── Test 4: intersection (parallel) ─────────────────────────────────────────
+// One clipped quad (index 0) crosses all four quadrants of the subject mesh.
+// Each subject face (index 0..3) intersects the single clipped face → owner2 is
+// always 0 for every match.
+//
+// Subject vector layout: same as Test 1 (index 0..3).
+// Clipped vector layout:
+//   index 0 → square  [-1,-1]x[1,1]
+TEST_F(FSClippingTestMatchesPar, Intersection)
+{
+
+  FSClac globalClac(MPI_COMM_WORLD);
+
+  FS_intT meshID = globalClac.GetProcID();
+  FSClac localClac;
+  globalClac.DivideIntoGroups(meshID, localClac);
+
+  IdentitySquare sq;
+
+  std::vector<FSClippingFace> subjectFaces;
+  subjectFaces.emplace_back(sq.bottomLeftArray);  // owner 5
+  subjectFaces.emplace_back(sq.bottomRightArray); // owner 6
+  subjectFaces.emplace_back(sq.topLeftArray);     // owner 7
+  subjectFaces.emplace_back(sq.topRightArray);    // owner 8
+
+  FSFloatArrayT centerArray(FSMESH_NNODES_QUAD4, FS_3D);
+  FS_floatT square[FSMESH_NNODES_QUAD4][FS_3D] = {{-1.0, -1.0, 0}, {1.0, -1.0, 0}, {1.0, 1.0, 0}, {-1.0, 1, 0}};
+  for(FS_intT i = 0; i < FSMESH_NNODES_QUAD4; ++i)
+    for(FS_intT d = 0; d < FS_3D; ++d)
+      centerArray(i, d) = square[i][d];
+
+  std::vector<FSClippingFace> clippedFaces;
+  clippedFaces.emplace_back(centerArray); // owner 9
+
+  // The single clipped face intersects every subject quadrant, but covers
+  // none of them entirely: each subject face is kept unclipped (NOT_COVERED).
+  const std::vector<ExpectedMatch> expected = {
+    {FSFaceMatch::INTERSECTING, 1, 0}, // bottomLeft  partially covered
+    {FSFaceMatch::INTERSECTING, 2, 0}, // bottomRight partially covered
+    {FSFaceMatch::INTERSECTING, 3, 0}, // topLeft     partially covered
+    {FSFaceMatch::INTERSECTING, 4, 0}, // topRight    partially covered
+  };
+
+  RunParallelMatchTest(globalClac, localClac, subjectFaces, clippedFaces, expected);
 }

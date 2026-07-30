@@ -27,14 +27,22 @@ struct ReceivedFaces {
 };
 
 // GatheredFaces aggregates all faces from one mesh group.
-// cellToGlobalProc maps each volume cell ID to the global proc that owns it,
+// cellToGlobalProc maps each volume cell to the global proc that owns it,
 // allowing ScatterSend to route matches back without storing per-face proc IDs.
 // localToGlobal maps sub-comm proc IDs to global proc IDs (populated even for
 // procs that sent 0 faces so that ScatterSend can send empty match lists).
+//
+// The cell key is the (local proc ID, cell ID) pair, NOT the bare cell ID: cell
+// IDs are local to a proc, so the several procs of one mesh may each use the same
+// ID for a different cell. Keying on the ID alone let the last proc gathered
+// overwrite the others, and every match for that ID was then scattered to a
+// single wrong proc — leaving the other procs' cells unclipped and merging two
+// distinct cells into one over-sized Poly3D downstream.
 struct GatheredFaces {
   ReceivedFaces faces;
-  std::map<FS_intT, FS_intT> cellToGlobalProc; // volume cell ID → global proc ID
-  std::map<FS_intT, FS_intT> localToGlobal;    // local proc ID → global proc ID
+  // (owner's local proc ID, volume cell ID) → global proc ID
+  std::map<std::pair<FS_intT, FS_intT>, FS_intT> cellToGlobalProc;
+  std::map<FS_intT, FS_intT> localToGlobal; // local proc ID → global proc ID
 };
 
 // Clipper receives from both mesh groups in one call.
