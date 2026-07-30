@@ -75,7 +75,7 @@ inline void exportMeshVTK(FSClac* clac, FSMeshData* meshDataPtr, const FSString&
   FSMeshExportParamsVTK exportParamsVTK;
   exportParamsVTK.mMeshFilename = filenamePrefix + FSString(".vtk");
   exportParamsVTK.mFormatType = FSVtkEnums::FT_Raw;
-  exportParamsVTK.mFilePerProcess = true;
+  exportParamsVTK.mFilePerProcess = false;
   bool success = exportFilterVTK.DoOp(meshDataPtr, &exportParamsVTK);
   if(!success)
     FSError.Print();

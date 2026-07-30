@@ -151,13 +151,26 @@ AllGatheredFaces GatherReceiveAll(FSClac& clac)
   result.meshB.faces.connectivity.reserve(nB);
   result.meshB.faces.faces.reserve(nB);
 
+  // Face indices are local to the sending proc, so faces coming from different
+  // procs of one mesh collide on the same index. Downstream those indices are the
+  // identity of a face (FSFaceMatch::face1/face2, and the per-face coverage sum in
+  // PreserveUncoveredFaces), so a collision made two distinct faces look like one:
+  // their intersection areas were summed, the total came to twice the face area,
+  // and the face was wrongly reported as not covered. Renumber the concatenated
+  // list contiguously so each gathered face has a unique index on the clipper.
+  FS_intT nextIndexA = 0, nextIndexB = 0;
+
   for(auto& msg : messages) {
-    GatheredFaces& g = (msg.meshID == 1) ? result.meshA : result.meshB;
+    const bool isMeshA = (msg.meshID == 1);
+    GatheredFaces& g = isMeshA ? result.meshA : result.meshB;
+    FS_intT& nextIndex = isMeshA ? nextIndexA : nextIndexB;
     g.localToGlobal[msg.localProcID] = msg.worldProcID;
     for(auto& raw : msg.faces) {
-      g.cellToGlobalProc[raw.conn.mOwner.mCell] = raw.originGlobalProc;
+      // Key on (owner proc, cell): cell IDs are local, so two procs of this same
+      // mesh can both own a cell numbered e.g. 201.
+      g.cellToGlobalProc[{raw.conn.mOwner.mCellProcID, raw.conn.mOwner.mCell}] = raw.originGlobalProc;
       g.faces.connectivity.push_back(raw.conn);
-      g.faces.faces.emplace_back(FSFace(g.faces.connectivity.back()), raw.faceIndex, raw.coords);
+      g.faces.faces.emplace_back(FSFace(g.faces.connectivity.back()), nextIndex++, raw.coords);
     }
   }
 
@@ -244,6 +257,7 @@ static FSFaceMatch InvertSingle(const FSFaceMatch& m)
   FSFaceMatch inv = m;
   std::swap(inv.face1, inv.face2);
   std::swap(inv.elemOwner1, inv.elemOwner2);
+  std::swap(inv.ownerProc1, inv.ownerProc2);
   std::swap(inv.elemOwnerType1, inv.elemOwnerType2);
   std::swap(inv.faceOwner1, inv.faceOwner2);
   std::swap(inv.faceOwnerType1, inv.faceOwnerType2);
@@ -259,11 +273,10 @@ void ScatterSend(FSClac& clac, const std::vector<FSFaceMatch>& matches, const FS
   for(const auto& [local, global] : gathered.localToGlobal)
     forAOrB[global] = {};
 
-  for(const auto& m : matches) {
-    // std::cout << "Matches " << m.type << " own by elem1 " << m.elemOwner1 << " and elem2 :  " << m.elemOwner2
-    //           << std::endl;
-    forAOrB.at(gathered.cellToGlobalProc.at(m.elemOwner1)).push_back(m);
-  }
+  // Route on (owner proc, cell), the only globally unique cell identity: the
+  // several procs of this mesh may each number a different cell with the same ID.
+  for(const auto& m : matches)
+    forAOrB.at(gathered.cellToGlobalProc.at({m.ownerProc1, m.elemOwner1})).push_back(m);
 
   for(auto& [globalProc, subset] : forAOrB)
     Send(clac, globalProc, subset);

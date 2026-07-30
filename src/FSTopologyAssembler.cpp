@@ -3,9 +3,6 @@
 #include "FSClipping/FSCell2NodeBuilder.h"
 #include "FSClipping/FSPolyFaceBuilder.h"
 #include <FSMeshData.h>
-#include <fstream>
-#include <sstream>
-#include <unistd.h>
 
 _FS_BEGIN_NAMESPACE
 
@@ -26,26 +23,6 @@ FSTopologyData FSTopologyAssembler::BuildSurfaceTopo(const std::vector<FSFaceMat
   }
 
   // -------------------------------------------------
-  // DEBUG: Write elemOwner1 and elemOwner2 to per-process files
-  // -------------------------------------------------
-  // Uses getpid() for unique per-process file names in parallel runs.
-  {
-    pid_t pid = getpid();
-    std::ostringstream oss;
-    oss << "elemOwner_proc" << pid << ".txt";
-    std::ofstream outFile(oss.str());
-    if(outFile.is_open()) {
-      for(const auto& f : matches) {
-        outFile << "elemOwner1: " << f.elemOwner1 << " | elemOwner2: " << f.elemOwner2 << "\n";
-        for(const auto& ng : f.nodeGlobalIds) {
-          outFile << ng << ", ";
-        }
-        outFile << "\n";
-      }
-      outFile.close();
-    }
-  }
-  // -------------------------------------------------
   // 1. Build cell2node + global coordinates
   // -------------------------------------------------
   for(const auto& f : matches) {
@@ -64,27 +41,6 @@ FSTopologyData FSTopologyAssembler::BuildSurfaceTopo(const std::vector<FSFaceMat
   cell2NodeBuilder_.SetAllCellOnTheBorder();
   cell2NodeBuilder_.BuildGlobalNumbering();
 
-  // -------------------------------------------------
-  // DEBUG: Write Cell2NodeBuilder to per-process files
-  // -------------------------------------------------
-  // Uses getpid() for unique per-process file names in parallel runs.
-  {
-    pid_t pid = getpid();
-    std::ostringstream oss;
-    oss << "cellData_proc" << pid << ".txt";
-    std::ofstream outFile(oss.str());
-    if(outFile.is_open()) {
-      for(const auto& elem : cell2NodeBuilder_.CellData()) {
-        outFile << elem.first << " : ";
-        for(const auto& c : elem.second.nodeIds) {
-          NodeKey key(c, tol_);
-          outFile << c << " ";
-        }
-        outFile << "\n";
-      }
-      outFile.close();
-    }
-  }
   result.globalCoords = cell2NodeBuilder_.GlobalCoords();
   result.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly3D();
 
@@ -138,9 +94,9 @@ void FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node, const st
   // -------------------------------------------------
   // 1. Add volume cells
   // -------------------------------------------------
-  // Skip ghost cells: with several procs per mesh (local numbering), non-owned
-  // cells are replicated on neighbour procs and would be emitted twice.
   for(FS_intT c = offSet; c < nCells + offSet; c++) {
+    // Skip ghost cells: with several procs per mesh (local numbering), non-owned
+    // cells are replicated on neighbour procs and would be emitted twice.
     if(!cellPool.IsOwned(c))
       continue;
     cell2NodeBuilder_.AddVolumeCellNodes(c, type, cell2Node, oldCoords);
