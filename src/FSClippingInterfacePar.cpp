@@ -32,7 +32,6 @@ FSMesh FSClippingInterfacePar::BuildInterface(FSMesh& mesh, FSClippingEngine::Mo
   FSClippingEngine engine(tol_);
   FSTopologyData topology = engine.BuildTopology(mesh, boundaryExtraction, matches, mode);
   return engine.Reconstruct(clac_, mesh, topology);
-  // return mesh;
 }
 
 _FS_END_NAMESPACE

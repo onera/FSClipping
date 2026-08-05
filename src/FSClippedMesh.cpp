@@ -89,9 +89,9 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
 
   if(meshId == 1 || meshId == 2) {
 
-    const FS_intT marker = (meshId == 0) ? mParams.mMarker1 : mParams.mMarker2;
-    const FSString& meshKey = (meshId == 0) ? mParams.mMeshKeyOriginal1 : mParams.mMeshKeyOriginal2;
-    const FSString& clippedKey = (meshId == 0) ? mParams.mMeshKeyClipped1 : mParams.mMeshKeyClipped2;
+    const FS_intT marker = (meshId == 1) ? mParams.mMarker1 : mParams.mMarker2;
+    const FSString& meshKey = (meshId == 1) ? mParams.mMeshKeyOriginal1 : mParams.mMeshKeyOriginal2;
+    const FSString& clippedKey = (meshId == 1) ? mParams.mMeshKeyClipped1 : mParams.mMeshKeyClipped2;
 
     FSMesh* mesh = mData->GetMesh(meshKey, false);
     FSMesh* meshClipped = mData->GetMesh(clippedKey, mesh->GetClac(), true);
@@ -99,12 +99,12 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
     BoundaryExtraction be;
     ExtractBoundaryFaces(*mesh, marker, be);
 
-    FSFaceExchange::GatherSend(*mClac, 0, meshId, be.faces);
-    // const std::vector<FSFaceMatch> matches = FSMatchExchange::Receive(*mClac, 2);
+    FSFaceExchange::GatherSend(*mClac, clipperProc, meshId, be.faces);
+    const std::vector<FSFaceMatch> matches = FSMatchExchange::ScatterReceive(*mClac, clipperProc);
 
-    // FSClippingEngine engine(mParams.mTol);
-    // FSTopologyData meshClippedTopo = engine.BuildTopology(*mesh, be, matches, FSClippingEngine::Mode::Volume);
-    // *meshClipped = engine.Reconstruct(*mesh->GetClac(), *mesh, meshClippedTopo, true);
+    FSClippingEngine engine(mParams.mTol);
+    FSTopologyData meshClippedTopo = engine.BuildTopology(*mesh, be, matches, FSClippingEngine::Mode::Volume);
+    *meshClipped = engine.Reconstruct(*mesh->GetClac(), *mesh, meshClippedTopo, true);
 #ifdef FS_SAFETYCHECKS
     if(!meshClipped->Check()) {
       FSError("FSClippedMesh: resulting mesh of sub-elements is invalid.");
@@ -113,7 +113,8 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
 #endif
 
   } else { // meshId == 0
-    // FSClippingEngine::RunMatcherProc(*mClac, mesh.GetClac(), mParams.mTol);
+    FSClac selfClac(FSClac::sSelfComm);
+    FSClippingEngine::RunMatcherProc(*mClac, selfClac, mParams.mTol);
   }
 
   return true;
@@ -126,13 +127,9 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
 
 bool FSClippedMesh::ExtractBoundaryFaces(FSMesh& mesh, FS_intT marker, BoundaryExtraction& be)
 {
-  FSMeshFaceExtractor& fex = (mClac->GetProcID() == 0) ? mFaceExtractor1 : mFaceExtractor2;
-  be = FSBoundaryFaceProvider::Extract(mesh, fex, marker, mParams.mTol, false);
+  FSMeshFaceExtractor& fex = (mClac->GetProcID() == 1) ? mFaceExtractor1 : mFaceExtractor2;
+  be = FSBoundaryFaceProvider::Extract(mesh, fex, marker, mParams.mTol, true);
 
-  if(be.faces.empty()) {
-    FSLog("No faces were extracted from the mesh");
-    return false;
-  }
   return true;
 }
 
