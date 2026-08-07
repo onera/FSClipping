@@ -6,12 +6,6 @@
 
 #include <set>
 
-// ── AssignGlobalNodeIds ───────────────────────────────────────────────────────
-// The clipper assigns a globally consistent numbering to the points of every
-// clippedPoly3D before scattering the matches (level 2 parallelism). Two mesh
-// procs that share a node at their partition interface must receive the same
-// global ID by construction. These tests validate the numbering invariants.
-
 static FSFaceMatch MakeMatch(const std::vector<FSVec3>& poly)
 {
   FSFaceMatch m;
@@ -22,8 +16,7 @@ static FSFaceMatch MakeMatch(const std::vector<FSVec3>& poly)
 
 TEST(AssignGlobalNodeIds, SharedPointsGetSameId)
 {
-  // Two triangles sharing the edge (1,0,0)-(0,1,0) — e.g. two cells on either
-  // side of a partition interface.
+  // Two triangles sharing the edge (1,0,0)-(0,1,0)
   std::vector<FSFaceMatch> matches = {
     MakeMatch({FSVec3(0, 0, 0), FSVec3(1, 0, 0), FSVec3(0, 1, 0)}),
     MakeMatch({FSVec3(1, 0, 0), FSVec3(1, 1, 0), FSVec3(0, 1, 0)}),
@@ -31,7 +24,6 @@ TEST(AssignGlobalNodeIds, SharedPointsGetSameId)
 
   const FS_intT nUnique = FSFaceMatcher::AssignGlobalNodeIds(matches, 1e-12);
 
-  // 4 unique points: shared edge deduplicated
   EXPECT_EQ(nUnique, 4);
   ASSERT_EQ(matches[0].nodeGlobalIds.size(), 3u);
   ASSERT_EQ(matches[1].nodeGlobalIds.size(), 3u);
@@ -54,7 +46,7 @@ TEST(AssignGlobalNodeIds, IdsAreContiguous)
 
   const FS_intT nUnique = FSFaceMatcher::AssignGlobalNodeIds(matches, 1e-12);
 
-  // Collect all assigned IDs — must be exactly {0, 1, ..., nUnique-1}
+  // Collect all assigned IDs must be exactly {0, 1, ..., nUnique-1}
   std::set<FS_intT> ids;
   for(const auto& m : matches)
     for(FS_intT id : m.nodeGlobalIds)
@@ -69,7 +61,7 @@ TEST(AssignGlobalNodeIds, ToleranceMergesClosePoints)
 {
   const FS_floatT tol = 1e-6;
 
-  // Same point up to 1e-8 (< tol) — must be merged.
+  // Same point up to 1e-8 (< tol) must be merged.
   std::vector<FSFaceMatch> matches = {
     MakeMatch({FSVec3(0, 0, 0), FSVec3(1, 0, 0), FSVec3(0, 1, 0)}),
     MakeMatch({FSVec3(1e-8, 0, 0), FSVec3(1, 1, 0), FSVec3(0, 1 + 1e-8, 0)}),
@@ -78,8 +70,8 @@ TEST(AssignGlobalNodeIds, ToleranceMergesClosePoints)
   const FS_intT nUnique = FSFaceMatcher::AssignGlobalNodeIds(matches, tol);
 
   EXPECT_EQ(nUnique, 4);
-  EXPECT_EQ(matches[0].nodeGlobalIds[0], matches[1].nodeGlobalIds[0]); // (0,0,0) ~ (1e-8,0,0)
-  EXPECT_EQ(matches[0].nodeGlobalIds[2], matches[1].nodeGlobalIds[2]); // (0,1,0) ~ (0,1+1e-8,0)
+  EXPECT_EQ(matches[0].nodeGlobalIds[0], matches[1].nodeGlobalIds[0]);
+  EXPECT_EQ(matches[0].nodeGlobalIds[2], matches[1].nodeGlobalIds[2]);
 }
 
 TEST(AssignGlobalNodeIds, GlobalCellIdsAreMatchIndices)
@@ -98,8 +90,6 @@ TEST(AssignGlobalNodeIds, GlobalCellIdsAreMatchIndices)
 
 TEST(AssignGlobalNodeIds, NotCoveredMatchIsNumbered)
 {
-  // NOT_COVERED matches carry the original face polygon in clippedPoly3D —
-  // their nodes are part of the reconstructed surface and must be numbered too.
   FSFaceMatch notCovered;
   notCovered.type = FSFaceMatch::NOT_COVERED;
   notCovered.clippedPoly3D = {FSVec3(0, 0, 0), FSVec3(1, 0, 0), FSVec3(1, 1, 0), FSVec3(0, 1, 0)};
@@ -123,6 +113,8 @@ TEST(AssignGlobalNodeIds, EmptyMatchesReturnsZero)
   std::vector<FSFaceMatch> matches;
   EXPECT_EQ(FSFaceMatcher::AssignGlobalNodeIds(matches, 1e-12), 0);
 }
+
+// Why we have Cell2Node test after ?
 
 // ── Consumption side (étape 2) ────────────────────────────────────────────────
 // FSCell2NodeBuilder and FSTopologyAssembler must propagate the clipper's

@@ -101,8 +101,7 @@ struct BoundaryExtraction {
 class FSBoundaryFaceProvider
 {
 public:
-  static BoundaryExtraction Extract(FSMesh& mesh, FSMeshFaceExtractor& ex, FS_intT boundaryMarker, FS_floatT tol,
-                                    bool matchRemoteFaces = true);
+  static BoundaryExtraction Extract(FSMesh& mesh, FSMeshFaceExtractor& ex, FS_intT boundaryMarker, FS_floatT tol);
 };
 
 
