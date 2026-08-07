@@ -13,7 +13,8 @@ add_executable(FSClippingTest FSClipping/FSClippingTestGeo.cpp
                               FSClipping/FSClippingTestCell2NodeBuilder.cpp
                               FSClipping/FSClippingTestPolyFaceBuilder.cpp
                               FSClipping/FSClippingTestGlobalNumbering.cpp
-                              FSClipping/FSClippingTestInterface.cpp)
+                              FSClipping/FSClippingTestInterface.cpp
+                              FSClipping/FSClippingTestGeomFaceKey.cpp)
 target_link_libraries(FSClippingTest PUBLIC GTest::gtest_mpi_main fsclipping::fsclipping)
 set_property(TARGET FSClippingTest PROPERTY CROSSCOMPILING_EMULATOR '${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 1')
 gtest_discover_tests(FSClippingTest DISCOVERY_TIMEOUT 20 PROPERTIES LABELS "CppUnitTests")

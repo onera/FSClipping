@@ -19,7 +19,7 @@ public:
   FSMesh BuildVolumeInterface(FSMesh& mesh, FS_intT meshID);
 
 private:
-  FSMesh BuildInterface(FSMesh& mesh, FSClippingEngine::Mode mode, bool matchRemoteFaces, const FS_intT meshId);
+  FSMesh BuildInterface(FSMesh& mesh, FSClippingEngine::Mode mode, const FS_intT meshId);
 
   FSClac& globalClac_;
   FSClac& clac_;

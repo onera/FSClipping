@@ -77,8 +77,7 @@ void FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_
   std::vector<FSFaceMatch> matches;
   matcher.ComputeMatches(matches);
 
-  // Each side gets its own global numbering (nodes + Poly2D cells), assigned
-  // here once so that mesh procs sharing an interface node receive the same ID.
+  // Each side gets its own global numbering (nodes + Poly2D cells)
   FSFaceMatcher::AssignGlobalNodeIds(matches, tol);
   FSMatchExchange::ScatterSend(globalClac, matches, allGathered.meshA);
 

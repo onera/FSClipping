@@ -156,7 +156,7 @@ void FSFaceMatch::Unpack(FSClac& clac)
 
 bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1, const FSClippingFace& f2, FSFaceMatch& out) const
 {
-  // 1. Identical faces
+  // 1 - Identical faces
   if(FSClippingUtil::AreFacesIdentical(f1, f2, tol_)) {
     out.type = FSFaceMatch::IDENTICAL;
     out.clippedPoly2D = f1.projected2D();
@@ -164,7 +164,7 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1, const FSClippingFace&
     return true;
   }
 
-  // 2. Sutherland-Hodgman clipping in the plane of f1
+  // 2 - Sutherland-Hodgman clipping in the plane of f1
   auto poly1 = f1.projected2D();
   auto poly2 = FSClippingUtil::ProjectFaceInPlane(f2, f1);
 
@@ -184,19 +184,11 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1, const FSClippingFace&
   if(FSClippingUtil::ArePointsColinear2D(clip, tol_))
     return false;
 
-  // Mean width of the clip polygon (2*area/perimeter) below tol means the
-  // intersection is a sliver of negligible thickness. Comparing the raw area
-  // (length^2) against tol (length) was scale-dependent and rejected real
-  // intersections on small meshes.
   const FS_floatT perimClip = FSClippingUtil::PolygonPerimeter(clip);
   if(2.0 * areaClip < tol_ * perimClip)
     return false;
 
-  // Inclusion is detected via area equality after clipping — no dedicated
-  // pre-check is needed. A separate inclusion branch was removed because it
-  // was orientation-sensitive and produced incorrect results in edge cases.
-  // The missing strip between clip and poly2 has area ~= width * perimeter/2,
-  // so the threshold is expressed with the same dimensions.
+  // 3 - Inclusion detection
   if(std::abs(areaClip - area2) < tol_ * 0.5 * FSClippingUtil::PolygonPerimeter(poly2))
     out.type = FSFaceMatch::INCLUDED;
   else
@@ -212,8 +204,7 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
   outMatches.clear();
   FSIntArrayT outIndicesBVHTree; // indices in the BVH tree, parallel to clippedFaces_
 
-  // Expand query bbox by tol_ to account for floating-point imprecision at flat
-  // interfaces (e.g. two meshes whose shared plane coordinate differs by ~1 ULP).
+  // Expand query bbox by tol_ to account for floating-point imprecision
   FS_floatT expandedBox[6];
   for(const auto& subject : subjectFaces_) {
     const FS_floatT* rawBox = subject.boundingBox().boxMinMax;
@@ -246,12 +237,8 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
 
       if(ComputeMatch(subject, clippedFaces_[faceIndexClippedBVHTree], match)) {
         match.clippedPoly3D = FSClippingUtil::ProjectPoly2DTo3D(subject, match.clippedPoly2D);
-        // Compute the intersection polygon in the clipped face's own frame by
-        // running the clipping algorithm with roles swapped. This ensures that
-        // vertices of the clipped face appear with their exact projected2D()
-        // values, making them consistent across all matches sharing that face.
-        // InvertMatches swaps clippedPoly3D <-> clippedPoly3D_face2 so that
-        // proc 1 always receives coordinates in its own face frame.
+
+        // Ensures that vertices of the clipped face appear with their exact projected2D()
         FSFaceMatch match_swapped;
         if(ComputeMatch(clippedFaces_[faceIndexClippedBVHTree], subject, match_swapped)) {
           match.clippedPoly3D_face2 =
@@ -261,8 +248,6 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
       }
     }
   }
-  // Keep the raw intersections so that ComputeInvertedMatches can apply the
-  // coverage criterion independently on the clipped side.
   rawMatches_ = outMatches;
 
   PreserveUncoveredFaces(outMatches, subjectFaces_);
@@ -271,24 +256,16 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
 void FSFaceMatcher::PreserveUncoveredFaces(std::vector<FSFaceMatch>& matches,
                                            const std::vector<FSClippingFace>& faces) const
 {
-  // Sum of the intersection areas per face (the face is identified by face1)
   std::unordered_map<FS_intT, FS_floatT> coveredArea;
   for(const auto& m : matches)
     coveredArea[m.face1] += m.intersectedArea;
 
-  // A face whose clipped polygons do not cover its whole area would leave a
-  // hole in the rebuilt surface (e.g. rim faces of two cylinders in relative
-  // rotation, only partially covered by the other mesh).
   std::unordered_set<FS_intT> uncovered;
   for(const auto& face : faces) {
     const FS_floatT faceArea = std::abs(FSClippingUtil::PolygonSignedArea(face.projected2D()));
     const auto it = coveredArea.find(face.faceIndex());
     const FS_floatT covered = (it == coveredArea.end()) ? 0.0 : it->second;
 
-    // An uncovered strip of width tol along the face boundary has area
-    // ~= tol * perimeter/2 — dimensionally consistent threshold (see ComputeMatch).
-    // Comparing the area difference against tol alone was scale-dependent and,
-    // on a mesh of extent ~1e-3, so loose that it could never fire.
     const FS_floatT perimeter = FSClippingUtil::PolygonPerimeter(face.projected2D());
     if(std::abs(covered - faceArea) > tol_ * 0.5 * perimeter)
       uncovered.insert(face.faceIndex());
@@ -297,13 +274,10 @@ void FSFaceMatcher::PreserveUncoveredFaces(std::vector<FSFaceMatch>& matches,
   if(uncovered.empty())
     return;
 
-  // Drop the partial clips of the uncovered faces...
   matches.erase(std::remove_if(matches.begin(), matches.end(),
                                [&uncovered](const FSFaceMatch& m) { return uncovered.contains(m.face1); }),
                 matches.end());
 
-  // ...and keep each uncovered face whole, as a single NOT_COVERED match
-  // carrying the original face polygon.
   for(const auto& face : faces) {
     if(!uncovered.contains(face.faceIndex()))
       continue;
@@ -349,9 +323,6 @@ FS_intT FSFaceMatcher::AssignGlobalNodeIds(std::vector<FSFaceMatch>& matches, FS
 
 void FSFaceMatcher::ComputeInvertedMatches(std::vector<FSFaceMatch>& outMatches) const
 {
-  // Start from the raw matches, not from the subject-side list: a partial clip
-  // dropped because its subject face is NOT_COVERED is still a valid
-  // intersection for the clipped face it belongs to.
   outMatches = rawMatches_;
 
   for(auto& m : outMatches) {

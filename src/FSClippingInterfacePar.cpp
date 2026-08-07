@@ -6,16 +6,15 @@ _FS_BEGIN_NAMESPACE
 
 FSMesh FSClippingInterfacePar::BuildSurfaceInterface(FSMesh& mesh, FS_intT meshID)
 {
-  return BuildInterface(mesh, FSClippingEngine::Mode::Surface, true, meshID);
+  return BuildInterface(mesh, FSClippingEngine::Mode::Surface, meshID);
 }
 
 FSMesh FSClippingInterfacePar::BuildVolumeInterface(FSMesh& mesh, FS_intT meshID)
 {
-  return BuildInterface(mesh, FSClippingEngine::Mode::Volume, true, meshID);
+  return BuildInterface(mesh, FSClippingEngine::Mode::Volume, meshID);
 }
 
-FSMesh FSClippingInterfacePar::BuildInterface(FSMesh& mesh, FSClippingEngine::Mode mode, bool matchRemoteFaces,
-                                              const FS_intT meshID)
+FSMesh FSClippingInterfacePar::BuildInterface(FSMesh& mesh, FSClippingEngine::Mode mode, const FS_intT meshID)
 {
   // proc 0: matcher role (clac_ is 1-proc → BVH purely local)
   if(meshID == 0) {
@@ -24,8 +23,7 @@ FSMesh FSClippingInterfacePar::BuildInterface(FSMesh& mesh, FSClippingEngine::Mo
   }
 
   FSMeshFaceExtractor extractor;
-  auto boundaryExtraction =
-    FSBoundaryFaceProvider::Extract(mesh, extractor, boundaryMarkerMesh_, tol_, matchRemoteFaces);
+  auto boundaryExtraction = FSBoundaryFaceProvider::Extract(mesh, extractor, boundaryMarkerMesh_, tol_);
 
   FSFaceExchange::GatherSend(globalClac_, 0, meshID, boundaryExtraction.faces);
   std::vector<FSFaceMatch> matches = FSMatchExchange::ScatterReceive(globalClac_, 0);
