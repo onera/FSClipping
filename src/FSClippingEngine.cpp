@@ -24,16 +24,15 @@ FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtra
   mesh.GetMeshData()->GetUnstructCells().GetCoordinates3D(coordDesc, oldCoords, nodeOffset);
 
   FSTopologyData volumeTopology;
-  // A proc whose partition has no boundary face of a given type has no entry
-  // in be.volumeCells — BuildVolumeTopo with an empty pool passes all cells
-  // of that type through unclipped.
-  static const std::set<FS_intT> kEmptyPool;
+
   for(const auto& t : mesh.GetCellTypes()) {
+
     if(FSMeshEnums::IsUnstructVolumeCellType(t)) {
+
       const auto& cell2Node = mesh.GetCell2Node(t);
       const auto& cellPool = mesh.GetMeshData()->GetUnstructCells().GetCellPool(t);
       const auto it = be.volumeCells.find(t);
-      const auto& bdryCellPool = (it != be.volumeCells.end()) ? it->second : kEmptyPool;
+      const auto& bdryCellPool = (it != be.volumeCells.end()) ? it->second : std::set<FS_intT>();
 
       topologyAssembler.BuildVolumeTopo(cell2Node, bdryCellPool, *cellPool, oldCoords, volumeTopology);
     }
@@ -69,13 +68,17 @@ FSMesh FSClippingEngine::Reconstruct(FSClac& clac, FSMesh& meshOriginal, FSTopol
 //  RunMatcherProc
 //
 
-void FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_floatT tol)
+bool FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_floatT tol)
 {
   auto allGathered = FSFaceExchange::GatherReceiveAll(globalClac);
 
   FSFaceMatcher matcher(localClac, allGathered.meshA.faces.faces, allGathered.meshB.faces.faces, tol);
   std::vector<FSFaceMatch> matches;
   matcher.ComputeMatches(matches);
+
+  if(matches.empty()) {
+    return false;
+  }
 
   // Each side gets its own global numbering (nodes + Poly2D cells)
   FSFaceMatcher::AssignGlobalNodeIds(matches, tol);
@@ -84,6 +87,8 @@ void FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_
   matcher.ComputeInvertedMatches(matches);
   FSFaceMatcher::AssignGlobalNodeIds(matches, tol);
   FSMatchExchange::ScatterSend(globalClac, matches, allGathered.meshB);
+
+  return true;
 }
 
 _FS_END_NAMESPACE

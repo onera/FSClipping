@@ -11,10 +11,7 @@ FSTopologyData FSTopologyAssembler::BuildSurfaceTopo(const std::vector<FSFaceMat
 {
   FSTopologyData result;
 
-  // In parallel a proc whose sub-domain does not cut the interface has no
-  // match. That is legitimate: build an empty (but valid) surface topology so
-  // the proc still participates in the collective reconstruction. The volume
-  // step then passes all its cells through as unclipped volume cells.
+  // In parallel a proc could have any matches
   if(matches.empty()) {
     polyFaceBuilder_ = std::make_unique<FSPolyFaceBuilder>(matches, cell2NodeBuilder_, faceKeys, tol_);
     polyFaceBuilder_->CollectMatchesFaces();
@@ -22,40 +19,27 @@ FSTopologyData FSTopologyAssembler::BuildSurfaceTopo(const std::vector<FSFaceMat
     return result;
   }
 
-  // -------------------------------------------------
-  // 1. Build cell2node + global coordinates
-  // -------------------------------------------------
+  // 1 - Build cell2node + global coordinates
   for(const auto& f : matches) {
     const auto elemIndex = f.elemOwner1;
     const auto cellType = f.elemOwnerType1;
 
     cell2NodeBuilder_.AddCellNodes(elemIndex, cellType);
-
     if(f.type != FSFaceMatch::UNKNOWN) {
-      if(!f.nodeGlobalIds.empty())
-        cell2NodeBuilder_.AddClippedPolygon(elemIndex, f.clippedPoly3D, f.nodeGlobalIds);
-      else
-        cell2NodeBuilder_.AddClippedPolygon(elemIndex, f.clippedPoly3D);
+      cell2NodeBuilder_.AddClippedPolygon(elemIndex, f.clippedPoly3D, f.nodeGlobalIds);
     }
   }
   cell2NodeBuilder_.SetAllCellOnTheBorder();
   cell2NodeBuilder_.BuildGlobalNumbering();
 
+  // Returning FSFloatArray and FSIntArray for FSDM data layer
   result.globalCoords = cell2NodeBuilder_.GlobalCoords();
   result.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly3D();
+  result.nodeGlobalNumbers = cell2NodeBuilder_.NodeGlobalNumbers();
+  for(const auto& f : matches)
+    result.poly2DGlobalNumbers.Append(f.globalCellId);
 
-  // Global numbering assigned by the clipper (level 2): expose it to
-  // FSMeshReconstruction so that procs of the same mesh sub-communicator
-  // agree on shared interface nodes. Absent in sequential mode.
-  const bool hasGlobalIds = matches.front().globalCellId >= 0;
-  if(hasGlobalIds) {
-    result.nodeGlobalNumbers = cell2NodeBuilder_.NodeGlobalNumbers();
-    for(const auto& f : matches)
-      result.poly2DGlobalNumbers.Append(f.globalCellId);
-  }
-  // -------------------------------------------------
-  // 2. Build polygonal faces
-  // -------------------------------------------------
+  // 2 - Build polygonal faces
   polyFaceBuilder_ = std::make_unique<FSPolyFaceBuilder>(FSPolyFaceBuilder(matches, cell2NodeBuilder_, faceKeys, tol_));
   polyFaceBuilder_->CollectMatchesFaces();
   polyFaceBuilder_->Build(result.polyFaces);
@@ -91,22 +75,19 @@ void FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node, const st
   auto offSet = cellPool.GetOffset();
   auto nCells = cellPool.GetNCells();
 
-  // -------------------------------------------------
-  // 1. Add volume cells
-  // -------------------------------------------------
+  // 1 - Add volume cells
   for(FS_intT c = offSet; c < nCells + offSet; c++) {
-    // Skip ghost cells: with several procs per mesh (local numbering), non-owned
-    // cells are replicated on neighbour procs and would be emitted twice.
+
+    // Skip ghost cells
     if(!cellPool.IsOwned(c))
       continue;
+
     cell2NodeBuilder_.AddVolumeCellNodes(c, type, cell2Node, oldCoords);
   }
 
   cell2NodeBuilder_.BuildGlobalNumbering();
 
-  // -------------------------------------------------
-  // 2. Update topology data
-  // -------------------------------------------------
+  // 2 - Update topology data
   volumeResult.globalCoords = cell2NodeBuilder_.GlobalCoords();
   volumeResult.cell2NodePoly3D = cell2NodeBuilder_.Cell2NodePoly3D();
 
@@ -117,8 +98,8 @@ void FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node, const st
   FSIntArrayT cellParentPolyType;
   FSIntArrayT cellParentPoly3D;
 
-  // Iterate the cells actually held by the builder (owned cells only — ghosts
-  // were skipped above, so the pool count may exceed the builder count).
+  // Complete the cellParent containers for 3D and 2D poly
+  // Transformer en une fonction du FSCell2NodeBuilder ?
   const FS_intT nBuilderCells = static_cast<FS_intT>(cell2NodeBuilder_.CellData().size());
   for(FS_intT localIdx = 0; localIdx < nBuilderCells; ++localIdx) {
     FS_intT globalId = cell2NodeBuilder_.GlobalCellId(localIdx);
@@ -132,26 +113,17 @@ void FSTopologyAssembler::BuildVolumeTopo(const FSIntArrayT& cell2Node, const st
 
   volumeResult.cellParent[type] = std::move(cellParent);
   if(!cellParentPoly3D.IsEmpty()) {
-    // NOTE: if multiple element types touch the border, the last one wins here.
+    // If multiple element types touch the border, the last one wins here
     volumeResult.cellParent[FSMeshEnums::CellType::CT_Poly3D] = std::move(cellParentPoly3D);
     volumeResult.cellParentType[FSMeshEnums::CellType::CT_Poly3D] = std::move(cellParentPolyType);
   }
 
-  // -------------------------------------------------
-  // 3. Build internal faces for clipped cells
-  // -------------------------------------------------
-  // Inner faces only for owned, matched boundary cells:
-  //  - a ghost boundary cell is owned by another proc (skipped above), absent
-  //    from the builder;
-  //  - in parallel a cell may have a marker face locally but no clipping match
-  //    (no counterpart in the other mesh), so it stays a plain volume cell with
-  //    no Poly3D inner faces.
-  // Either way it is absent from the poly-face builder → skip it.
+  // 3 - Build internal faces for clipped cells
   for(const auto& c : bdryCellPool) {
     if(!cellPool.IsOwned(c) || !polyFaceBuilder_->HasCell(c))
       continue;
 
-    FS_intT nFaces = FSCellInfo::NFaces(type);
+    FS_intT nFaces = FSCellInfo::NFaces(type); // Needs modification for an original Poly3D mesh
     for(FS_intT f = 0; f < nFaces; f++)
       polyFaceBuilder_->AddInnerFaces(type, cellPool, c, f, oldCoords);
   }
@@ -168,10 +140,7 @@ FSIntArrayT FSTopologyAssembler::UpdateOldCell2Node(const FSIntArrayT& oldCell2N
   const FS_intT nCellNodes = oldCell2Node.Size(1);
   const FS_intT offset = oldCell2Node.Offset();
 
-  // Keep only owned, non-clipped surface cells. Ghost cells are replicated on
-  // neighbour procs and their nodes were never registered in the builder
-  // (BuildVolumeTopo skips ghosts) — emitting them would duplicate faces and
-  // reference unknown nodes.
+  // 1 - Keep only owned, non-clipped surface cells
   FS_intT nKept = 0;
   for(FS_intT c = 0; c < nCellOld; c++) {
     const FS_intT cellId = offset + c;
@@ -182,6 +151,7 @@ FSIntArrayT FSTopologyAssembler::UpdateOldCell2Node(const FSIntArrayT& oldCell2N
   FSIntArrayT cell2Node(nKept, nCellNodes);
   FS_intT iter = 0;
 
+  // 2 - For each nodes of each non-clipped surfaces cells, we add each nodes wich are unknown
   for(FS_intT c = 0; c < nCellOld; c++) {
     const FS_intT cellId = offset + c;
     if(bdry2DCells.contains(cellId) || !cellPool.IsOwned(cellId))
@@ -191,10 +161,7 @@ FSIntArrayT FSTopologyAssembler::UpdateOldCell2Node(const FSIntArrayT& oldCell2N
     for(FS_intT node = 0; node < nCellNodes; ++node) {
       FS_intT idx = oldCell2Node(cellId, node);
       FSVec3 vecNode{oldCoords(idx, 0), oldCoords(idx, 1), oldCoords(idx, 2)};
-      // Register the node if it is unknown: an owned unclipped surface cell may
-      // reference a node that no owned volume cell owns (shared only with volume
-      // ghosts, which BuildVolumeTopo skips). topo.globalCoords is refreshed by
-      // the caller after all surface types are processed.
+
       cell2Node(iter, node) = cell2NodeBuilder_.ResolveOrRegisterNode(vecNode);
     }
     iter++;
@@ -222,8 +189,7 @@ void FSTopologyAssembler::AppendUnclippedSurfaces(FSMesh& mesh,
     topo.cellParent[t] = std::move(parent);
   }
 
-  // UpdateOldCell2Node may have appended nodes that no owned volume cell owns.
-  // Refresh globalCoords so the reconstructed mesh has coordinates for them.
+  // UpdateOldCell2Node may have appended nodes that no owned volume cell ownn so we refresh globalCoords
   topo.globalCoords = cell2NodeBuilder_.GlobalCoords();
 }
 
