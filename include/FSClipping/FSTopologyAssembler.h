@@ -28,9 +28,7 @@ struct FSTopologyData {
   FSCellType2IntArrayT cellParent;
   FSCellType2IntArrayT cellParentType;
 
-  // Global numbering assigned by the clipper proc (level 2 parallelism).
-  // Empty in sequential mode — FSMeshReconstruction then falls back to a
-  // local 0..N-1 numbering.
+  // Global numbering assigned by the clipper proc
   FSIntArrayT nodeGlobalNumbers;   // parallel to globalCoords
   FSIntArrayT poly2DGlobalNumbers; // parallel to the Poly2D cells (match order)
 
@@ -44,7 +42,7 @@ class FSTopologyAssembler
 {
 
 public:
-  explicit FSTopologyAssembler(FS_floatT tol) : tol_(tol), cell2NodeBuilder_(FSCell2NodeBuilder(tol)) {};
+  explicit FSTopologyAssembler(FS_floatT tol) : tol_(tol), cell2NodeBuilder_(FSCell2NodeBuilder(tol)){};
 
   FSTopologyData BuildSurfaceTopo(const std::vector<FSFaceMatch>& matches,
                                   const std::unordered_set<GeomFaceKey, GeomFaceKeyHash>& faceKeys);

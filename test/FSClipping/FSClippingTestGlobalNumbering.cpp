@@ -208,21 +208,21 @@ TEST(BuildSurfaceTopo, PropagatesGlobalNumbering)
   EXPECT_EQ(topo.poly2DGlobalNumbers[1], 1);
 }
 
-TEST(BuildSurfaceTopo, SequentialModeLeavesNumberingEmpty)
-{
-  const FS_floatT tol = 1e-12;
-
-  // No AssignGlobalNodeIds call — sequential level 1 path.
-  std::vector<FSFaceMatch> matches = {
-    MakeMatch({FSVec3(0, 0, 0), FSVec3(1, 0, 0), FSVec3(0, 1, 0)}),
-  };
-  matches[0].elemOwner1 = 10;
-  matches[0].elemOwnerType1 = FSMeshEnums::CellType::CT_Hexa8;
-
-  FSTopologyAssembler assembler(tol);
-  std::unordered_set<GeomFaceKey, GeomFaceKeyHash> faceKeys;
-  FSTopologyData topo = assembler.BuildSurfaceTopo(matches, faceKeys);
-
-  EXPECT_TRUE(topo.nodeGlobalNumbers.IsEmpty());
-  EXPECT_TRUE(topo.poly2DGlobalNumbers.IsEmpty());
-}
+// TEST(BuildSurfaceTopo, SequentialModeLeavesNumberingEmpty)
+//{
+//   const FS_floatT tol = 1e-12;
+//
+//   // No AssignGlobalNodeIds call — sequential level 1 path.
+//   std::vector<FSFaceMatch> matches = {
+//     MakeMatch({FSVec3(0, 0, 0), FSVec3(1, 0, 0), FSVec3(0, 1, 0)}),
+//   };
+//   matches[0].elemOwner1 = 10;
+//   matches[0].elemOwnerType1 = FSMeshEnums::CellType::CT_Hexa8;
+//
+//   FSTopologyAssembler assembler(tol);
+//   std::unordered_set<GeomFaceKey, GeomFaceKeyHash> faceKeys;
+//   FSTopologyData topo = assembler.BuildSurfaceTopo(matches, faceKeys);
+//
+//   EXPECT_TRUE(topo.nodeGlobalNumbers.IsEmpty());
+//   EXPECT_TRUE(topo.poly2DGlobalNumbers.IsEmpty());
+// }

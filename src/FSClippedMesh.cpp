@@ -113,7 +113,6 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
     // 2 - Send the faces extrated and compute the matches
     FSFaceExchange::GatherSend(*mClac, clipperProc, meshId, be.faces);
     const std::vector<FSFaceMatch> matches = FSMatchExchange::ScatterReceive(*mClac, clipperProc);
-    // condition sur les matches -> Si tous les matches sont nul, alors on a un pbm
 
     // 4 - Reconstruct the topologie of the entire mesh in parrallel
     FSClippingEngine engine(mParams.mTol);
@@ -132,7 +131,9 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
   } else {
     // 3 - Clipper proc (meshID = 0) receive the extrated faces and compute the matches
     FSClac selfClac(FSClac::sSelfComm);
-    FSClippingEngine::RunMatcherProc(*mClac, selfClac, mParams.mTol);
+    bool ok = FSClippingEngine::RunMatcherProc(*mClac, selfClac, mParams.mTol);
+    if(!ok)
+      return false;
   }
 
   return true;
