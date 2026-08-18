@@ -5,6 +5,7 @@
 #include "FSClipping/FSFaceExchange.h"
 #include "FSDataManagerData.h"
 #include "FSTimer.h"
+#include <numeric>
 
 
 _FS_BEGIN_NAMESPACE
@@ -108,7 +109,15 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
     // 1 - Extract the boundaries faces with the marker
     FSMeshFaceExtractor fex;
     BoundaryExtraction be = FSBoundaryFaceProvider::Extract(*mesh, fex, marker, mParams.mTol);
-    // condition sur les bdry sinon return false, operation atomique pour recuperer le nb total de face extraite ?
+
+    FS_int32T nFaces32 = static_cast<FS_int32T>(be.faces.size());
+    std::vector<FS_int32T> countsFaces(mesh->GetClac()->NProcs(), 0);
+    mesh->GetClac()->AllGather(&nFaces32, 1, countsFaces.data(), 1);
+    if(!(std::accumulate(countsFaces.begin(), countsFaces.end(), 0) > 0)) {
+      FSString msg = "FSClippedMesh: no faces were extract, check your boundaries marker";
+      FSError(msg);
+      return false;
+    }
 
     // 2 - Send the faces extrated and compute the matches
     FSFaceExchange::GatherSend(*mClac, clipperProc, meshId, be.faces);
@@ -132,8 +141,12 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
     // 3 - Clipper proc (meshID = 0) receive the extrated faces and compute the matches
     FSClac selfClac(FSClac::sSelfComm);
     bool ok = FSClippingEngine::RunMatcherProc(*mClac, selfClac, mParams.mTol);
-    if(!ok)
+    if(!ok) {
+      FSString msg = "FSClippedMesh: They were an error with the clipper proc, any matches was computed, check your "
+                     "marker or the tolerance.";
+      FSError(msg);
       return false;
+    }
   }
 
   return true;

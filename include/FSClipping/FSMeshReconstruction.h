@@ -20,17 +20,13 @@ public:
   void CopyAttributes(const FSMesh& meshOriginal, FSMesh& meshClipped);
 
 private:
-  //! Level 2 parallel assembly of the distributed node numbering.
-  /*!
-    FSDM's global-numbering contract: each node is owned by exactly one proc
-    (contiguous ranges per proc) and cell2node references those global numbers.
-    This routine merges nodes geometrically (coordinates quantized by tol_ —
-    covers clipped-surface and volume nodes alike) to (1) decide ownership of
-    nodes shared across procs, (2) compute the contiguous distributed
-    numbering, (3) remap cell2NodePoly2D/Poly3D/cell2NodeInner in place.
-    \param[in,out] topo             topology whose connectivity gets remapped.
-    \param[out] ownedLocalRows      local row indices (into globalCoords) of the owned nodes, in contiguous-ID order.
-    \param[out] ownedGlobalNumbers  distributed global numbers of the owned nodes (GlobalNumber attribute).
+  /*
+    Parallel assembly of the distributed node numbering :
+      1 - Decide ownership of nodes shared across procs
+      2 - Compute the contiguous distributed numbering
+      3 - Remap cell2NodePoly2D/Poly3D/cell2NodeInner in place.
+    We do the remapping because each node is owned by exactly one proc (contiguous ranges per proc) and cell2node
+    references those global numbers.
   */
   void RemapToDistributedNumbering(FSTopologyData& topo, std::vector<FS_intT>& ownedLocalRows,
                                    FSIntArrayT& ownedGlobalNumbers);
