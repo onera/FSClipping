@@ -13,21 +13,21 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
   auto& cell2NodeInner = topologyData.cell2NodeInner;
   auto& polyFaces = topologyData.polyFaces;
 
-  // Several procs may share this mesh (level 2). FSDM's global numbering
-  // requires each node to be owned by exactly one proc and cell2node to carry
-  // the distributed global numbers — assemble that by geometric node merge.
+  // Remap the global numbering of the node if distributed
   const bool distributed = clac_.GetNProcs() > 1;
   std::vector<FS_intT> ownedLocalRows;
   FSIntArrayT ownedGlobalNumbers;
-  if(distributed) {
+
+  if(distributed)
     RemapToDistributedNumbering(topologyData, ownedLocalRows, ownedGlobalNumbers);
-  } else {
+  else {
     ownedLocalRows.resize(globalCoords.size());
     for(std::size_t i = 0; i < globalCoords.size(); ++i)
       ownedLocalRows[i] = static_cast<FS_intT>(i);
   }
   const FS_intT nOwned = static_cast<FS_intT>(ownedLocalRows.size());
 
+  // Begin the initialization of the new clippedMesh
   meshClipped.BeginInitialization();
   FSMeshData* meshDataClippedPtr = meshClipped.GetMeshData();
   FSUnstructMeshData& unstructMeshData = meshDataClippedPtr->GetUnstructCells();
@@ -61,13 +61,10 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
     FSError.SetAndPrintAndExit("FSMeshReconstruction : Error while set coordinates");
 
   const FSString globalNumberName = FSMeshEnums::AttributeTypeToString(FSMeshEnums::AT_GlobalNumber);
-  if(distributed) {
-    // The distributed numbers are unique and consistent across the procs of
-    // this mesh's sub-communicator — a node shared between two procs exists on
-    // exactly one of them.
+
+  if(distributed)
     unstructMeshData.InitCellAttribute(globalNumberName, FSMeshEnums::CT_Node, ownedGlobalNumbers);
-  } else {
-    // Single proc for this mesh: local numbering is globally valid.
+  else {
     FS_intT currentOffset = 0;
     FSIntArrayT cellTypeArray_2 = meshDataClippedPtr->GetUnstructCells().GetCellTypesArray();
     for(FSIntArrayT::ConstIterator cellType = cellTypeArray_2.BeginConst(); cellType.IsValid(); cellType.Next()) {
@@ -77,7 +74,7 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
       }
     }
   }
-  // Poly2D global numbers come from the clipper's match numbering (level 2).
+  // Poly2D global numbers come from the clipper's match numbering
   if(!topologyData.poly2DGlobalNumbers.IsEmpty())
     unstructMeshData.InitCellAttribute(globalNumberName, FSMeshEnums::CT_Poly2D, topologyData.poly2DGlobalNumbers);
 
@@ -96,11 +93,7 @@ void FSMeshReconstruction::RemapToDistributedNumbering(FSTopologyData& topo, std
   const FS_intT nProcs = clac_.GetNProcs();
   const FS_intT nLocal = static_cast<FS_intT>(topo.globalCoords.size());
 
-  // 1. Exchange every proc's node list as coordinates quantized by tol_
-  //    (3 int32 per node, local row order). The geometric key merges nodes
-  //    regardless of provenance: clipped-surface points and volume nodes of
-  //    the original mesh get the same key on every proc that holds them.
-  //    Fixed-size AllGather with padding since counts differ across procs.
+  // 1 - Exchange every proc's node list as coordinates quantized by tol_
   std::vector<FS_int32T> counts(nProcs);
   FS_int32T nLocal32 = static_cast<FS_int32T>(nLocal);
   clac_.AllGather(&nLocal32, 1, counts.data(), 1);
@@ -119,9 +112,7 @@ void FSMeshReconstruction::RemapToDistributedNumbering(FSTopologyData& topo, std
   std::vector<FS_int32T> allKeys(static_cast<std::size_t>(maxCount) * 3 * nProcs);
   clac_.AllGather(sendKeys.data(), 3 * maxCount, allKeys.data(), 3 * maxCount);
 
-  // 2. Deterministic ownership and contiguous numbering: scanning procs in
-  //    ascending rank, the first proc listing a node owns it. Numbering in
-  //    scan order yields contiguous per-proc ranges, as FSDM requires.
+  // 2 - Numbering in scan order yields contiguous per-proc ranges, as FSDM requires
   std::unordered_map<NodeKey, FS_intT> keyToDistributed;
   keyToDistributed.reserve(static_cast<std::size_t>(maxCount) * nProcs);
   const FS_intT myRank = clac_.GetProcID();
@@ -140,14 +131,13 @@ void FSMeshReconstruction::RemapToDistributedNumbering(FSTopologyData& topo, std
     }
   }
 
-  // 3. GlobalNumber attribute of the owned nodes: their distributed numbers,
-  //    consecutive within this proc's range by construction.
+  // 3 - Distributing numbers consecutive within each proc's range by construction
   ownedGlobalNumbers.Resize(static_cast<FS_intT>(ownedLocalRows.size()));
   for(std::size_t i = 0; i < ownedLocalRows.size(); ++i)
     ownedGlobalNumbers[static_cast<FS_intT>(i)] =
       keyToDistributed.at(NodeKey(topo.globalCoords[ownedLocalRows[i]], tol_));
 
-  // 4. Remap the connectivity in place: local row index → distributed number.
+  // 4 - Remap the connectivity in place: local row index → distributed number
   auto localToDistributed = [&](FS_intT localRow) {
     return keyToDistributed.at(NodeKey(topo.globalCoords[localRow], tol_));
   };
@@ -172,10 +162,6 @@ void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshData
   for(const auto& [cellType, parentArray] : topo.cellParent) {
     const FS_intT numCells = parentArray.Size();
 
-    // Empty clipped partition for this cell type on this proc (common in level 2
-    // when a sub-domain contributes no clipped cells of this type). There is no
-    // parent to resolve and no value to copy; declaring a 0-size attribute would
-    // also trip FSCellPool::InitCellAttribute (NDims of an empty array != 1).
     if(numCells == 0)
       continue;
 

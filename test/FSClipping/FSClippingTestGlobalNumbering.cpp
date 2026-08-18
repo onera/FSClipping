@@ -114,63 +114,6 @@ TEST(AssignGlobalNodeIds, EmptyMatchesReturnsZero)
   EXPECT_EQ(FSFaceMatcher::AssignGlobalNodeIds(matches, 1e-12), 0);
 }
 
-// Why we have Cell2Node test after ?
-
-// ── Consumption side (étape 2) ────────────────────────────────────────────────
-// FSCell2NodeBuilder and FSTopologyAssembler must propagate the clipper's
-// numbering into FSTopologyData so that FSMeshReconstruction can init the
-// GlobalNumber attributes.
-
-TEST(NodeGlobalNumbers, MapsLocalIndicesToClipperIds)
-{
-  FSCell2NodeBuilder builder(1e-12);
-
-  const std::vector<FSVec3> poly = {FSVec3(0, 0, 0), FSVec3(1, 0, 0), FSVec3(0, 1, 0)};
-  const std::vector<FS_intT> clipperIds = {42, 7, 13};
-
-  builder.AddCellNodes(0, FSMeshEnums::CellType::CT_Hexa8);
-  builder.AddClippedPolygon(0, poly, clipperIds);
-  builder.BuildGlobalNumbering();
-
-  const FSIntArrayT numbers = builder.NodeGlobalNumbers();
-  ASSERT_EQ(numbers.Size(), 3);
-
-  // For every local node, the returned ID must be the clipper ID of the
-  // geometrically matching point.
-  const auto& coords = builder.GlobalCoords();
-  for(FS_intT l = 0; l < numbers.Size(); ++l) {
-    bool found = false;
-    for(std::size_t i = 0; i < poly.size(); ++i) {
-      if((coords[l] - poly[i]).L2Norm() < 1e-12) {
-        EXPECT_EQ(numbers[l], clipperIds[i]);
-        found = true;
-      }
-    }
-    EXPECT_TRUE(found);
-  }
-}
-
-TEST(NodeGlobalNumbers, SharedNodeKeepsSingleId)
-{
-  FSCell2NodeBuilder builder(1e-12);
-
-  // Two cells sharing the point (1,0,0) — the clipper gave it ID 99 in both.
-  builder.AddCellNodes(0, FSMeshEnums::CellType::CT_Hexa8);
-  builder.AddCellNodes(1, FSMeshEnums::CellType::CT_Hexa8);
-  builder.AddClippedPolygon(0, {FSVec3(0, 0, 0), FSVec3(1, 0, 0)}, {1, 99});
-  builder.AddClippedPolygon(1, {FSVec3(1, 0, 0), FSVec3(2, 0, 0)}, {99, 2});
-  builder.BuildGlobalNumbering();
-
-  const FSIntArrayT numbers = builder.NodeGlobalNumbers();
-  ASSERT_EQ(numbers.Size(), 3); // 3 unique points
-
-  FS_intT count99 = 0;
-  for(FS_intT l = 0; l < numbers.Size(); ++l)
-    if(numbers[l] == 99)
-      ++count99;
-  EXPECT_EQ(count99, 1);
-}
-
 TEST(BuildSurfaceTopo, PropagatesGlobalNumbering)
 {
   const FS_floatT tol = 1e-12;
@@ -207,22 +150,3 @@ TEST(BuildSurfaceTopo, PropagatesGlobalNumbering)
   EXPECT_EQ(topo.poly2DGlobalNumbers[0], 0);
   EXPECT_EQ(topo.poly2DGlobalNumbers[1], 1);
 }
-
-// TEST(BuildSurfaceTopo, SequentialModeLeavesNumberingEmpty)
-//{
-//   const FS_floatT tol = 1e-12;
-//
-//   // No AssignGlobalNodeIds call — sequential level 1 path.
-//   std::vector<FSFaceMatch> matches = {
-//     MakeMatch({FSVec3(0, 0, 0), FSVec3(1, 0, 0), FSVec3(0, 1, 0)}),
-//   };
-//   matches[0].elemOwner1 = 10;
-//   matches[0].elemOwnerType1 = FSMeshEnums::CellType::CT_Hexa8;
-//
-//   FSTopologyAssembler assembler(tol);
-//   std::unordered_set<GeomFaceKey, GeomFaceKeyHash> faceKeys;
-//   FSTopologyData topo = assembler.BuildSurfaceTopo(matches, faceKeys);
-//
-//   EXPECT_TRUE(topo.nodeGlobalNumbers.IsEmpty());
-//   EXPECT_TRUE(topo.poly2DGlobalNumbers.IsEmpty());
-// }

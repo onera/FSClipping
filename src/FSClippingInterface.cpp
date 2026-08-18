@@ -27,6 +27,7 @@ FSMesh FSClippingInterface::BuildInterface(FSMesh& mesh1, FSMesh& mesh2, FSClipp
   FSFaceMatcher matcher(clac2_, boundaryExtraction1.faces, boundaryExtraction2.faces, tol_);
   std::vector<FSFaceMatch> matches;
   matcher.ComputeMatches(matches);
+  FSFaceMatcher::AssignGlobalNodeIds(matches, tol_);
 
   // 3. Build topology and reconstruct the mesh
   FSClippingEngine engine(tol_);

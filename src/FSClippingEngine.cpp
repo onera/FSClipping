@@ -72,6 +72,9 @@ bool FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_
 {
   auto allGathered = FSFaceExchange::GatherReceiveAll(globalClac);
 
+  if(allGathered.meshA.faces.faces.empty() || allGathered.meshB.faces.faces.empty())
+    return false;
+
   FSFaceMatcher matcher(localClac, allGathered.meshA.faces.faces, allGathered.meshB.faces.faces, tol);
   std::vector<FSFaceMatch> matches;
   matcher.ComputeMatches(matches);
