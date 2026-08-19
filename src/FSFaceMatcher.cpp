@@ -249,6 +249,10 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
     }
   }
   rawMatches_ = outMatches;
+  if(rawMatches_.empty()) {
+    FSError("FSFaceMatcher: no matches were found");
+    return;
+  }
 
   PreserveUncoveredFaces(outMatches, subjectFaces_);
 }
