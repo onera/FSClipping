@@ -50,30 +50,50 @@ bool FSClippedMesh::DoOp(FSDataManagerData*& data, const FSDataManagerOpParams* 
 {
   const FSClippedMeshParams* clippedMeshParams = dynamic_cast<const FSClippedMeshParams*>(params);
 
+  // --- check ---
   if(clippedMeshParams == nullptr) {
     FSError("FSClippedMesh: clipped mesh parameters NOT initialized");
     return false;
   }
 
+  // --- timer ---
   FSTimer timer(mClac, sTimerLevel);
   timer.Start();
 
+  // --- copy data ---
   mData = data;
+  // if(mData == nullptr) {
+  //   FSError("FSClippedMesh: data manager data NOT initialized.");
+  //   return false;
+  // }
+
+  // --- set parameters ---
   mParams = *clippedMeshParams;
-  if(!mParams.IsInitialized())
+
+  if(!mParams.IsInitialized()) {
+    FSError("FSClippedMesh: clipped mesh parameters NOT initialized.");
     return false;
+  }
 
   // Determine role from which meshes are locally present in the data manager.
   const bool hasA = mData && mData->HasMesh(mParams.mMeshKeyOriginal1);
   const bool hasB = mData && mData->HasMesh(mParams.mMeshKeyOriginal2);
+
+  if(mClac->WorldProcID()) { // clipper proc is 0
+    if(!hasA && !hasB) {
+      FSError("FSClippedMesh: original mesh NOT initialized");
+      return false;
+    }
+  }
+
   const FS_intT meshId = hasA ? 1 : (hasB ? 2 : 0);
 
-  mParams = *clippedMeshParams;
+  bool okFlag = GenerateClippedMesh(meshId);
 
-  if(!mParams.IsInitialized())
-    return false;
+  const intT nProcs = FSCLAC_NPROCS(mClac);
+  if(nProcs > 1)
+    mClac->AgreeOnSuccess(okFlag);
 
-  const bool okFlag = GenerateClippedMesh(meshId);
   timer.Stop();
   timer.Print(0, "FSClippedMesh: created clipped mesh:");
   return okFlag;
@@ -94,6 +114,7 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
     const FSString& meshKey = (meshId == 1) ? mParams.mMeshKeyOriginal1 : mParams.mMeshKeyOriginal2;
     const FSString& clippedKey = (meshId == 1) ? mParams.mMeshKeyClipped1 : mParams.mMeshKeyClipped2;
 
+    // --- check input mesh
     FSMesh* mesh = mData->GetMesh(meshKey, false);
     FSMesh* meshClipped = mData->GetMesh(clippedKey, mesh->GetClac(), true);
 
@@ -101,8 +122,7 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
     assert(meshClipped != nullptr);
 
     if((!mesh->IsInitialized()) || (!mesh->IsUnstructured())) {
-      FSString msg = "FSClippedMesh: original mesh " + meshKey + "NOT initialized";
-      FSError(msg);
+      FSError("FSClippedMesh: original mesh NOT initialized or NOT unstructured");
       return false;
     }
 
@@ -114,8 +134,7 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
     std::vector<FS_int32T> countsFaces(mesh->GetClac()->NProcs(), 0);
     mesh->GetClac()->AllGather(&nFaces32, 1, countsFaces.data(), 1);
     if(!(std::accumulate(countsFaces.begin(), countsFaces.end(), 0) > 0)) {
-      FSString msg = "FSClippedMesh: no faces were extract, check your boundaries marker";
-      FSError(msg);
+      FSError("FSClippedMesh: no faces were extract, check your boundaries marker");
       return false;
     }
 
@@ -132,7 +151,7 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
 
 #ifdef FS_SAFETYCHECKS
     if(!meshClipped->Check()) {
-      FSError("FSClippedMesh: resulting mesh of sub-elements is invalid.");
+      FSError("FSClippedMesh: resulting of clipped mesh is invalid.");
       return false;
     }
 #endif
@@ -142,9 +161,8 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
     FSClac selfClac(FSClac::sSelfComm);
     bool ok = FSClippingEngine::RunMatcherProc(*mClac, selfClac, mParams.mTol);
     if(!ok) {
-      FSString msg = "FSClippedMesh: They were an error with the clipper proc, any matches was computed, check your "
-                     "marker or the tolerance.";
-      FSError(msg);
+      FSError("FSClippedMesh: They were an error with the clipper proc, any matches was computed, check your marker or "
+              "the tolerance.");
       return false;
     }
   }

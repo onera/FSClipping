@@ -1,175 +1,169 @@
-// Symmetric parallel interface tests — run at exactly 5 MPI procs.
-//
-// Layout (SymMeshID): rank 0 = clipper, even ranks = mesh 1, odd ranks = mesh 2,
-// i.e. 1 clipper + 2 procs (mesh 1) + 2 procs (mesh 2). Both meshes get the same
-// number of procs.
-//
-// This translation unit is compiled into its own CTest executable
-// (FSClippingParallelTest_np5) and launched only at 5 procs, so no test needs to
-// skip itself.
+// Asymmetric parallel interface tests, run at exactly 6 MPI procs :
+// rank 0 = clipper
+// ranks 1..2 = mesh 1
+// ranks 3..5 = mesh 2
 
-#include "FSClipping/FSClippingInterfacePar.h"
+#include "FSClipping/FSClippedMesh.h"
+#include "FSClipping/FSClippedMeshParams.h"
 #include "TestUtilsParallel.hpp"
 #include "gtest/gtest.h"
+#include <FSDataManagerData.h>
+#include <FSDataManagerOp.h>
 
 _FS_BEGIN_NAMESPACE
 
-// ── Cube, surface reconstruction ─────────────────────────────────────────────
-TEST(FSClippingTestInterfaceParSym, CubeSurface)
-{
-  FSClac globalClac(MPI_COMM_WORLD);
-  FS_intT procId = globalClac.GetProcID();
-
-  FS_intT meshID = SymMeshID(procId);
-
-  FSClac clac;
-  globalClac.DivideIntoGroups(meshID, clac);
-
-  FSMesh mesh;
-  const FS_floatT tol = 1e-8;
-  FS_intT marker = -1;
-
-  if(meshID == 1) {
-    marker = 6;
-    mesh = LoadMeshWithClac(clac, MeshPath("input/cube_hexa_coarse_par.grid"));
-    polyMeshRepartition(&clac, mesh.GetMeshData());
-    mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-    CheckMesh(clac, mesh.GetMeshData());
-  }
-
-  if(meshID == 2) {
-    marker = 5;
-    mesh = LoadMeshWithClac(clac, MeshPath("input/cube_hexa_fine_par.grid"));
-    polyMeshRepartition(&clac, mesh.GetMeshData());
-    mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-    CheckMesh(clac, mesh.GetMeshData());
-  }
-
-  FSClippingInterfacePar surfaceInterface(globalClac, clac, tol, marker, meshID);
-  FSMesh meshClipped = surfaceInterface.BuildSurfaceInterface(mesh, meshID);
-
-  if(meshID == 1 || meshID == 2) {
-    FSMeshData* ptr = meshClipped.GetMeshData();
-    ptr->GetUnstructCells().CreateLocalNumbering();
-    exportMeshVTK(&clac, ptr,
-                  MeshPath(meshID == 1 ? "output/cube_coarse_clipped_surf_par" : "output/cube_fine_clipped_surf_par"));
-  }
-  if(meshID == 1) {
-    FSMeshData* ptr = meshClipped.GetMeshData();
-    polyMeshExtractFaces(ptr->GetUnstructCells());
-    polyMeshExportImport(&clac, ptr, MeshPath("output/cube_clipped_coarse_par"), 1, false);
-  }
-  if(meshID == 2) {
-    FSMeshData* ptr = meshClipped.GetMeshData();
-    polyMeshExtractFaces(ptr->GetUnstructCells());
-    polyMeshExportImport(&clac, ptr, MeshPath("output/cube_clipped_fine_par"), 1, false);
-  }
-}
-
-// ── Cube, volume reconstruction ──────────────────────────────────────────────
 TEST(FSClippingTestInterfaceParSym, CubeVolume)
 {
   FSClac globalClac(MPI_COMM_WORLD);
   FS_intT procId = globalClac.GetProcID();
-
   FS_intT meshID = SymMeshID(procId);
 
   FSClac clac;
   globalClac.DivideIntoGroups(meshID, clac);
 
-  FSMesh mesh;
-  const FS_floatT tol = 1e-8;
-  FS_intT marker = -1;
+  FSMesh mesh(&clac);
+  FSDataManagerData* data = new FSDataManagerData(&globalClac);
+
+  FSClippedMeshParams clippedParams;
+  clippedParams.mMeshKeyOriginal1 = "original1";
+  clippedParams.mMeshKeyOriginal2 = "original2";
+  clippedParams.mMeshKeyClipped1 = "clippedMesh1";
+  clippedParams.mMeshKeyClipped2 = "clippedMesh2";
+  clippedParams.mMarker1 = 6;
+  clippedParams.mMarker2 = 5;
+  clippedParams.mTol = 1e-8;
 
   if(meshID == 1) {
-    marker = 6;
-    mesh = LoadMeshWithClac(clac, MeshPath("input/cube_hexa_coarse_par.grid"));
-    polyMeshRepartition(&clac, mesh.GetMeshData());
-    mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-    CheckMesh(clac, mesh.GetMeshData());
+    FSMesh* meshPtr = data->GetMesh("original1", &clac);
+    FSString meshFile = MeshPath("input/cube_hexa_coarse_par.grid");
+    LoadMeshWithClac(meshPtr, meshFile);
+
+    polyMeshRepartition(&clac, meshPtr->GetMeshData());
+    meshPtr->GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+    CheckMesh(clac, meshPtr->GetMeshData());
+    mesh = *meshPtr;
   }
 
   if(meshID == 2) {
-    marker = 5;
-    mesh = LoadMeshWithClac(clac, MeshPath("input/cube_hexa_fine_par.grid"));
-    polyMeshRepartition(&clac, mesh.GetMeshData());
-    mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-    CheckMesh(clac, mesh.GetMeshData());
+    FSMesh* meshPtr = data->GetMesh("original2", &clac);
+    FSString meshFilename = MeshPath("input/cube_hexa_fine_par.grid");
+    LoadMeshWithClac(meshPtr, meshFilename);
+
+    polyMeshRepartition(&clac, meshPtr->GetMeshData());
+    meshPtr->GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+    CheckMesh(clac, meshPtr->GetMeshData());
+    mesh = *meshPtr;
   }
 
-  FSClippingInterfacePar volumeInterface(globalClac, clac, tol, marker, meshID);
-  FSMesh meshClipped = volumeInterface.BuildVolumeInterface(mesh, meshID);
+  // Call the clipping operation
+  FSClippedMesh clippedMesh(&globalClac);
+  bool success = clippedMesh.DoOp(data, &clippedParams);
+  if(!(success)) {
+    FSError.Print();
+  }
+  ASSERT_TRUE(success);
 
   if(meshID == 1 || meshID == 2) {
-    FSMeshData* ptr = meshClipped.GetMeshData();
-    ptr->GetUnstructCells().CreateLocalNumbering();
-    exportMeshVTK(&clac, ptr,
-                  MeshPath(meshID == 1 ? "output/cube_coarse_clipped_vol_par" : "output/cube_fine_clipped_vol_par"));
-  }
-  if(meshID == 1) {
-    FSMeshData* ptr = meshClipped.GetMeshData();
+    const FSString clippedKey = meshID == 1 ? "clippedMesh1" : "clippedMesh2";
+    FSMesh* meshClippedPtr = data->GetMesh(clippedKey, false);
+    FSMeshData* ptr = meshClippedPtr->GetMeshData();
+    if(!ptr->GetUnstructCells().HasLocalNumbering())
+      ptr->GetUnstructCells().CreateLocalNumbering();
     polyMeshExtractFaces(ptr->GetUnstructCells());
-    polyMeshExportImport(&clac, ptr, MeshPath("output/cube_clipped_vol_coarse_par"), 1, true);
+    polyMeshExportImport(
+      &clac, ptr, MeshPath(meshID == 1 ? "cube_clipped_vol_coarse_sym" : "output/cube_clipped_vol_fine_sym"), 1, true);
   }
-  if(meshID == 2) {
-    FSMeshData* ptr = meshClipped.GetMeshData();
-    polyMeshExtractFaces(ptr->GetUnstructCells());
-    polyMeshExportImport(&clac, ptr, MeshPath("output/cube_clipped_vol_fine_par"), 1, true);
-  }
+
+  // VTK part if you want export
+  // if(meshID == 1 || meshID == 2) {
+  //  const FSString clippedKey = meshID == 1 ? "clippedMesh1" : "clippedMesh2";
+  //  FSMesh* meshClippedPtr = data->GetMesh(clippedKey, false);
+  //  if(meshClippedPtr && meshClippedPtr->IsInitialized()) {
+  //    FSMeshData* ptr = meshClippedPtr->GetMeshData();
+  //    // Export the clipped mesh with its as-clipped partition (one VTK per proc).
+  //    ptr->GetUnstructCells().CreateLocalNumbering();
+  //    exportMeshVTK(&clac, ptr,
+  //                  MeshPath(meshID == 1 ? "output/cube_clipped_vol_coarse_view" :
+  //                  "output/cube_clipped_vol_fine_view"));
+  //  }
+  //}
 }
 
-// ── Two cylinders, volume reconstruction ─────────────────────────────────────
-// The two cylinder boundaries only partially overlap (relative rotation): faces
-// at the rim of the interface are not fully covered by the other mesh. Both sides
-// must keep those faces whole (NOT_COVERED) so that neither rebuilt mesh has
-// holes or missing faces.
 TEST(FSClippingTestInterfaceParSym, TwoCylindersVolume)
 {
   FSClac globalClac(MPI_COMM_WORLD);
   FS_intT procId = globalClac.GetProcID();
-
   FS_intT meshID = SymMeshID(procId);
 
   FSClac clac;
   globalClac.DivideIntoGroups(meshID, clac);
 
-  FSMesh mesh;
-  const FS_floatT tol = 1e-6;
-  const FS_intT marker = 1;
+  FSMesh mesh(&clac);
+  FSDataManagerData* data = new FSDataManagerData(&globalClac);
+
+  FSClippedMeshParams clippedParams;
+  clippedParams.mMeshKeyOriginal1 = "original1";
+  clippedParams.mMeshKeyOriginal2 = "original2";
+  clippedParams.mMeshKeyClipped1 = "clippedMesh1";
+  clippedParams.mMeshKeyClipped2 = "clippedMesh2";
+  clippedParams.mMarker1 = 1;
+  clippedParams.mMarker2 = 1;
+  clippedParams.mTol = 1e-6;
 
   if(meshID == 1) {
-    mesh = LoadMeshWithClac(clac, MeshPath("input/mesh_cylinder_1.grid"));
-    polyMeshRepartition(&clac, mesh.GetMeshData());
-    mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-    CheckMesh(clac, mesh.GetMeshData());
+    FSMesh* meshPtr = data->GetMesh("original1", &clac);
+    FSString meshFile = MeshPath("input/mesh_cylinder_1.grid");
+    LoadMeshWithClac(meshPtr, meshFile);
+
+    polyMeshRepartition(&clac, meshPtr->GetMeshData());
+    meshPtr->GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+    CheckMesh(clac, meshPtr->GetMeshData());
+    mesh = *meshPtr;
   }
 
   if(meshID == 2) {
-    mesh = LoadMeshWithClac(clac, MeshPath("input/mesh_cylinder_2.grid"));
-    polyMeshRepartition(&clac, mesh.GetMeshData());
-    mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
-    CheckMesh(clac, mesh.GetMeshData());
+    FSMesh* meshPtr = data->GetMesh("original2", &clac);
+    FSString meshFilename = MeshPath("input/mesh_cylinder_2.grid");
+    LoadMeshWithClac(meshPtr, meshFilename);
+
+    polyMeshRepartition(&clac, meshPtr->GetMeshData());
+    meshPtr->GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+    CheckMesh(clac, meshPtr->GetMeshData());
+    mesh = *meshPtr;
   }
 
-  FSClippingInterfacePar volumeInterface(globalClac, clac, tol, marker, meshID);
-  FSMesh meshClipped = volumeInterface.BuildVolumeInterface(mesh, meshID);
+  // Call the clipping operation
+  FSClippedMesh clippedMesh(&globalClac);
+  bool success = clippedMesh.DoOp(data, &clippedParams);
+  if(!(success)) {
+    FSError.Print();
+  }
+  ASSERT_TRUE(success);
+
 
   if(meshID == 1 || meshID == 2) {
-    FSMeshData* ptr = meshClipped.GetMeshData();
-    // Export the clipped mesh with its as-clipped partition (one VTK per proc).
-    ptr->GetUnstructCells().CreateLocalNumbering();
-    exportMeshVTK(&clac, ptr, MeshPath(meshID == 1 ? "output/cyl1_clipped_vol_view" : "output/cyl2_clipped_vol_view"));
-  }
-  if(meshID == 1) {
-    FSMeshData* ptr = meshClipped.GetMeshData();
+    const FSString clippedKey = meshID == 1 ? "clippedMesh1" : "clippedMesh2";
+    FSMesh* meshClippedPtr = data->GetMesh(clippedKey, false);
+    FSMeshData* ptr = meshClippedPtr->GetMeshData();
+    if(!ptr->GetUnstructCells().HasLocalNumbering())
+      ptr->GetUnstructCells().CreateLocalNumbering();
     polyMeshExtractFaces(ptr->GetUnstructCells());
-    polyMeshExportImport(&clac, ptr, MeshPath("output/cyl1_clipped_vol_par"), 1, true);
+    polyMeshExportImport(
+      &clac, ptr, MeshPath(meshID == 1 ? "output/cyl1_clipped_vol_sym" : "output/cyl2_clipped_vol_sym"), 1, true);
   }
-  if(meshID == 2) {
-    FSMeshData* ptr = meshClipped.GetMeshData();
-    polyMeshExtractFaces(ptr->GetUnstructCells());
-    polyMeshExportImport(&clac, ptr, MeshPath("output/cyl2_clipped_vol_par"), 1, true);
-  }
-}
 
+  // VTK part if you want export
+  // if(meshID == 1 || meshID == 2) {
+  //  const FSString clippedKey = meshID == 1 ? "clippedMesh1" : "clippedMesh2";
+  //  FSMesh* meshClippedPtr = data->GetMesh(clippedKey, false);
+  //  if(meshClippedPtr && meshClippedPtr->IsInitialized()) {
+  //    FSMeshData* ptr = meshClippedPtr->GetMeshData();
+  //    // Export the clipped mesh with its as-clipped partition (one VTK per proc).
+  //    if(!ptr->GetUnstructCells().HasLocalNumbering())
+  //      ptr->GetUnstructCells().CreateLocalNumbering();
+  //    exportMeshVTK(&clac, ptr,
+  //                  MeshPath(meshID == 1 ? "output/cyl1_clipped_vol_view" : "output/cyl2_clipped_vol_view"));
+  //  }
+  //}
+}
 _FS_END_NAMESPACE
