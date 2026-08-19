@@ -26,13 +26,12 @@ inline FSMesh LoadMeshWithClac(FSClac& clac, const FSString& filename)
   return mesh;
 }
 
-// ── Proc-layout helpers ──────────────────────────────────────────────────────
-//
-// Every parallel interface test is now compiled into exactly one CTest
-// executable, run at exactly the MPI world size its layout needs (np5 for the
-// symmetric 1+2+2 layout, np6 for the asymmetric 1+2+3 layout). There is no
-// cross-proc-count registration any more, so tests no longer skip themselves —
-// the SKIP_UNLESS_* macro below is kept only for ad-hoc / manual runs.
+inline void LoadMeshWithClac(FSMesh* mesh, const FSString& filename)
+{
+  FSMeshImportParamsTAU params;
+  params.mMeshFilename = filename;
+  EXPECT_TRUE(mesh->ImportMesh(&params));
+}
 
 #define SKIP_UNLESS_EXACT_PROCS(clac, n)                                                                               \
   do {                                                                                                                 \
@@ -41,8 +40,7 @@ inline FSMesh LoadMeshWithClac(FSClac& clac, const FSString& filename)
       GTEST_SKIP() << "needs exactly " << (n) << " MPI procs, running with " << nProcs__;                              \
   } while(0)
 
-// Symmetric parity layout: rank 0 = clipper, even ranks = mesh 1, odd ranks =
-// mesh 2. With np5 both meshes get 2 procs.
+
 inline FS_intT SymMeshID(FS_intT procId)
 {
   if(procId == 0)
@@ -50,10 +48,6 @@ inline FS_intT SymMeshID(FS_intT procId)
   return (procId % 2 == 0) ? 1 : 2;
 }
 
-// Asymmetric layout: rank 0 = clipper, the next nMesh1 ranks build mesh 1, the
-// remaining ranks build mesh 2. Contiguous ranges (not rank parity) so the two
-// meshes can have a different number of procs. With np6 and nMesh1=2 the split
-// is 1 clipper + 2 (mesh 1) + 3 (mesh 2). Returns meshID in {0,1,2}.
 inline FS_intT AsymMeshID(FS_intT procId, FS_intT nMesh1)
 {
   if(procId == 0)
@@ -63,19 +57,15 @@ inline FS_intT AsymMeshID(FS_intT procId, FS_intT nMesh1)
   return 2;
 }
 
-// ── Mesh-op helpers shared by the interface tests ────────────────────────────
-
-// Export the mesh as one VTK (legacy ASCII) file per proc: prefix_<procID>.vtk.
-// Used to visualise the per-proc partition, both the original mesh (before
-// clipping) and the reconstructed mesh (after clipping). No HDF5, no import.
-inline void exportMeshVTK(FSClac* clac, FSMeshData* meshDataPtr, const FSString& filenamePrefix)
+inline void exportMeshVTK(FSClac* clac, FSMeshData* meshDataPtr, const FSString& filenamePrefix,
+                          bool filePerProcess = true)
 {
   const FS_intT procID = FSCLAC_PROCID(clac);
   FSMeshExportFilterVTK exportFilterVTK(clac);
   FSMeshExportParamsVTK exportParamsVTK;
   exportParamsVTK.mMeshFilename = filenamePrefix + FSString(".vtk");
   exportParamsVTK.mFormatType = FSVtkEnums::FT_Raw;
-  exportParamsVTK.mFilePerProcess = false;
+  exportParamsVTK.mFilePerProcess = filePerProcess;
   bool success = exportFilterVTK.DoOp(meshDataPtr, &exportParamsVTK);
   if(!success)
     FSError.Print();

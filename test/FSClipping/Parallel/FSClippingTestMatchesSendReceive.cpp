@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include "FSClipping/FSClippingInterfacePar.h"
 #include "FSClipping/FSFaceMatcher.h"
 #include "FSClipping/FSFaceExchange.h"
 #include "FSClipping/FSClippingFace.h"
