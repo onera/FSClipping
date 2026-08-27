@@ -6,11 +6,25 @@ from FSDataManager import FSDataManager
 
 import FSClipping
 
-# --- parallel setup: 3 processes required
-# proc 0 = subject mesh (mesh1), proc 1 = clipper mesh (mesh2), proc 2 = matcher
+def MeshID(procID, nMesh1):
+    if(procID == 0):
+        return 0
+    elif(procID <= nMesh1):
+        return 1
+    return 2
+
+# --- parallel setup
 globalClac = FSClac()
-assert globalClac.GetNProcs() == 3, "3 MPI processes required"
-meshID = globalClac.GetProcID()
+nTotalProc = globalClac.NWorldProcs()
+nProcMesh1 = 3
+nProcMesh2 = 2
+
+if(nProcMesh1 + nProcMesh2 != nTotalProc - 1) :
+    FSError.PrintAndExit()
+
+procID = globalClac.WorldProcID()
+meshID = MeshID(procID, nProcMesh1)
+
 clac = FSClac()
 globalClac.DivideIntoGroups(meshID, clac)
 
@@ -18,18 +32,20 @@ globalClac.DivideIntoGroups(meshID, clac)
 dm = FSDataManager(globalClac)
 
 # --- load meshes on their respective processes
-if meshID == 0:
+if meshID == 1:
     fsmeshOrig1 = dm.GetMesh("original1", clac)
     meshOps = (("ImportMeshTAU", {"MeshFilename": "test/Mesh/input/mesh_cylinder_1.grid"}),
+               "RepartitionMeshRCB",
                "CreateLocalNumbering",
                "PrintInfo",
                "Check",
               )
     fsmeshOrig1.DoOps(meshOps) or FSError.PrintAndExit()
 
-if meshID == 1:
+if meshID == 2:
     fsmeshOrig2 = dm.GetMesh("original2", clac)
     meshOps = (("ImportMeshTAU", {"MeshFilename": "test/Mesh/input/mesh_cylinder_2.grid"}),
+               "RepartitionMeshRCB",
                "CreateLocalNumbering",
                "PrintInfo",
                "Check",
@@ -49,40 +65,18 @@ dataManagerOps = (("ClippedMesh", {"MeshKeyOrig1"      : "original1",
 
 dm.DoOps(dataManagerOps) or FSError.PrintAndExit()
 
-if meshID == 0:
+if meshID == 1:
    if(dm.HasMesh("clippedMesh1")):
        clippedMesh1 = dm.GetMesh("clippedMesh1", False)
-       meshOps = ( "PrintInfo", ("ExportMeshHDF5", {"MeshFilename" : "test/Mesh/output/mesh_cylinder_1_clipped.h5"}),)
+       meshOps = ( "PrintInfo",)
        clippedMesh1.DoOps(meshOps) or FSError.PrintAndExit() 
    else:
       FSError.PrintAndExit()
 
-if meshID == 1:
+if meshID == 2:
    if(dm.HasMesh("clippedMesh2")):
        clippedMesh2 = dm.GetMesh("clippedMesh2", False)
-       meshOps = ( "PrintInfo", ("ExportMeshHDF5", {"MeshFilename" : "test/Mesh/output/mesh_cylinder_2_clipped.h5"}),)
+       meshOps = ( "PrintInfo",)
        clippedMesh2.DoOps(meshOps) or FSError.PrintAndExit() 
    else:
       FSError.PrintAndExit()
-
-if meshID == 0:
-    meshOps = (("ExportMeshVTK", {"Filename"            : "test/Mesh/output/mesh_clipped_cylinder_1",
-                              "Format"            : "RAW",
-                              "FilePerProcess"    : True,
-                              "PrefixDatasetName" : True,
-                              "SplitDataset"      : True,
-                              "ExtractVectors"    : True}),)
-
-    if not clippedMesh1.DoOps(meshOps):
-        FSError.PrintAndExit()
-        
-if meshID == 1:
-    meshOps = (("ExportMeshVTK", {"Filename"          : "test/Mesh/output/mesh_clipped_cylinder_2",
-                              "Format"            : "RAW",
-                              "FilePerProcess"    : True,
-                              "PrefixDatasetName" : True,
-                              "SplitDataset"      : True,
-                              "ExtractVectors"    : True}),)
-
-    if not clippedMesh2.DoOps(meshOps):
-        FSError.PrintAndExit()

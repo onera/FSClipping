@@ -17,7 +17,6 @@ add_library(fsclipping SHARED   FSClippingUtil.cpp
                                 FSClippingEngine.cpp
                                 FSClippingInterface.cpp
                                 FSFaceExchange.cpp
-                                FSClippingInterfacePar.cpp
                                 FSClippedMeshParams.cpp
                                 FSClippedMesh.cpp)
 
@@ -62,7 +61,6 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippingEngine.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippingInterface.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSFaceExchange.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippingInterfacePar.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippedMeshParams.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippedMeshParams.i
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippedMesh.h

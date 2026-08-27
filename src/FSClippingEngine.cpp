@@ -15,7 +15,6 @@ FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtra
 {
   FSTopologyAssembler topologyAssembler(tol_);
   FSTopologyData surfaceTopology = topologyAssembler.BuildSurfaceTopo(matches, be.faceKeys);
-
   if(mode == Mode::Surface)
     return surfaceTopology;
 
@@ -25,11 +24,15 @@ FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtra
   mesh.GetMeshData()->GetUnstructCells().GetCoordinates3D(coordDesc, oldCoords, nodeOffset);
 
   FSTopologyData volumeTopology;
+
   for(const auto& t : mesh.GetCellTypes()) {
+
     if(FSMeshEnums::IsUnstructVolumeCellType(t)) {
+
       const auto& cell2Node = mesh.GetCell2Node(t);
       const auto& cellPool = mesh.GetMeshData()->GetUnstructCells().GetCellPool(t);
-      const auto& bdryCellPool = be.volumeCells.at(t);
+      const auto it = be.volumeCells.find(t);
+      const auto& bdryCellPool = (it != be.volumeCells.end()) ? it->second : std::set<FS_intT>();
 
       topologyAssembler.BuildVolumeTopo(cell2Node, bdryCellPool, *cellPool, oldCoords, volumeTopology);
     }
@@ -41,6 +44,7 @@ FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtra
     surfaceTopology.cellParent[FSMeshEnums::CellType::CT_Poly2D];
   volumeTopology.cellParentType[FSMeshEnums::CellType::CT_Poly2D] =
     surfaceTopology.cellParentType[FSMeshEnums::CellType::CT_Poly2D];
+  volumeTopology.poly2DGlobalNumbers = surfaceTopology.poly2DGlobalNumbers;
 
   return volumeTopology;
 }
@@ -52,7 +56,7 @@ FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtra
 
 FSMesh FSClippingEngine::Reconstruct(FSClac& clac, FSMesh& meshOriginal, FSTopologyData& topo, bool copyAttributes)
 {
-  FSMeshReconstruction meshReconstruction(clac);
+  FSMeshReconstruction meshReconstruction(clac, tol_);
   FSMesh clippedMesh = meshReconstruction.Build(meshOriginal.GetMeshData()->GetUnstructCells(), topo);
   if(copyAttributes)
     meshReconstruction.CopyAttributes(meshOriginal, clippedMesh);
@@ -64,18 +68,30 @@ FSMesh FSClippingEngine::Reconstruct(FSClac& clac, FSMesh& meshOriginal, FSTopol
 //  RunMatcherProc
 //
 
-void FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_floatT tol)
+bool FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_floatT tol)
 {
-  auto subjectReceived = FSFaceExchange::Receive(globalClac, 0);
-  auto clippedReceived = FSFaceExchange::Receive(globalClac, 1);
+  auto allGathered = FSFaceExchange::GatherReceiveAll(globalClac);
 
-  FSFaceMatcher matcher(localClac, subjectReceived.faces, clippedReceived.faces, tol);
+  if(allGathered.meshA.faces.faces.empty() || allGathered.meshB.faces.faces.empty())
+    return false;
+
+  FSFaceMatcher matcher(localClac, allGathered.meshA.faces.faces, allGathered.meshB.faces.faces, tol);
   std::vector<FSFaceMatch> matches;
   matcher.ComputeMatches(matches);
 
-  FSMatchExchange::Send(globalClac, 0, matches);
+  if(matches.empty()) {
+    return false;
+  }
+
+  // Each side gets its own global numbering (nodes + Poly2D cells)
+  FSFaceMatcher::AssignGlobalNodeIds(matches, tol);
+  FSMatchExchange::ScatterSend(globalClac, matches, allGathered.meshA);
+
   matcher.ComputeInvertedMatches(matches);
-  FSMatchExchange::Send(globalClac, 1, matches);
+  FSFaceMatcher::AssignGlobalNodeIds(matches, tol);
+  FSMatchExchange::ScatterSend(globalClac, matches, allGathered.meshB);
+
+  return true;
 }
 
 _FS_END_NAMESPACE

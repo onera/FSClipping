@@ -4,12 +4,15 @@
 _FS_BEGIN_NAMESPACE
 
 BoundaryExtraction FSBoundaryFaceProvider::Extract(FSMesh& mesh, FSMeshFaceExtractor& ex, FS_intT boundaryMarker,
-                                                   FS_floatT tol, bool matchRemoteFaces)
+                                                   FS_floatT tol)
 {
-  // assert(mesh.GetMeshData()->GetUnstructCells().HasLocalNumbering());
+  const bool hasLocalNumbering = mesh.GetMeshData()->GetUnstructCells().HasLocalNumbering();
+  if(hasLocalNumbering)
+    mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+
   BoundaryExtraction result;
 
-  ex.PrepareFaceConnectivity(mesh.GetMeshData()->GetUnstructCells(), matchRemoteFaces, false);
+  ex.PrepareFaceConnectivity(mesh.GetMeshData()->GetUnstructCells());
 
   ex.PrepareFaceNodeCoordinates(FSQuantityDescArrayT());
 
@@ -22,6 +25,7 @@ BoundaryExtraction FSBoundaryFaceProvider::Extract(FSMesh& mesh, FSMeshFaceExtra
     ex.GetFaceNodeCoordinates(faceIndex, faceCoordinates);
 
     GeomFaceKey key(faceCoordinates, tol);
+    // On est vraiment sur qu'on ne peut pas utiliser les tables de hachages de FSDM ?
 
     result.faceKeys.insert(key);
     result.faces.emplace_back(f, faceIndex, faceCoordinates);

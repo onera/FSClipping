@@ -48,8 +48,13 @@ inline bool IsPointInsideEdge(const FSVec2& P, const FSVec2& A, const FSVec2& B,
                               FS_floatT tol = static_cast<FS_floatT>(1e-12))
 {
   // (B-A) × (p-A) >= 0  →  p is on the left of AB
-  FS_floatT cross = (B[0] - A[0]) * (P[1] - A[1]) - (B[1] - A[1]) * (P[0] - A[0]);
-  return cross >= -tol;
+  // cross / |B-A| is the signed distance from P to the line AB. Comparing the
+  // raw cross product (a length^2) against tol (a length) was scale-dependent:
+  // on small meshes (edge ~2e-4, offset ~5e-5, cross ~1e-8) points clearly
+  // outside were declared inside and clipper edges never cut the subject.
+  FSVec2 AB = B - A;
+  FS_floatT cross = AB[0] * (P[1] - A[1]) - AB[1] * (P[0] - A[0]);
+  return cross >= -tol * AB.Norm();
 }
 
 /* -----------------------------------------------------------------
@@ -81,18 +86,36 @@ inline bool ArePointsColinear2D(const std::vector<FSVec2>& pts, FS_floatT tol)
   const FSVec2& p1 = pts[1];
 
   FSVec2 dir = p1 - p0;
+  const FS_floatT dirNorm = dir.Norm();
+  if(dirNorm < tol)
+    return true;
 
   for(size_t i = 2; i < pts.size(); ++i) {
     FSVec2 v = pts[i] - p0;
 
-    // produit vectoriel 2D = scalaire
+    // |cross| / |dir| is the distance from pts[i] to the line (p0, p1).
+    // Comparing the raw cross product (an area) against tol (a length) made
+    // the test scale-dependent: valid intersection polygons on small meshes
+    // (cell size ~1e-4, cross ~1e-8) were wrongly declared colinear.
     FS_floatT cross = dir[0] * v[1] - dir[1] * v[0];
 
-    if(std::abs(cross) > tol)
+    if(std::abs(cross) > tol * dirNorm)
       return false;
   }
 
   return true;
+}
+
+/* -----------------------------------------------------------------
+   PolygonPerimeter
+   ----------------------------------------------------------------- */
+inline FS_floatT PolygonPerimeter(const std::vector<FSVec2>& pts)
+{
+  FS_floatT perimeter = 0.0;
+  const size_t n = pts.size();
+  for(size_t i = 0; i < n; ++i)
+    perimeter += (pts[(i + 1) % n] - pts[i]).Norm();
+  return perimeter;
 }
 
 /* -----------------------------------------------------------------

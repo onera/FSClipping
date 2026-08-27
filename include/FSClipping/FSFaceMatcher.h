@@ -10,16 +10,20 @@ _FS_BEGIN_NAMESPACE
 
 struct FSFaceMatch {
 
-  // --- Identification of the two faces (local indices in their arrays) ---
-  FS_intT face1 = -1; // index in the FSClippingFace list of mesh 1
-  FS_intT face2 = -1; // index in the FSClippingFace list of mesh 2 (-1 for NOT_COVERED matches)
+  // Local index of the two matches faces
+  FS_intT face1 = -1;
+  FS_intT face2 = -1;
 
-  // --- Ownership information (already known from FSDM / MPI) ---
-  FS_intT elemOwner1 = -1; // element owner of the face 1
-  FS_intT elemOwner2 = -1; // element owner of the face 2
+  // Local index of the element owner of the two faces
+  FS_intT elemOwner1 = -1;
+  FS_intT elemOwner2 = -1;
 
-  FS_intT faceOwner1 = -1; // face owner of the face 1
-  FS_intT faceOwner2 = -1; // face owner of the face 2
+  // ProcID of each faces (local to their own clac)
+  FS_intT ownerProc1 = -1;
+  FS_intT ownerProc2 = -1;
+
+  FS_intT faceOwner1 = -1;
+  FS_intT faceOwner2 = -1;
 
   FSMeshEnums::CellType elemOwnerType1 = FSMeshEnums::CT_Undefined;
   FSMeshEnums::CellType elemOwnerType2 = FSMeshEnums::CT_Undefined;
@@ -28,32 +32,32 @@ struct FSFaceMatch {
   FSMeshEnums::CellType faceOwnerType2 = FSMeshEnums::CT_Undefined;
 
   // --- Type of geometric relation ---
-  // NOT_COVERED: the subject face is not entirely covered by the clipped mesh
-  // (e.g. rim faces of two cylinders in relative rotation). The face is kept
-  // unclipped: the match carries the original face polygon and has no face2.
   enum MatchType : FS_intT {
     UNKNOWN = 0,
     IDENTICAL = 1,
     INCLUDED = 2,
     INTERSECTING = 3,
-    NOT_COVERED = 4
+    NOT_COVERED = 4 // could be if the match of face (A/B) are note totaly recover by the mesh (A/B)
   } type = UNKNOWN;
 
-  // --- Geometric measure ---
   FS_floatT intersectedArea = 0.0;
 
-  // --- clippedPoly2D polygon in the local plane of face1 ---
-  // stored in 2D because polygon clipping is performed in 2D
+  // 2D polygon resulted by the match in the local plane of face1
   std::vector<FSVec2> clippedPoly2D;
 
-  // Intersection polygon re-projected in 3D in the frame of face1
+  // 3D polygon re-projected in the frame of face1
   std::vector<FSVec3> clippedPoly3D;
 
-  // Intersection polygon re-projected in 3D in the frame of face2.
-  // ComputeInvertedMatches swaps the two so that clippedPoly3D always refers
-  // to the current face1 frame. This ensures consistent float values when the
-  // same geometric vertex appears in multiple matches for the same cell.
+  // 3D polygon re-projected in the frame of face2.
   std::vector<FSVec3> clippedPoly3D_face2;
+
+  // Global numbering of each node of a match
+  std::vector<FS_intT> nodeGlobalIds;
+  // On peut pas creer cette liste dans le Cell2NodeBuilder ?
+
+  // Global ID of the future Poly2D cell
+  FS_intT globalCellId = -1;
+  // Meme remarque, la numerotation globale ne peut pas etre faite dans Cell2NodeBuilder ?
 
   FSClac::sizeT GetBufSize(FSClac& clac) const;
   void Pack(FSClac& clac);
@@ -80,17 +84,17 @@ public:
       FSError.SetAndPrintAndExit("Failed to build BVH for clipped face");
   }
 
-  // Computes the match list for the subject side: raw face-pair intersections,
-  // then subject faces not fully covered by the clipped mesh are kept whole as
-  // single NOT_COVERED matches (see PreserveUncoveredFaces).
+
   void ComputeMatches(std::vector<FSFaceMatch>& outMatches);
 
-  // Computes the match list for the clipped side (face1/face2 roles swapped).
-  // Rebuilt from the raw matches — not from the subject-side list — so that the
-  // coverage decision is made independently on each side: a partial clip
-  // dropped for an uncovered subject face is still a valid intersection for
-  // the clipped face it belongs to. Requires ComputeMatches to have run.
   void ComputeInvertedMatches(std::vector<FSFaceMatch>& outMatches) const;
+
+  /*
+  Assigns a globally consistent numbering across one mesh side:
+    - nodeGlobalIds: geometric deduplication (NodeKey, tol) of every point of every clippedPoly3D
+    - globalCellId: match index 0..n-1 (global ID of the future Poly2D cell)
+  */
+  static FS_intT AssignGlobalNodeIds(std::vector<FSFaceMatch>& matches, FS_floatT tol);
 
 private:
   const std::vector<FSClippingFace>& subjectFaces_;
@@ -99,15 +103,12 @@ private:
   FSBVHTree bvhClipped_;
   FS_floatT tol_;
 
-  // All face-pair intersections, before any coverage filtering. Kept so that
-  // ComputeInvertedMatches can apply the coverage criterion on the clipped side.
+  // All face-pair intersections, before any coverage filtering.
   std::vector<FSFaceMatch> rawMatches_;
 
   bool ComputeMatch(const FSClippingFace& f1, const FSClippingFace& f2, FSFaceMatch& out) const;
 
-  // For every face of `faces` whose matches (identified via face1) do not sum
-  // up to the full face area, drops the partial clips and appends one
-  // NOT_COVERED match carrying the original face polygon instead.
+  // Preserve the faces of the clipping algorithm when they are not totaly covered by the facing mesh
   void PreserveUncoveredFaces(std::vector<FSFaceMatch>& matches, const std::vector<FSClippingFace>& faces) const;
 };
 

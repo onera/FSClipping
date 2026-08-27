@@ -45,7 +45,9 @@ FS_intT FSCell2NodeBuilder::LocalCellIndex(FS_intT globalId) const
 {
   auto it = cellId2L_.find(globalId);
   if(it == cellId2L_.end()) {
-    FSError.SetAndPrintAndExit("FSCell2NodeBuilder : Unknown cellId : " + globalId);
+    FSString msg = "FSCell2NodeBuilder : Unknown cellId : ";
+    msg.Add(globalId);
+    FSError.SetAndPrintAndExit(msg.c_str());
   }
   return it->second;
 }
@@ -65,9 +67,12 @@ void FSCell2NodeBuilder::AddCellNodes(FS_intT cellId, FSMeshEnums::CellType cell
   nodes.reserve(nCellNodes);
 }
 
-void FSCell2NodeBuilder::AddClippedPolygon(FS_intT cellId, const std::vector<FSVec3>& poly)
+void FSCell2NodeBuilder::AddClippedPolygon(FS_intT cellId, const std::vector<FSVec3>& poly,
+                                           const std::vector<FS_intT>& globalIds)
 {
+  // AddClippedPolygon(cellId, poly);
   auto it = cellData_.find(cellId);
+
   if(it == cellData_.end())
     FSError.SetAndPrintAndExit(
       "FSCell2NodeBuilder::AddClippedPolygon You are trying to add a clipped polygon to an inexistent cell.");
@@ -77,13 +82,35 @@ void FSCell2NodeBuilder::AddClippedPolygon(FS_intT cellId, const std::vector<FSV
     if(!exists(nodes, p))
       nodes.push_back(p);
   }
+  // Pourquoi ne pas avoir une seule methode et un nodeGlobalIDs dans tous les cas (seq et par) ?
+  // if(!globalIds.empty()) {
+  for(std::size_t i = 0; i < poly.size() && i < globalIds.size(); ++i)
+    keyToGlobalId_.try_emplace(NodeKey(poly[i], tol_), globalIds[i]);
+  //}
+}
+
+FSIntArrayT FSCell2NodeBuilder::NodeGlobalNumbers() const
+{
+  FSIntArrayT numbers(static_cast<FS_intT>(globalCoords_.size()));
+  for(FS_intT i = 0; i < numbers.Size(); ++i)
+    numbers[i] = -1;
+
+  for(const auto& [key, localIdx] : coordToNode_) {
+    auto it = keyToGlobalId_.find(key);
+    if(it != keyToGlobalId_.end())
+      numbers[localIdx] = it->second;
+  }
+  return numbers;
 }
 
 void FSCell2NodeBuilder::BuildGlobalNumbering()
 {
-  // Pass 1: assign a unique global index to each coordinate.
-  // Builds globalCoords_ (deduplicated list) and coordToNode_ (O(1) lookup),
-  // then stores the resulting index in cell2Node.nodeIds.
+  /*
+  1 - Assign a unique global index to each coordinate :
+        - Build globalCoords_ (deduplicated list)
+        - Build coordToNode_ (O(1) lookup)
+        - Stores the resulting index in cell2Node.nodeIds.
+  */
   for(auto& [_, data] : cellData_) {
     data.nodeIds.resize(data.coords.size());
 
@@ -103,8 +130,10 @@ void FSCell2NodeBuilder::BuildGlobalNumbering()
     }
   }
 
-  // Pass 2: build the per-cell coord→localIndex map used by FSPolyFaceBuilder
-  // to resolve face node indices within the cell's local coordinate array.
+  /*
+  2 - Keep in memory the position (localy) in the cell2Node[elem] of the coords :
+        - build the per-cell coord→localIndex map (position) used by FSPolyFaceBuilder
+  */
   for(auto& [cellId, data] : cellData_) {
     data.localIndex.reserve(data.coords.size());
 
@@ -114,6 +143,22 @@ void FSCell2NodeBuilder::BuildGlobalNumbering()
     }
   }
   BuildCellIdMapping();
+}
+
+FS_intT FSCell2NodeBuilder::ResolveOrRegisterNode(const FSVec3& p)
+{
+  NodeKey key(p, tol_);
+  auto it = coordToNode_.find(key);
+  // Return the index in globalNumber if p exist
+  if(it != coordToNode_.end())
+    return it->second;
+
+  // Add the nodes and return the sixe+1 of globalCoords as index
+  // Ca arrive seulement en par non sym, pourquoi ?
+  const FS_intT id = static_cast<FS_intT>(globalCoords_.size());
+  globalCoords_.push_back(p);
+  coordToNode_[key] = id;
+  return id;
 }
 
 void FSCell2NodeBuilder::AddVolumeCellNodes(FS_intT cellId, FSMeshEnums::CellType cellType,
@@ -127,7 +172,7 @@ void FSCell2NodeBuilder::AddVolumeCellNodes(FS_intT cellId, FSMeshEnums::CellTyp
     FSError.SetAndPrintAndExit("FSCell2NodeBuilder::AddVolumeCellNodes You have an empty array of nodes. The match "
                                "builder should have added some nodes.");
 
-  const FS_intT nCellNodes = FSCellInfo::cNNodes[cellType];
+  const FS_intT nCellNodes = FSCellInfo::cNNodes[cellType]; // Modification is needed for a PolyMesh3D initial mesh
 
   for(FS_intT node = 0; node < nCellNodes; ++node) {
     FS_intT idx = cell2Node(cellId, node);

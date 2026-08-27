@@ -148,9 +148,21 @@ static void polyMeshExtractFaces(FSUnstructMeshData& unstructMeshData)
 }
 
 namespace {
-FSMesh LoadMesh(FSClac& clac, const std::string& filename)
+FSMesh LoadMeshTau(FSClac& clac, const std::string& filename)
 {
   FSMeshImportParamsTAU params;
+  params.mMeshFilename = filename;
+
+  FSMesh mesh(&clac);
+  EXPECT_TRUE(mesh.ImportMesh(&params));
+
+  mesh.GetMeshData()->GetUnstructCells().CreateLocalNumbering();
+  return mesh;
+}
+
+FSMesh LoadMeshHDF5(FSClac& clac, const std::string& filename)
+{
+  FSMeshImportParamsHDF5 params;
   params.mMeshFilename = filename;
 
   FSMesh mesh(&clac);
@@ -176,8 +188,8 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh2DHexaHexa)
 {
   FSClac clac1, clac2, clac3;
 
-  auto mesh1 = LoadMesh(clac1, MeshPath("input/cube_hexa_coarse.grid"));
-  auto mesh2 = LoadMesh(clac2, MeshPath("input/cube_hexa_fine.grid"));
+  auto mesh1 = LoadMeshTau(clac1, MeshPath("input/cube_hexa_coarse.grid"));
+  auto mesh2 = LoadMeshTau(clac2, MeshPath("input/cube_hexa_fine.grid"));
 
   const FS_intT marker1 = 2;
   const FS_intT marker2 = 1;
@@ -201,8 +213,8 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexa)
 {
   FSClac clac1, clac2, clac3;
 
-  auto mesh1 = LoadMesh(clac1, MeshPath("input/cube_hexa_coarse.grid"));
-  auto mesh2 = LoadMesh(clac2, MeshPath("input/cube_hexa_fine.grid"));
+  auto mesh1 = LoadMeshTau(clac1, MeshPath("input/cube_hexa_coarse.grid"));
+  auto mesh2 = LoadMeshTau(clac2, MeshPath("input/cube_hexa_fine.grid"));
 
   const FS_intT marker1 = 2;
   const FS_intT marker2 = 1;
@@ -226,8 +238,8 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
 {
   FSClac clac1, clac2, clac3;
 
-  auto mesh1 = LoadMesh(clac1, MeshPath("input/cube_hexa_coarse.grid"));
-  auto mesh2 = LoadMesh(clac2, MeshPath("input/cube_tetra_fine.grid"));
+  auto mesh1 = LoadMeshTau(clac1, MeshPath("input/cube_hexa_coarse.grid"));
+  auto mesh2 = LoadMeshTau(clac2, MeshPath("input/cube_tetra_fine.grid"));
 
   const FS_intT marker1 = 2;
   const FS_intT marker2 = 1;
@@ -251,8 +263,8 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexaRotate)
 {
   FSClac clac1, clac2, clac3;
 
-  auto mesh1 = LoadMesh(clac1, MeshPath("input/square_mesh.grid"));
-  auto mesh2 = LoadMesh(clac2, MeshPath("input/square_mesh_rotate.grid"));
+  auto mesh1 = LoadMeshTau(clac1, MeshPath("input/square_mesh.grid"));
+  auto mesh2 = LoadMeshTau(clac2, MeshPath("input/square_mesh_rotate.grid"));
 
   const FS_intT marker1 = 2;
   const FS_intT marker2 = 1;
@@ -276,8 +288,8 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh2Cylinders)
 {
   FSClac clac1, clac2, clac3;
 
-  auto mesh1 = LoadMesh(clac1, MeshPath("input/mesh_cylinder_1.grid"));
-  auto mesh2 = LoadMesh(clac2, MeshPath("input/mesh_cylinder_2.grid"));
+  auto mesh1 = LoadMeshTau(clac1, MeshPath("input/mesh_cylinder_1.grid"));
+  auto mesh2 = LoadMeshTau(clac2, MeshPath("input/mesh_cylinder_2.grid"));
 
   const FS_intT marker1 = 1;
   const FS_intT marker2 = 1;
@@ -295,3 +307,5 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh2Cylinders)
 
   polyMeshExportImport(&clac3, ptr, MeshPath("output/2Cylinders"), 1, false);
 }
+
+_FS_END_NAMESPACE

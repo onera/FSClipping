@@ -57,6 +57,13 @@ public:
      -------------------------------------------------------------- */
   const FSFace& topo() const noexcept { return topo_; }
   const FS_intT& faceIndex() const noexcept { return faceIndex_; }
+
+  // Reset the auto-increment id used by the coordinate-only constructors. Only
+  // meant for unit tests: s_nextId_ is a process-wide static that keeps counting
+  // across TEST bodies run in the same process, so a test asserting on absolute
+  // faceIndex values must reset it in its fixture SetUp to be independent of run
+  // order / execution mode.
+  static void ResetIdCounter() noexcept { s_nextId_ = 0; }
   const FSBoundingBoxFace& boundingBox() const noexcept { return boundingBox_; }
   const std::vector<FSVec3>& vertices() const noexcept { return vertices_; }
   const std::vector<FSVec2>& projected2D() const noexcept { return projected2D_; }

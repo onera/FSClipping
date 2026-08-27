@@ -18,7 +18,7 @@ class FSPolyFaceBuilder
 public:
   FSPolyFaceBuilder(const std::vector<FSFaceMatch>& matches, const FSCell2NodeBuilder& cell2NodeBuilder,
                     const std::unordered_set<GeomFaceKey, GeomFaceKeyHash>& faceKeys, FS_floatT tol = 1e-12)
-    : matches_(matches), cell2NodeBuilder_(cell2NodeBuilder), boundaryFaceKeys_(faceKeys), tol_(tol) {};
+    : matches_(matches), cell2NodeBuilder_(cell2NodeBuilder), boundaryFaceKeys_(faceKeys), tol_(tol){};
 
   void AddInnerFaces(FSMeshEnums::CellType, const FSCellPool& cellPool, FS_intT cell, FS_intT face,
                      const FSFloatArrayT& oldCoords);
@@ -30,6 +30,8 @@ public:
   void Reorienting();
 
   FS_intT LocalCellIndex(FS_intT globalId) const;
+
+  bool HasCell(FS_intT globalId) const;
 
   const std::vector<std::vector<FaceData> >& CellFaces() const noexcept { return cellFaces_; };
 

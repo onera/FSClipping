@@ -11,6 +11,8 @@ FS_intT FSPolyFaceBuilder::LocalCellIndex(FS_intT globalId) const
   return it->second;
 }
 
+bool FSPolyFaceBuilder::HasCell(FS_intT globalId) const { return cellId2L_.find(globalId) != cellId2L_.end(); }
+
 void FSPolyFaceBuilder::CollectMatchesFaces()
 {
   const auto& cellData = cell2NodeBuilder_.CellData();

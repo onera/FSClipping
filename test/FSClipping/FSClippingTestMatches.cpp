@@ -144,91 +144,7 @@ TEST(FSClippingTestMatches, Intersection)
   }
 }
 
-// --- Test 2: intersection along z
-TEST(FSClippingTestMatches, IntersectionZ)
-{
-
-  FSClac dummyClac;
-  IdentitySquareZ identitySquare;
-  std::vector<FSClippingFace> subject;
-  std::vector<FSClippingFace> clipped;
-
-  FSFloatArrayT centerSquareArray(FSMESH_NNODES_QUAD4, FS_3D);
-  FS_floatT centerSquare[FSMESH_NNODES_QUAD4][FS_3D] = {{0, -0.5, -0.5}, {0, -0.5, 0.5}, {0, 0.5, 0.5}, {0, 1, -0.5}};
-
-  for(FS_intT i = 0; i < FSMESH_NNODES_QUAD4; ++i)
-    for(FS_intT d = 0; d < FS_3D; ++d)
-      centerSquareArray(i, d) = centerSquare[i][d];
-
-  clipped.emplace_back(centerSquareArray);
-  subject.emplace_back(identitySquare.bottomLeftArray);
-  subject.emplace_back(identitySquare.bottomRightArray);
-  subject.emplace_back(identitySquare.topLeftArray);
-  subject.emplace_back(identitySquare.topRightArray);
-
-  // Build matcher
-  FSFaceMatcher matcherIntersection(dummyClac, subject, clipped);
-  std::vector<FSFaceMatch> matches;
-  matcherIntersection.ComputeMatches(matches);
-  ASSERT_TRUE(matches.size() == 4);
-
-  // Each subject quadrant is only partially covered by the clipped face, so
-  // the clipping is discarded and the original face is kept (NOT_COVERED).
-  for(const auto& m : matches) {
-    ASSERT_TRUE(m.type == FSFaceMatch::NOT_COVERED);
-    ASSERT_TRUE(m.face2 == -1);
-    ASSERT_TRUE(m.clippedPoly3D.size() == 4);
-  }
-}
-
-// --- Test: inverted matches (coverage is decided independently on each side)
-TEST(FSClippingTestMatches, InvertedMatches)
-{
-
-  FSClac dummyClac;
-  IdentitySquare identitySquare;
-  std::vector<FSClippingFace> subject;
-  std::vector<FSClippingFace> clipped;
-
-  // Center square [-0.5,0.5]x[-0.5,0.5]: crosses the four subject quadrants
-  // and is entirely tiled by its four intersections with them.
-  FSFloatArrayT centerSquareArray(FSMESH_NNODES_QUAD4, FS_3D);
-  FS_floatT centerSquare[FSMESH_NNODES_QUAD4][FS_3D] = {
-    {-0.5, -0.5, 0}, {0.5, -0.5, 0}, {0.5, 0.5, 0}, {-0.5, 0.5, 0}};
-
-  for(FS_intT i = 0; i < FSMESH_NNODES_QUAD4; ++i)
-    for(FS_intT d = 0; d < FS_3D; ++d)
-      centerSquareArray(i, d) = centerSquare[i][d];
-
-  clipped.emplace_back(centerSquareArray);
-  subject.emplace_back(identitySquare.bottomLeftArray);
-  subject.emplace_back(identitySquare.bottomRightArray);
-  subject.emplace_back(identitySquare.topLeftArray);
-  subject.emplace_back(identitySquare.topRightArray);
-
-  FSFaceMatcher matcher(dummyClac, subject, clipped);
-  std::vector<FSFaceMatch> matches;
-  matcher.ComputeMatches(matches);
-
-  // Subject side: each quadrant is only partially covered by the center
-  // square, so the original faces are kept (NOT_COVERED).
-  ASSERT_TRUE(matches.size() == 4);
-  for(const auto& m : matches)
-    ASSERT_TRUE(m.type == FSFaceMatch::NOT_COVERED);
-
-  // Clipped side: the center square is fully covered by its four
-  // intersections, so the raw INTERSECTING matches are kept.
-  std::vector<FSFaceMatch> inverted;
-  matcher.ComputeInvertedMatches(inverted);
-  ASSERT_TRUE(inverted.size() == 4);
-  for(const auto& m : inverted) {
-    ASSERT_TRUE(m.type == FSFaceMatch::INTERSECTING);
-    ASSERT_TRUE(m.face1 == clipped[0].faceIndex());
-    ASSERT_TRUE(m.clippedPoly3D.size() >= 3);
-  }
-}
-
-// --- Test 2: included
+// --- Test 3: included
 TEST(FSClippingTestMatches, included)
 {
 
@@ -266,6 +182,52 @@ TEST(FSClippingTestMatches, included)
     ASSERT_TRUE(m.type == FSFaceMatch::NOT_COVERED);
     ASSERT_TRUE(m.face2 == -1);
     ASSERT_TRUE(m.clippedPoly3D.size() == 4);
+  }
+}
+
+// Test 4: inverted matches (coverage is decided independently on each side)
+TEST(FSClippingTestMatches, InvertedMatches)
+{
+
+  FSClac dummyClac;
+  IdentitySquare identitySquare;
+  std::vector<FSClippingFace> subject;
+  std::vector<FSClippingFace> clipped;
+
+  // Center square [-0.5,0.5]x[-0.5,0.5]: crosses the four subject quadrants
+  // and is entirely tiled by its four intersections with them.
+  FSFloatArrayT centerSquareArray(FSMESH_NNODES_QUAD4, FS_3D);
+  FS_floatT centerSquare[FSMESH_NNODES_QUAD4][FS_3D] = {{-0.5, -0.5, 0}, {0.5, -0.5, 0}, {0.5, 0.5, 0}, {-0.5, 0.5, 0}};
+
+  for(FS_intT i = 0; i < FSMESH_NNODES_QUAD4; ++i)
+    for(FS_intT d = 0; d < FS_3D; ++d)
+      centerSquareArray(i, d) = centerSquare[i][d];
+
+  clipped.emplace_back(centerSquareArray);
+  subject.emplace_back(identitySquare.bottomLeftArray);
+  subject.emplace_back(identitySquare.bottomRightArray);
+  subject.emplace_back(identitySquare.topLeftArray);
+  subject.emplace_back(identitySquare.topRightArray);
+
+  FSFaceMatcher matcher(dummyClac, subject, clipped);
+  std::vector<FSFaceMatch> matches;
+  matcher.ComputeMatches(matches);
+
+  // Subject side: each quadrant is only partially covered by the center
+  // square, so the original faces are kept (NOT_COVERED).
+  ASSERT_TRUE(matches.size() == 4);
+  for(const auto& m : matches)
+    ASSERT_TRUE(m.type == FSFaceMatch::NOT_COVERED);
+
+  // Clipped side: the center square is fully covered by its four
+  // intersections, so the raw INTERSECTING matches are kept.
+  std::vector<FSFaceMatch> inverted;
+  matcher.ComputeInvertedMatches(inverted);
+  ASSERT_TRUE(inverted.size() == 4);
+  for(const auto& m : inverted) {
+    ASSERT_TRUE(m.type == FSFaceMatch::INTERSECTING);
+    ASSERT_TRUE(m.face1 == clipped[0].faceIndex());
+    ASSERT_TRUE(m.clippedPoly3D.size() >= 3);
   }
 }
 

@@ -28,6 +28,10 @@ struct FSTopologyData {
   FSCellType2IntArrayT cellParent;
   FSCellType2IntArrayT cellParentType;
 
+  // Global numbering assigned by the clipper proc
+  FSIntArrayT nodeGlobalNumbers;   // parallel to globalCoords
+  FSIntArrayT poly2DGlobalNumbers; // parallel to the Poly2D cells (match order)
+
   void Send(FSClac& clac, FS_intT destProc);
   void Received(FSClac& clac, FS_intT sourceProc);
 };
@@ -38,7 +42,7 @@ class FSTopologyAssembler
 {
 
 public:
-  explicit FSTopologyAssembler(FS_floatT tol) : tol_(tol), cell2NodeBuilder_(FSCell2NodeBuilder(tol)) {};
+  explicit FSTopologyAssembler(FS_floatT tol) : tol_(tol), cell2NodeBuilder_(FSCell2NodeBuilder(tol)){};
 
   FSTopologyData BuildSurfaceTopo(const std::vector<FSFaceMatch>& matches,
                                   const std::unordered_set<GeomFaceKey, GeomFaceKeyHash>& faceKeys);
@@ -49,8 +53,9 @@ public:
   void AppendUnclippedSurfaces(FSMesh& mesh, const std::unordered_map<FS_intT, std::set<FS_intT> >& bdry2DCells,
                                const FSFloatArrayT& oldCoords, FSTopologyData& topo);
 
-  FSIntArrayT UpdateOldCell2Node(const FSIntArrayT& oldCell2Node, const FSFloatArrayT& oldCoords,
-                                 const std::set<FS_intT>& bdry2DCells, FSIntArrayT& cellParent);
+  FSIntArrayT UpdateOldCell2Node(const FSIntArrayT& oldCell2Node, const FSCellPool& cellPool,
+                                 const FSFloatArrayT& oldCoords, const std::set<FS_intT>& bdry2DCells,
+                                 FSIntArrayT& cellParent);
 
 private:
   void CheckSurfaceWasBuilt() const;

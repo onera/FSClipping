@@ -9,40 +9,40 @@
 
 _FS_BEGIN_NAMESPACE
 
-// Point-to-point exchange of FSClippingFace geometry and FSDM connectivity
-// via the FSClac buffer protocol.
-//
-// Send transmits both vertex geometry and the per-face FSFaceConnectivity
-// (owner cell + neighbor face IDs and types). The received connectivity is
-// used to populate FSFaceMatch topology fields after ComputeMatches so that
-// BuildSurfaceTopo can be called on the clipper proc.
-//
-// Precondition for Send: faces must come from FSBoundaryFaceProvider::Extract
-// (valid _faceFSDM). Geometry-only faces (null topology) are not supported.
+// Exchange of FSClippingFace geometry and FSDM connectivity via FSClac
 namespace FSFaceExchange {
 
 struct ReceivedFaces {
   std::vector<FSClippingFace> faces;
-  std::vector<FSFaceConnectivity> connectivity; // parallel to faces
+  std::vector<FSFaceConnectivity> connectivity;
 };
 
-// Pack face geometry + FSDM connectivity into clac's send buffer and transmit
-// to destProc. destProc must call Receive(clac, thisProc).
-void Send(FSClac& clac, FS_intT destProc, const std::vector<FSClippingFace>& faces);
+struct GatheredFaces {
+  ReceivedFaces faces;
+  std::map<std::pair<FS_intT, FS_intT>, FS_intT> cellToGlobalProc; // <local proc ID, volume cell ID> → global proc ID
+  std::map<FS_intT, FS_intT> localToGlobal;                        // local proc ID → global proc ID
+};
 
-// Receive and unpack faces and their FSDM connectivity from sourceProc.
-ReceivedFaces Receive(FSClac& clac, FS_intT sourceProc);
+struct AllGatheredFaces {
+  GatheredFaces meshA;
+  GatheredFaces meshB;
+};
+
+// Send all the faces (faceIndex, coord[3D], connectivity) of each proc to the only clipperProc (=0)
+void GatherSend(FSClac& clac, FS_intT clipperProc, FS_intT meshID, const std::vector<FSClippingFace>& faces);
+
+// Receive all the faces of each proc (GatherSend) and stored them in the AllGatheredFaces struct
+AllGatheredFaces GatherReceiveAll(FSClac& clac);
 
 } // namespace FSFaceExchange
 
 namespace FSMatchExchange {
 
-// Pack face geometry + FSDM connectivity into clac's send buffer and transmit
-// to destProc. destProc must call Receive(clac, thisProc).
 void Send(FSClac& clac, FS_intT destProc, const std::vector<FSFaceMatch>& matches);
 
-// Receive and unpack faces and their FSDM connectivity from sourceProc.
-std::vector<FSFaceMatch> Receive(FSClac& clac, FS_intT sourceProc);
+void ScatterSend(FSClac& clac, const std::vector<FSFaceMatch>& matches, const FSFaceExchange::GatheredFaces& gatheredA);
+
+std::vector<FSFaceMatch> ScatterReceive(FSClac& clac, FS_intT clipperProc);
 
 } // namespace FSMatchExchange
 

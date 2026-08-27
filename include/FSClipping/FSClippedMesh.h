@@ -36,15 +36,11 @@ protected:
 
   //! Top-level parallel driver: dispatches to proc-specific steps.
   //! Proc 0 = subject, proc 1 = clipper, proc 2 = matcher.
-  bool GenerateClippedMesh(FS_intT meshId, FSClac& meshClac);
-
-  //! Extract boundary faces for the given mesh and boundary marker.
-  bool ExtractBoundaryFaces(FSMesh& mesh, FS_intT marker, BoundaryExtraction& be);
+  bool GenerateClippedMesh(FS_intT meshId);
 
   // --- Members ---
 
   FSClippedMeshParams mParams;
-  FSMeshFaceExtractor mFaceExtractor1, mFaceExtractor2;
 };
 
 _FS_END_NAMESPACE
