@@ -307,3 +307,5 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh2Cylinders)
 
   polyMeshExportImport(&clac3, ptr, MeshPath("output/2Cylinders"), 1, false);
 }
+
+_FS_END_NAMESPACE
