@@ -25,6 +25,11 @@ struct FSFaceMatch {
   FS_intT faceOwner1 = -1;
   FS_intT faceOwner2 = -1;
 
+  // CADGroupID of the surface cell each face closes. faceOwner1/2 index the surface cell pool of the proc that owns
+  // it, which is not necessarily the proc holding the face, so the attribute value has to travel with the match.
+  FS_intT faceMarker1 = -1;
+  FS_intT faceMarker2 = -1;
+
   FSMeshEnums::CellType elemOwnerType1 = FSMeshEnums::CT_Undefined;
   FSMeshEnums::CellType elemOwnerType2 = FSMeshEnums::CT_Undefined;
 

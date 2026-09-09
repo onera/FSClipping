@@ -13,7 +13,7 @@ void GatherSend(FSClac& globalClac, FS_intT clipperProc, FS_intT meshID, const s
   // Header: worldProcID + localProcID + meshID + n_faces
   FSClac::sizeT bufSize = globalClac.GetBufSizeInt32(4);
   for(const auto& f : faces) {
-    bufSize += globalClac.GetBufSizeInt32(2);
+    bufSize += globalClac.GetBufSizeInt32(3); // nVerts, faceIndex, marker
     bufSize += globalClac.GetBufSizeFloat64(static_cast<FSClac::intT>(f.vertices().size()) * 3);
     bufSize += f.topo()._faceFSDM->GetBufSize(globalClac);
   }
@@ -31,6 +31,8 @@ void GatherSend(FSClac& globalClac, FS_intT clipperProc, FS_intT meshID, const s
     globalClac.Pack(&nv, 1);
     FS_intT faceIndex = f.faceIndex();
     globalClac.Pack(&faceIndex, 1);
+    FS_intT marker = f.marker(); // the surface cell may be owned elsewhere, so its CADGroupID travels with the face
+    globalClac.Pack(&marker, 1);
     for(const auto& v : f.vertices()) {
       FS_float64T coords[3] = {v[0], v[1], v[2]};
       globalClac.Pack(coords, 3);
@@ -49,6 +51,7 @@ AllGatheredFaces GatherReceiveAll(FSClac& globalClac)
   // 1 - Receive raw data from every non-clipper proc.
   struct RawFace {
     FS_intT faceIndex;
+    FS_intT marker;
     FSFloatArrayT coords;
     FSFaceConnectivity conn;
     FS_intT originGlobalProc;
@@ -87,6 +90,7 @@ AllGatheredFaces GatherReceiveAll(FSClac& globalClac)
       FS_intT nVerts = 0;
       globalClac.Unpack(&nVerts, 1);
       globalClac.Unpack(&raw.faceIndex, 1);
+      globalClac.Unpack(&raw.marker, 1);
       raw.coords = FSFloatArrayT(nVerts, FS_3D);
       for(FS_intT v = 0; v < nVerts; ++v) {
         FS_float64T coords[3];
@@ -128,7 +132,7 @@ AllGatheredFaces GatherReceiveAll(FSClac& globalClac)
     for(auto& raw : msg.faces) {
       g.cellToGlobalProc[{raw.conn.mOwner.mCellProcID, raw.conn.mOwner.mCell}] = raw.originGlobalProc;
       g.faces.connectivity.push_back(raw.conn);
-      g.faces.faces.emplace_back(FSFace(g.faces.connectivity.back()), nextIndex++, raw.coords);
+      g.faces.faces.emplace_back(FSFace(g.faces.connectivity.back()), nextIndex++, raw.coords, raw.marker);
     }
   }
 

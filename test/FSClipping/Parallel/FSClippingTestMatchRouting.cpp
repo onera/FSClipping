@@ -51,7 +51,7 @@ void AddFace(FaceSet& set, FS_intT ownerCell, FS_intT ownerProc, FS_floatT x0, F
   FSCellFace owner(ownerProc, ownerCell, FSMeshEnums::CellType::CT_Hexa8, FSMeshEnums::CellType::CT_Quad4, 0);
   FSCellFace neighbor;
   set.connectivity.emplace_back(owner, neighbor);
-  set.faces.emplace_back(FSFace(set.connectivity.back()), ownerCell, MakeQuad(x0, y0));
+  set.faces.emplace_back(FSFace(set.connectivity.back()), ownerCell, MakeQuad(x0, y0), -1);
 }
 
 // Geometry layout shared by the tests below.

@@ -32,6 +32,11 @@ struct FSTopologyData {
   FSIntArrayT nodeGlobalNumbers;   // parallel to globalCoords
   FSIntArrayT poly2DGlobalNumbers; // parallel to the Poly2D cells (match order)
 
+  // CADGroupID of each Poly2D, parallel to the Poly2D cells. cellParent indexes the surface cell pool of whichever
+  // proc owns that cell, so when the partitioner split the pair the value cannot be read back locally and is carried
+  // here instead.
+  FSIntArrayT poly2DMarkers;
+
   void Send(FSClac& clac, FS_intT destProc);
   void Received(FSClac& clac, FS_intT sourceProc);
 };

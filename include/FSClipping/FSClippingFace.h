@@ -1,6 +1,7 @@
 #ifndef FSCLIPPINGFACE_H
 #define FSCLIPPINGFACE_H
 
+#include "FSBoundaryFace.h"
 #include "FSFace.h"
 #include "FSMeshFaceExtractor.h"
 
@@ -36,8 +37,17 @@ public:
   /* --------------------------------------------------------------
      Constructors
      -------------------------------------------------------------- */
-  explicit FSClippingFace(const FSFace& face, const FS_intT faceIndex, const FSFloatArrayT& faceNodeCoordinates)
-    : topo_(face), faceIndex_(faceIndex)
+  explicit FSClippingFace(const FSBoundaryFace& face, const FS_intT faceIndex,
+                          const FSFloatArrayT& faceNodeCoordinates)
+    : topo_(face), faceIndex_(faceIndex), marker_(face._marker)
+  {
+    buildGeometry(faceNodeCoordinates);
+  };
+
+  /// Constructor for a face rebuilt from a remote proc, whose marker travelled with it.
+  explicit FSClippingFace(const FSFace& face, const FS_intT faceIndex, const FSFloatArrayT& faceNodeCoordinates,
+                          const FS_intT marker)
+    : topo_(face), faceIndex_(faceIndex), marker_(marker)
   {
     buildGeometry(faceNodeCoordinates);
   };
@@ -56,6 +66,8 @@ public:
      Public read-only accessors
      -------------------------------------------------------------- */
   const FSFace& topo() const noexcept { return topo_; }
+  /// FSDM boundary marker of the surface cell closing this face, -1 when unknown.
+  FS_intT marker() const noexcept { return marker_; }
   const FS_intT& faceIndex() const noexcept { return faceIndex_; }
 
   // Reset the auto-increment id used by the coordinate-only constructors. Only
@@ -102,6 +114,7 @@ private:
      -------------------------------------------------------------- */
   const FSFace topo_;                    // immutable wrapper to the FSDM connectivity
   const FS_intT faceIndex_;              // global index of the face
+  FS_intT marker_ = -1;                  // CADGroupID of the surface cell, carried so it survives a proc boundary
   FSBoundingBoxFace boundingBox_;        // axis-aligned bounding box
   static std::atomic<FS_intT> s_nextId_; // auto-increment id used by coordinate-only constructors (unit tests)
   std::vector<FSVec3> vertices_;         // 3D vertices
