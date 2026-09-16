@@ -186,8 +186,7 @@ void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshData
 
     const FS_intT offset = meshDataOriginal.GetCellPool(parentCellType)->GetOffset();
 
-    // A Poly2D born from a match on a volume/surface pair split by the partitioner has a parent owned by another
-    // proc, so its index cannot be resolved against the local pool. Its CADGroupID travelled with the match instead.
+    // A Poly2D born from a match on a volume/surface pair split by the partitioner has a parent owned by another proc
     static const FSString attrCADGroupIDName = FSEnums::AttributeTypeToString(FSEnums::AT_CADGroupID);
     const bool isPoly2D = (FSMeshEnums::Int2CellType(cellType) == FSMeshEnums::CellType::CT_Poly2D);
     const bool hasCarriedMarkers = isPoly2D && topo.poly2DMarkers.Size() == numCells;
@@ -204,8 +203,7 @@ void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshData
         for(FS_intT i = 0; i < numCells; ++i) {
           const FS_intT localId = parentArray[i] - offset;
           if(localId < 0 || localId >= valuesOrig.Size()) {
-            // Parent owned by another proc and no carried value for this attribute: leave it unset rather than
-            // reading past the local pool.
+            // Parent owned by another proc and no carried value for this attribute.
             valuesNew[i] = -1;
             continue;
           }

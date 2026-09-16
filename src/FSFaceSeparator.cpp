@@ -50,15 +50,6 @@ SurfaceCellAttributes ReadSurfaceCellAttributes(const FSUnstructMeshData& meshDa
 }
 
 /// Orders a separated/external boundary face by the volume/surface cell pair it belongs to.
-/**
- * A pair split by the partitioner is reported on both procs with owner and neighbor swapped, so FSDMs own face
- * ordering -- by (owner, neighbor) -- ranks the two halves differently. Keying on the pair as seen from the volume
- * side instead makes both procs agree on the order, which is what lets the exchange below match faces by position.
- *
- * @param face The face connectivity to build a key for.
- * @param ownerIsVolume true for an external boundary face (volume cell is the owner), false for a separated one.
- * @return The ordering key: volume proc and cell, then surface proc and cell.
- */
 std::tuple<FS_intT, FS_intT, FS_intT, FS_intT> VolumeSidePairKey(const FSFaceConnectivity& face, bool ownerIsVolume)
 {
   const FSCellFace& volume = ownerIsVolume ? face.mOwner : face.mNeighbor;
@@ -67,28 +58,6 @@ std::tuple<FS_intT, FS_intT, FS_intT, FS_intT> VolumeSidePairKey(const FSFaceCon
 }
 
 /// Sends the marker of the separated boundary faces to the procs owning their volume cell.
-/**
- * The partitioner may place a volume cell and the surface cell closing it on different procs. The face extractor then
- * reports that pair on both procs, with owner and neighbor swapped: on the surface cell's proc as a *separated*
- * boundary face (surface cell as owner, so its marker is readable locally), and on the volume cell's proc as an
- * *external* boundary face (surface cell as a remote neighbor, so its marker is not readable at all). Neither half is
- * usable on its own, and keeping only the locally complete pairs drops such faces on both procs, which makes the set
- * of extracted faces depend on the partitioning.
- *
- * The face is therefore kept on the volume's proc -- the side the clipping works on -- and only the marker travels.
- * Every separated face is sent, whatever its marker, so that both sides hold the same faces in the same order and the
- * n-th face sent to a proc is the n-th face that proc expects from us; the receiving side then keeps only the clipped
- * marker.
- *
- * The sends are non-blocking, because two procs may each hold separated faces for the other and blocking sends on
- * both sides would deadlock before either reaches its receive loop.
- *
- * @param clac The FSDM MPI communications handler object.
- * @param sepBdryFaces The local separated boundary faces, sorted by VolumeSidePairKey().
- * @param extBdryFaces The local external boundary faces, sorted by VolumeSidePairKey().
- * @param markerBoundaryClipped The FSDM boundary marker of the interface being clipped.
- * @param[out] bdryFaces Receives the external boundary faces whose remote marker is the clipped one.
- */
 void ExchangeSeparatedBdryFaces(FSClac& clac, const std::vector<FSBoundaryFace>& sepBdryFaces,
                                 const std::vector<FSFace>& extBdryFaces, const FS_intT markerBoundaryClipped,
                                 std::vector<FSBoundaryFace>& bdryFaces)
@@ -97,8 +66,7 @@ void ExchangeSeparatedBdryFaces(FSClac& clac, const std::vector<FSBoundaryFace>&
   std::map<FS_intT, FSClac::sizeT> proc2sendSize;
   for(const auto& sbf : sepBdryFaces) {
     assert(sbf._faceFSDM->mNeighbor.mCellProcID != -1);
-    proc2sendSize[sbf._faceFSDM->mNeighbor.mCellProcID] +=
-      sbf._faceFSDM->GetBufSize(clac) + clac.GetBufSizeInt32(2);
+    proc2sendSize[sbf._faceFSDM->mNeighbor.mCellProcID] += sbf._faceFSDM->GetBufSize(clac) + clac.GetBufSizeInt32(2);
   }
 
   STLIntSetT destProcs;
@@ -169,9 +137,12 @@ void SeparateFaces(const FSMesh& fsmesh, const FSMeshFaceExtractor& faceExtracto
   assert(fsmesh.GetMeshData());
   const FSUnstructMeshData& meshData = fsmesh.GetMeshData()->GetUnstructCells();
 
-  // The two halves of a volume/surface pair split by the partitioner. Neither is usable on its own: the separated
-  // side holds the marker, the external side holds the face the clipping needs. ExchangeSeparatedBdryFaces() matches
-  // them, so these lists never leave this function.
+  /*
+  The two halves of a volume/surface pair split by the partitioner. Neither is usable on its own: the separated
+   side holds the marker, the external side holds the face the clipping needs. ExchangeSeparatedBdryFaces() matches
+   them, so these lists never leave this function.
+  */
+
   // Locally used, but external (i.e. located somewhere remote) FSDM bdry faces.
   std::vector<FSFace> extBdryFaces;
   // Separated local FSDM bdry faces, i.e. owner element somewhere remote.
@@ -217,7 +188,7 @@ void SeparateFaces(const FSMesh& fsmesh, const FSMeshFaceExtractor& faceExtracto
   });
 
   if(fsmesh.GetClac()->GetNProcs() > 1) {
-    // check there are as many local(ly) separated boundary faces as there are external boundary faces somewhere remote
+    // check there are as many local separated boundary faces as there are external boundary faces somewhere remote
     auto missingBdryFaces = static_cast<FS_int32T>(extBdryFaces.size() - sepBdryFaces.size()); // possibly != 0
     fsmesh.GetClac()->SumInPlace(&missingBdryFaces, 1);
     assert(missingBdryFaces == 0);
@@ -225,10 +196,7 @@ void SeparateFaces(const FSMesh& fsmesh, const FSMeshFaceExtractor& faceExtracto
     ExchangeSeparatedBdryFaces(*fsmesh.GetClac(), sepBdryFaces, extBdryFaces, markerBoundaryClipped, bdryFaces);
   }
 
-  // order the faces according to FSDM cell number of the owner and neighbor
-  // cell, since their original order in the face extractor is implementation
-  // defined (but currently depends on the hash of the node number(s)
-  // referenced)
+  // order the faces according to FSDM cell number of the owner and neighbor cell
   std::sort(bdryFaces.begin(), bdryFaces.end());
 }
 

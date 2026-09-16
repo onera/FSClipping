@@ -11,7 +11,6 @@ FSClac::sizeT FSFaceMatch::GetBufSize(FSClac& clac) const
 {
   FSClac::sizeT s = 0;
   // face1, face2, elemOwner1/2, ownerProc1/2, faceOwner1/2, faceMarker1/2, 4 CellTypes, type
-  // → 15 FS_intT
   s += clac.GetBufSizeInt32(15);
   // intersectedArea → 1 FS_float64T
   s += clac.GetBufSizeFloat64(1);

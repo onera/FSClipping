@@ -20,7 +20,7 @@ nProcMesh1 = 3
 nProcMesh2 = 2
 
 if(nProcMesh1 + nProcMesh2 != nTotalProc - 1) :
-    FSError.PrintAndExit()
+    FSError.PrintAndExit("Wrong number of mpi process were chosen.")
 
 procID = globalClac.WorldProcID()
 meshID = MeshID(procID, nProcMesh1)

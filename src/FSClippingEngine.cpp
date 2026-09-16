@@ -17,12 +17,7 @@ FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtra
   // const FS_intT master = mesh.GetClac()->GetProcID();
   FSTopologyAssembler topologyAssembler(tol_);
   FSTopologyData surfaceTopology = topologyAssembler.BuildSurfaceTopo(matches, be.faceKeys);
-  // FS_int32T nProc = static_cast<FS_int32T>(1);
-  // std::vector<FS_int32T> countsProc(mesh.GetClac()->NProcs(), 0);
-  // mesh.GetClac()->AllGather(&nProc, 1, countsProc.data(), 1);
-  // FS_intT numProc = std::accumulate(countsProc.begin(), countsProc.end(), 0);
-  // if(!master)
-  //   std::cout << "Surfacique done" << numProc << std::endl;
+
   if(mode == Mode::Surface)
     return surfaceTopology;
 
@@ -78,8 +73,6 @@ FSMesh FSClippingEngine::Reconstruct(FSClac& clac, FSMesh& meshOriginal, FSTopol
 bool FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_floatT tol)
 {
   auto allGathered = FSFaceExchange::GatherReceiveAll(globalClac);
-  std::cout << "Nb faces mesh A :" << allGathered.meshA.faces.faces.size() << std::endl;
-  std::cout << "Nb faces mesh B :" << allGathered.meshB.faces.faces.size() << std::endl;
   if(allGathered.meshA.faces.faces.empty() || allGathered.meshB.faces.faces.empty())
     return false;
 
@@ -98,7 +91,6 @@ bool FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_
   matcher.ComputeInvertedMatches(matches);
   FSFaceMatcher::AssignGlobalNodeIds(matches, tol);
   FSMatchExchange::ScatterSend(globalClac, matches, allGathered.meshB);
-  std::cout << "Nb matches clipper proc :" << matches.size() << std::endl;
   return true;
 }
 

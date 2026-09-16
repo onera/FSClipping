@@ -1,11 +1,12 @@
-// Attributes of the clipped Poly2D cells, run at exactly 9 MPI procs:
-// rank 0 = clipper, ranks 1..8 split between the two meshes. 9 procs is the smallest count at which RCB splits a
-// volume/surface pair on these meshes, which is what this test is about.
-//
-// A Poly2D is born from a match, and its parent is the surface cell the matched face closes. When RCB splits a
-// volume/surface pair, that parent is owned by another proc: its index means nothing in the local pool, so the
-// CADGroupID cannot be read back locally and has to travel with the match. Without that, the copy either reads an
-// unrelated local cell or runs past the end of the pool.
+/*
+Attributes of the clipped Poly2D cells, run at exactly 9 MPI procs. It is the smallest count at which RCB splits a
+volume/surface pair on these meshes, which is what this test is about.
+
+A Poly2D is born from a match, and its parent is the surface cell the matched face closes. When RCB splits a
+volume/surface pair, that parent is owned by another proc: its index means nothing in the local pool, so the
+CADGroupID cannot be read back locally and has to travel with the match. Without that, the copy either reads an
+unrelated local cell or runs past the end of the pool.
+*/
 
 #include "FSClipping/FSClippedMesh.h"
 #include "FSClipping/FSClippedMeshParams.h"
@@ -87,8 +88,7 @@ TEST(FSClippingTestPoly2DAttributesPar, ClippedFacesKeepTheirCADGroupID)
   FS_int32T totalWrong = 0;
   clac.Sum(&localWrong, &totalWrong, 1);
 
-  // Every clipped face lies on the clipped boundary, so all Poly2D must carry that marker -- those whose parent
-  // surface cell was left on another proc included.
+  // Every clipped face lies on the clipped boundary, so all Poly2D must carry that marker
   EXPECT_EQ(totalWrong, 0);
 }
 

@@ -2,8 +2,8 @@
 //
 // The number of faces extracted on a boundary marker is a property of the mesh, so summing it over all procs must
 // give the same total whatever the partitioning. RCB partitions volume and surface cells independently, so a
-// hexahedron and the quad closing it can land on different procs. Such a pair is reported twice by the face extractor
-// -- once on the volume's proc (surface neighbour remote) and once on the surface's proc (surface cell as owner) --
+// hexahedron and the quad closing it can land on different procs. Such a pair is reported twice by the face extractor :
+// once on the volume's proc (surface neighbour remote) and once on the surface's proc (surface cell as owner)
 // and must end up in the extraction exactly once.
 //
 // cube_hexa_coarse_par.grid has 16 faces on marker 6, and 4 procs is the smallest count at which RCB actually splits
@@ -46,8 +46,6 @@ TEST(FSClippingTestBoundaryExtractionPar, FaceCountIsPartitionIndependent)
   FS_int32T totalFaces = 0;
   clac.Sum(&localFaces, &totalFaces, 1);
 
-  // A volume/surface pair split across two procs must still be extracted, otherwise the total silently drops below
-  // the sequential reference.
   EXPECT_EQ(totalFaces, sExpectedFaceCount);
 }
 

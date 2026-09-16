@@ -33,8 +33,8 @@ BoundaryExtraction FSBoundaryFaceProvider::Extract(FSMesh& mesh, FSMeshFaceExtra
     result.faces.emplace_back(f, faceIndex, faceCoordinates);
 
     result.volumeCells[f._faceFSDM->mOwner.mCellType].insert(f._faceFSDM->mOwner.mCell);
-    // Only a local surface cell may be listed here: the set is used to drop the clipped cells from this proc's
-    // surface pools, and a remote cell index would collide with an unrelated local one.
+
+    // Only a local surface cell may be listed here
     if(f._faceFSDM->mNeighbor.mCellProcID == procID)
       result.surfaceCells[f._faceFSDM->mNeighbor.mCellType].insert(f._faceFSDM->mNeighbor.mCell);
   }
