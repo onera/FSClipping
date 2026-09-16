@@ -50,6 +50,7 @@ FSTopologyData FSTopologyAssembler::BuildSurfaceTopo(const std::vector<FSFaceMat
   for(const auto& f : matches) {
     cellParentPoly2D.Append(f.faceOwner1);
     cellParentPolyType.Append(f.faceOwnerType1);
+    result.poly2DMarkers.Append(f.faceMarker1);
   }
   result.cellParent[FSMeshEnums::CellType::CT_Poly2D] = std::move(cellParentPoly2D);
   result.cellParentType[FSMeshEnums::CellType::CT_Poly2D] = std::move(cellParentPolyType);

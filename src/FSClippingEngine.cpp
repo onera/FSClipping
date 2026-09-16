@@ -2,6 +2,7 @@
 #include "FSClipping/FSFaceExchange.h"
 #include "FSClipping/FSMeshReconstruction.h"
 #include <FSMeshData.h>
+#include <numeric>
 
 _FS_BEGIN_NAMESPACE
 
@@ -13,6 +14,7 @@ _FS_BEGIN_NAMESPACE
 FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtraction& be,
                                                const std::vector<FSFaceMatch>& matches, Mode mode)
 {
+  // const FS_intT master = mesh.GetClac()->GetProcID();
   FSTopologyAssembler topologyAssembler(tol_);
   FSTopologyData surfaceTopology = topologyAssembler.BuildSurfaceTopo(matches, be.faceKeys);
   if(mode == Mode::Surface)
@@ -37,14 +39,13 @@ FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtra
       topologyAssembler.BuildVolumeTopo(cell2Node, bdryCellPool, *cellPool, oldCoords, volumeTopology);
     }
   }
-
   topologyAssembler.AppendUnclippedSurfaces(mesh, be.surfaceCells, oldCoords, volumeTopology);
-
   volumeTopology.cellParent[FSMeshEnums::CellType::CT_Poly2D] =
     surfaceTopology.cellParent[FSMeshEnums::CellType::CT_Poly2D];
   volumeTopology.cellParentType[FSMeshEnums::CellType::CT_Poly2D] =
     surfaceTopology.cellParentType[FSMeshEnums::CellType::CT_Poly2D];
   volumeTopology.poly2DGlobalNumbers = surfaceTopology.poly2DGlobalNumbers;
+  volumeTopology.poly2DMarkers = surfaceTopology.poly2DMarkers;
 
   return volumeTopology;
 }
@@ -71,7 +72,6 @@ FSMesh FSClippingEngine::Reconstruct(FSClac& clac, FSMesh& meshOriginal, FSTopol
 bool FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_floatT tol)
 {
   auto allGathered = FSFaceExchange::GatherReceiveAll(globalClac);
-
   if(allGathered.meshA.faces.faces.empty() || allGathered.meshB.faces.faces.empty())
     return false;
 
@@ -90,7 +90,6 @@ bool FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_
   matcher.ComputeInvertedMatches(matches);
   FSFaceMatcher::AssignGlobalNodeIds(matches, tol);
   FSMatchExchange::ScatterSend(globalClac, matches, allGathered.meshB);
-
   return true;
 }
 

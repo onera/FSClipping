@@ -32,6 +32,9 @@ struct FSTopologyData {
   FSIntArrayT nodeGlobalNumbers;   // parallel to globalCoords
   FSIntArrayT poly2DGlobalNumbers; // parallel to the Poly2D cells (match order)
 
+  // CADGroupID of each Poly2D
+  FSIntArrayT poly2DMarkers;
+
   void Send(FSClac& clac, FS_intT destProc);
   void Received(FSClac& clac, FS_intT sourceProc);
 };

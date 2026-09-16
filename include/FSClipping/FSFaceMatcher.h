@@ -25,6 +25,10 @@ struct FSFaceMatch {
   FS_intT faceOwner1 = -1;
   FS_intT faceOwner2 = -1;
 
+  // CADGroupID of the surface cell each face closes
+  FS_intT faceMarker1 = -1;
+  FS_intT faceMarker2 = -1;
+
   FSMeshEnums::CellType elemOwnerType1 = FSMeshEnums::CT_Undefined;
   FSMeshEnums::CellType elemOwnerType2 = FSMeshEnums::CT_Undefined;
 
