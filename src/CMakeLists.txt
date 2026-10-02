@@ -17,6 +17,7 @@ add_library(fsclipping SHARED   FSClippingUtil.cpp
                                 FSClippingEngine.cpp
                                 FSClippingInterface.cpp
                                 FSFaceExchange.cpp
+                                FSCellSource.cpp
                                 FSClippedMeshParams.cpp
                                 FSClippedMesh.cpp)
 
@@ -49,7 +50,6 @@ target_link_libraries(fsclipping
 set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSBoundaryFace.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSFaceMatcher.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSCellAdress.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippingUtil.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSFace.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSFaceSeparator.h
@@ -61,6 +61,7 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippingEngine.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippingInterface.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSFaceExchange.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSCellSource.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippedMeshParams.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippedMeshParams.i
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippedMesh.h
