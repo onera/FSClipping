@@ -12,15 +12,11 @@ class FSClippingInterface
 {
 public:
   FSClippingInterface(FSClac& clac1, FSClac& clac2, FS_floatT tol, FS_intT markerMesh1, FS_intT markerMesh2)
-    : clac1_(clac1), clac2_(clac2), tol_(tol), boundaryMarkerMesh1_(markerMesh1), boundaryMarkerMesh2_(markerMesh2) {};
+    : clac1_(clac1), clac2_(clac2), tol_(tol), boundaryMarkerMesh1_(markerMesh1), boundaryMarkerMesh2_(markerMesh2){};
 
-  FSMesh BuildSurfaceInterface(FSMesh& mesh1, FSMesh& mesh2);
-
-  FSMesh BuildVolumeInterface(FSMesh& mesh1, FSMesh& mesh2);
+  FSMesh BuildInterface(FSMesh& mesh1, FSMesh& mesh2);
 
 private:
-  FSMesh BuildInterface(FSMesh& mesh1, FSMesh& mesh2, FSClippingEngine::Mode mode);
-
   FSClac& clac1_;
   FSClac& clac2_;
   FS_floatT tol_;

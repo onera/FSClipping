@@ -144,7 +144,7 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
 
     // 4 - Reconstruct the topologie of the entire mesh in parrallel
     FSClippingEngine engine(mParams.mTol);
-    FSTopologyData meshClippedTopo = engine.BuildTopology(*mesh, be, matches, FSClippingEngine::Mode::Volume);
+    FSTopologyData meshClippedTopo = engine.BuildTopology(*mesh, be, matches);
 
     // 5 - Construct the new clipped mesh
     *meshClipped = engine.Reconstruct(*mesh->GetClac(), *mesh, meshClippedTopo, true);

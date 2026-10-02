@@ -12,13 +12,11 @@ _FS_BEGIN_NAMESPACE
 //
 
 FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtraction& be,
-                                               const std::vector<FSFaceMatch>& matches, Mode mode)
+                                               const std::vector<FSFaceMatch>& matches)
 {
   // const FS_intT master = mesh.GetClac()->GetProcID();
   FSTopologyAssembler topologyAssembler(tol_);
   FSTopologyData surfaceTopology = topologyAssembler.BuildSurfaceTopo(matches, be.faceKeys);
-  if(mode == Mode::Surface)
-    return surfaceTopology;
 
   FSFloatArrayT oldCoords;
   FS_intT nodeOffset;
