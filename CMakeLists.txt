@@ -15,11 +15,6 @@ project(FSClipping
         LANGUAGES CXX
         DESCRIPTION "Sutherland‑Hodgman clipping for two FSMesh")
 
-# --------------------------------------------------------------
-# Options 
-# --------------------------------------------------------------
-option(FSCLIPPING_BUILD_TESTS "Compile unit tests" OFF)
-
 # Installation directory prefix
 # Users can override this via -DCMAKE_INSTALL_PREFIX=/path at configure time
 if(NOT CMAKE_INSTALL_PREFIX)
@@ -91,6 +86,7 @@ add_subdirectory(py)
 # --------------------------------------------------------------
 include(CTest)
 if (BUILD_TESTING)
+    message(STATUS "Enabling building of C++ tests")
     add_subdirectory(thirdparty/gtest-gmock-1.14.0)
     add_subdirectory(test)
 endif ()
