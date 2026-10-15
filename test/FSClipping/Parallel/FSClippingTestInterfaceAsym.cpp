@@ -16,6 +16,7 @@ static constexpr FS_intT kNMesh1 = 2; // mesh 1 gets 2 procs, mesh 2 gets 3
 
 TEST(FSClippingTestInterfaceParAsym, CubeVolume)
 {
+  TempDir tmpDir;
   FSClac globalClac(MPI_COMM_WORLD);
   FS_intT procId = globalClac.GetProcID();
 
@@ -74,13 +75,14 @@ TEST(FSClippingTestInterfaceParAsym, CubeVolume)
       ptr->GetUnstructCells().CreateLocalNumbering();
     polyMeshExtractFaces(ptr->GetUnstructCells());
     polyMeshExportImport(&clac, ptr,
-                         MeshPath(meshID == 1 ? "cube_clipped_vol_coarse_asym" : "output/cube_clipped_vol_fine_asym"),
+                         TempMeshPath(meshID == 1 ? "cube_clipped_vol_coarse_asym" : "cube_clipped_vol_fine_asym", tmpDir),
                          1, true);
   }
 }
 
 TEST(FSClippingTestInterfaceParAsym, TwoCylindersVolume)
 {
+  TempDir tmpDir;
   FSClac globalClac(MPI_COMM_WORLD);
   FS_intT procId = globalClac.GetProcID();
 
@@ -139,7 +141,7 @@ TEST(FSClippingTestInterfaceParAsym, TwoCylindersVolume)
       ptr->GetUnstructCells().CreateLocalNumbering();
     polyMeshExtractFaces(ptr->GetUnstructCells());
     polyMeshExportImport(
-      &clac, ptr, MeshPath(meshID == 1 ? "output/cyl1_clipped_vol_asym" : "output/cyl2_clipped_vol_asym"), 1, true);
+      &clac, ptr, TempMeshPath(meshID == 1 ? "cyl1_clipped_vol_asym" : "cyl2_clipped_vol_asym", tmpDir), 1, true);
   }
 
   // VTK part if you want export
