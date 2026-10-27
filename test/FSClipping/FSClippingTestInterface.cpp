@@ -186,6 +186,7 @@ void CheckMesh(FSClac& clac, FSMeshData* meshData)
 
 TEST(FSClippingTestInterface, ReconstructClippedMesh2DHexaHexa)
 {
+  TempDir tmpDir;
   FSClac clac1, clac2, clac3;
 
   auto mesh1 = LoadMeshTau(clac1, MeshPath("input/cube_hexa_coarse.grid"));
@@ -206,11 +207,12 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh2DHexaHexa)
 
   polyMeshExtractFaces(ptr->GetUnstructCells());
 
-  polyMeshExportImport(&clac3, ptr, MeshPath("output/cube2D_clipped_HexaHexa"), 1, false);
+  polyMeshExportImport(&clac3, ptr, TempMeshPath("cube2D_clipped_HexaHexa", tmpDir), 1, false);
 }
 
 TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexa)
 {
+  TempDir tmpDir;
   FSClac clac1, clac2, clac3;
 
   auto mesh1 = LoadMeshTau(clac1, MeshPath("input/cube_hexa_coarse.grid"));
@@ -231,11 +233,12 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexa)
 
   polyMeshExtractFaces(ptr->GetUnstructCells());
 
-  polyMeshExportImport(&clac3, ptr, MeshPath("output/cube3D_clipped_HexaHexa"), 1, false);
+  polyMeshExportImport(&clac3, ptr, TempMeshPath("cube3D_clipped_HexaHexa", tmpDir), 1, false);
 }
 
 TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
 {
+  TempDir tmpDir;
   FSClac clac1, clac2, clac3;
 
   auto mesh1 = LoadMeshTau(clac1, MeshPath("input/cube_hexa_coarse.grid"));
@@ -256,11 +259,12 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaTetra)
 
   polyMeshExtractFaces(ptr->GetUnstructCells());
 
-  polyMeshExportImport(&clac3, ptr, MeshPath("output/cube3D_clipped_HexaTetra"), 1, false);
+  polyMeshExportImport(&clac3, ptr, TempMeshPath("cube3D_clipped_HexaTetra", tmpDir), 1, false);
 }
 
 TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexaRotate)
 {
+  TempDir tmpDir;
   FSClac clac1, clac2, clac3;
 
   auto mesh1 = LoadMeshTau(clac1, MeshPath("input/square_mesh.grid"));
@@ -281,11 +285,12 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh3DHexaHexaRotate)
 
   polyMeshExtractFaces(ptr->GetUnstructCells());
 
-  polyMeshExportImport(&clac3, ptr, MeshPath("output/cube3D_clipped_HexaHexaRotate"), 1, false);
+  polyMeshExportImport(&clac3, ptr, TempMeshPath("cube3D_clipped_HexaHexaRotate", tmpDir), 1, false);
 }
 
 TEST(FSClippingTestInterface, ReconstructClippedMesh2Cylinders)
 {
+  TempDir tmpDir;
   FSClac clac1, clac2, clac3;
 
   auto mesh1 = LoadMeshTau(clac1, MeshPath("input/mesh_cylinder_1.grid"));
@@ -305,7 +310,7 @@ TEST(FSClippingTestInterface, ReconstructClippedMesh2Cylinders)
 
   polyMeshExtractFaces(ptr->GetUnstructCells());
 
-  polyMeshExportImport(&clac3, ptr, MeshPath("output/2Cylinders"), 1, false);
+  polyMeshExportImport(&clac3, ptr, TempMeshPath("2Cylinders", tmpDir), 1, false);
 }
 
 _FS_END_NAMESPACE
