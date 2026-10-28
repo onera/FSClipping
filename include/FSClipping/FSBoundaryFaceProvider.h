@@ -5,8 +5,8 @@
 
 #include "FSClipping/FSClippingFace.h"
 
-#include <set>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 _FS_BEGIN_NAMESPACE
@@ -14,9 +14,7 @@ _FS_BEGIN_NAMESPACE
 struct BoundaryExtraction {
   std::vector<FSClippingFace> faces;
   std::unordered_map<FS_intT, std::vector<FS_intT> > cell2BoundaryFaces; // cell ID -> local faces on the boundary
-
-  std::unordered_map<FS_intT, std::set<FS_intT> > volumeCells;
-  std::unordered_map<FS_intT, std::set<FS_intT> > surfaceCells;
+  std::unordered_set<FS_intT> surfaceCells;                               // local surface cells on the boundary (IDs unique across types)
 };
 
 class FSBoundaryFaceProvider

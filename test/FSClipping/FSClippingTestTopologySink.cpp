@@ -186,7 +186,7 @@ protected:
       mock::MakeMatch(Cell(t), t, {{0.5, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0.5, 1, 0}}, {100, 11, 12, 101}));
     be.cell2BoundaryFaces[Cell(t)].push_back(LocalFace(t, {0, 1, 2, 3}));
     // The Quad4 closing that face is replaced by the match polygons, as FSBoundaryFaceProvider records it
-    be.surfaceCells[FSMeshEnums::CT_Quad4].insert(Cell(FSMeshEnums::CT_Quad4));
+    be.surfaceCells.insert(Cell(FSMeshEnums::CT_Quad4));
   }
 
   // Fields the clipper fills on each match: Poly2D global number, closed surface cell and its carried marker
