@@ -30,10 +30,7 @@ FSCellClipped::FSCellClipped(const std::vector<FSFaceMatch>& matches, const Boun
 
 bool FSCellClipped::IsBoundarySurface(FS_intT surfaceCell) const
 {
-  for(const auto& t : be_.surfaceCells)
-    if(t.second.contains(surfaceCell))
-      return true;
-  return false;
+  return be_.surfaceCells.contains(surfaceCell);
 }
 
 bool FSCellClipped::IsBoundaryFace(FS_intT cell, FS_intT localFace) const

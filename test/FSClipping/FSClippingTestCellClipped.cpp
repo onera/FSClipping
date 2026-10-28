@@ -29,8 +29,7 @@ BoundaryExtraction Boundary()
 {
   BoundaryExtraction be;
   be.cell2BoundaryFaces = {{kCorner, {0, 3}}, {kSide, {2}}};
-  be.volumeCells = {{FSMeshEnums::CT_Hexa8, {kCorner}}, {FSMeshEnums::CT_Tetra4, {kSide}}};
-  be.surfaceCells = {{FSMeshEnums::CT_Quad4, {kQuad}}, {FSMeshEnums::CT_Tri3, {kTri}}};
+  be.surfaceCells = {kQuad, kTri};
   return be;
 }
 

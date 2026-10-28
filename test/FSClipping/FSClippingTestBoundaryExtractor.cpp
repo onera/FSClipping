@@ -32,11 +32,7 @@ protected:
   FSMesh mesh = mock::BuildMixedMesh(clac);
 };
 
-FS_intT NCells(const std::unordered_map<FS_intT, std::set<FS_intT> >& cells, FSMeshEnums::CellType t)
-{
-  auto it = cells.find(FS_intT(t));
-  return it == cells.end() ? 0 : FS_intT(it->second.size());
-}
+FS_intT Cell(const FSMesh& mesh, FSMeshEnums::CellType t) { return mock::Offset(mesh, t); }
 
 } // namespace
 
@@ -54,12 +50,12 @@ TEST_F(FSClippingTestBoundaryFaceProvider, QuadAndPoly2DOnHexa)
   BoundaryExtraction be = Extract(1);
 
   EXPECT_EQ(be.faces.size(), 2u);
-  EXPECT_EQ(be.volumeCells.size(), 1u);
-  EXPECT_EQ(NCells(be.volumeCells, FSMeshEnums::CT_Hexa8), 1);
-  EXPECT_EQ(NCells(be.surfaceCells, FSMeshEnums::CT_Quad4), 1);
-  EXPECT_EQ(NCells(be.surfaceCells, FSMeshEnums::CT_Poly2D), 1);
   ASSERT_EQ(be.cell2BoundaryFaces.size(), 1u);
-  EXPECT_EQ(be.cell2BoundaryFaces.begin()->second.size(), 2u);
+  ASSERT_TRUE(be.cell2BoundaryFaces.contains(Cell(mesh, FSMeshEnums::CT_Hexa8)));
+  EXPECT_EQ(be.cell2BoundaryFaces.at(Cell(mesh, FSMeshEnums::CT_Hexa8)).size(), 2u);
+  EXPECT_EQ(be.surfaceCells.size(), 2u);
+  EXPECT_TRUE(be.surfaceCells.contains(Cell(mesh, FSMeshEnums::CT_Quad4)));
+  EXPECT_TRUE(be.surfaceCells.contains(Cell(mesh, FSMeshEnums::CT_Poly2D)));
 }
 
 TEST_F(FSClippingTestBoundaryFaceProvider, TriOnTetra)
@@ -67,10 +63,10 @@ TEST_F(FSClippingTestBoundaryFaceProvider, TriOnTetra)
   BoundaryExtraction be = Extract(2);
 
   EXPECT_EQ(be.faces.size(), 1u);
-  EXPECT_EQ(be.volumeCells.size(), 1u);
-  EXPECT_EQ(NCells(be.volumeCells, FSMeshEnums::CT_Tetra4), 1);
+  ASSERT_EQ(be.cell2BoundaryFaces.size(), 1u);
+  EXPECT_TRUE(be.cell2BoundaryFaces.contains(Cell(mesh, FSMeshEnums::CT_Tetra4)));
   EXPECT_EQ(be.surfaceCells.size(), 1u);
-  EXPECT_EQ(NCells(be.surfaceCells, FSMeshEnums::CT_Tri3), 1);
+  EXPECT_TRUE(be.surfaceCells.contains(Cell(mesh, FSMeshEnums::CT_Tri3)));
 }
 
 TEST_F(FSClippingTestBoundaryFaceProvider, UnknownMarkerGivesNothing)
@@ -78,7 +74,7 @@ TEST_F(FSClippingTestBoundaryFaceProvider, UnknownMarkerGivesNothing)
   BoundaryExtraction be = Extract(3);
 
   EXPECT_TRUE(be.faces.empty());
-  EXPECT_TRUE(be.volumeCells.empty());
+  EXPECT_TRUE(be.cell2BoundaryFaces.empty());
   EXPECT_TRUE(be.surfaceCells.empty());
 }
 

@@ -57,11 +57,9 @@ struct FSFaceMatch {
 
   // Global numbering of each node of a match
   std::vector<FS_intT> nodeGlobalIds;
-  // On peut pas creer cette liste dans le Cell2NodeBuilder ?
 
   // Global ID of the future Poly2D cell
   FS_intT globalCellId = -1;
-  // Meme remarque, la numerotation globale ne peut pas etre faite dans Cell2NodeBuilder ?
 
   FSClac::sizeT GetBufSize(FSClac& clac) const;
   void Pack(FSClac& clac);

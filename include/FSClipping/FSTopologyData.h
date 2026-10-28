@@ -26,9 +26,6 @@ struct FSTopologyData {
 
   // CADGroupID of each Poly2D
   FSIntArrayT poly2DMarkers;
-
-  void Send(FSClac& clac, FS_intT destProc);
-  void Received(FSClac& clac, FS_intT sourceProc);
 };
 
 _FS_END_NAMESPACE
