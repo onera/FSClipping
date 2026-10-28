@@ -6,6 +6,10 @@ add_library(GTest::gtest_mpi_main ALIAS gtest_mpi_parallel_main)
 add_compile_definitions(FS_TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/test/Mesh")
 include(GoogleTest)
 
+# Detect available logical processors at configure time so that
+# parallel tests can be auto-disabled when the hardware cannot run them.
+cmake_host_system_information(RESULT AVAILABLE_CORES QUERY NUMBER_OF_LOGICAL_CORES)
+
 # Sequential tests — 1 proc
 add_executable(FSClippingTest FSClipping/FSClippingTestGeo.cpp
                               FSClipping/FSClippingTestBoundaryExtractor.cpp
@@ -50,10 +54,18 @@ function(add_parallel_test nproc)
                                               ${CMAKE_CURRENT_SOURCE_DIR}/FSClipping/Parallel)
   set_property(TARGET ${target}
                PROPERTY CROSSCOMPILING_EMULATOR '${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${nproc}')
+  if(AVAILABLE_CORES AND AVAILABLE_CORES LESS nproc)
+    # Doc on DIASBLED https://cmake.org/cmake/help/latest/prop_test/DISABLED.html
+    message(STATUS "Disabling ${target}: requires ${nproc} cores but only ${AVAILABLE_CORES} available")
+    set(_discover_props "LABELS;CppUnitTests;DISABLED;TRUE")
+  else()
+    set(_discover_props "LABELS;CppUnitTests")
+  endif()
+  # DISCOVERY_MODE PRE_TEST seems to solve issue related to "mpirun -np 1 cmd"
   gtest_discover_tests(${target}
     TEST_PREFIX "np${nproc}."
     DISCOVERY_TIMEOUT 40
-    PROPERTIES LABELS "CppUnitTests")
+    PROPERTIES ${_discover_props})
 endfunction()
 
 add_parallel_test(3 FSClipping/Parallel/FSClippingTestMatchesSendReceive.cpp)
