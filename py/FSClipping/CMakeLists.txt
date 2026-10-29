@@ -61,14 +61,20 @@ foreach(python_file IN ITEMS __init__.py)
                  COPYONLY)
 endforeach()
 
+# The module lives in <libdir>/pythonX.Y/site-packages/FSClipping, three levels below the library
+if(APPLE)
+  set(module_origin "@loader_path")
+else()
+  set(module_origin "$ORIGIN")
+endif()
 set_target_properties(
   ${swig_module_target} PROPERTIES INSTALL_RPATH
-                                   "$ORIGIN/../../../;${CMAKE_INSTALL_RPATH}")
+                                   "${module_origin}/../../../;${CMAKE_INSTALL_RPATH}")
 
 cmake_path(
   APPEND
   python_install_dir
-  "lib"
+  "${CMAKE_INSTALL_LIBDIR}"
   "python${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}"
   "site-packages"
   "${package_name}"

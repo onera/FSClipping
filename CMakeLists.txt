@@ -1,7 +1,7 @@
 # --------------------------------------------------------------
 # Root CMakeLists.txt – project entry point
 # --------------------------------------------------------------
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.22)  # ENVIRONMENT_MODIFICATION for tests
 
 if(NOT CMAKE_CXX_COMPILER)
     find_program(MPICXX mpicxx)

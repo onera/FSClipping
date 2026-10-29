@@ -6,6 +6,14 @@ add_library(GTest::gtest_mpi_main ALIAS gtest_mpi_parallel_main)
 add_compile_definitions(FS_TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/test/Mesh")
 include(GoogleTest)
 
+# Tests must load the build-tree library, even when an installed one is on the loader path
+if(APPLE)
+  set(loader_path_var DYLD_LIBRARY_PATH)
+else()
+  set(loader_path_var LD_LIBRARY_PATH)
+endif()
+set(build_lib_env "${loader_path_var}=path_list_prepend:${PROJECT_BINARY_DIR}/src")
+
 # Sequential tests — 1 proc
 add_executable(FSClippingTest FSClipping/FSClippingTestGeo.cpp
                               FSClipping/FSClippingTestBoundaryExtractor.cpp
@@ -20,13 +28,13 @@ add_executable(FSClippingTest FSClipping/FSClippingTestGeo.cpp
                               FSClipping/FSClippingTestCellAttributes.cpp)
 target_link_libraries(FSClippingTest PUBLIC GTest::gtest_mpi_main fsclipping::fsclipping)
 set_property(TARGET FSClippingTest PROPERTY CROSSCOMPILING_EMULATOR '${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 1')
-gtest_discover_tests(FSClippingTest DISCOVERY_TIMEOUT 20 PROPERTIES LABELS "CppUnitTests")
+gtest_discover_tests(FSClippingTest DISCOVERY_TIMEOUT 20 PROPERTIES LABELS "CppUnitTests" ENVIRONMENT_MODIFICATION "${build_lib_env}")
 
 # Death tests end in MPI_Abort, which kills the whole job under mpiexec: run them as an MPI singleton
 add_executable(FSClippingDeathTest FSClipping/FSClippingTestCellClipped.cpp
                                    FSClipping/FSClippingTestNodeRegistry.cpp)
 target_link_libraries(FSClippingDeathTest PUBLIC GTest::gtest_mpi_main fsclipping::fsclipping)
-gtest_discover_tests(FSClippingDeathTest DISCOVERY_TIMEOUT 20 TEST_FILTER "*Death*" PROPERTIES LABELS "CppUnitTests")
+gtest_discover_tests(FSClippingDeathTest DISCOVERY_TIMEOUT 20 TEST_FILTER "*Death*" PROPERTIES LABELS "CppUnitTests" ENVIRONMENT_MODIFICATION "${build_lib_env}")
 
 # Parallel tests — one executable per MPI proc count, each launched at exactly
 # that proc count. gtest_discover_tests reads the proc count from the target's
@@ -53,7 +61,7 @@ function(add_parallel_test nproc)
   gtest_discover_tests(${target}
     TEST_PREFIX "np${nproc}."
     DISCOVERY_TIMEOUT 40
-    PROPERTIES LABELS "CppUnitTests")
+    PROPERTIES LABELS "CppUnitTests" ENVIRONMENT_MODIFICATION "${build_lib_env}")
 endfunction()
 
 add_parallel_test(3 FSClipping/Parallel/FSClippingTestMatchesSendReceive.cpp)
@@ -65,12 +73,12 @@ add_parallel_test(6 FSClipping/Parallel/FSClippingTestInterfaceAsym.cpp)
 
 # Python examples, run against the module of the build tree (build/py) rather than the installed one
 set(example_dir ${CMAKE_SOURCE_DIR}/example/meshOp)
-set(example_env "PYTHONPATH=${CMAKE_BINARY_DIR}/py:$ENV{PYTHONPATH}")
+set(example_env "PYTHONPATH=path_list_prepend:${PROJECT_BINARY_DIR}/py" "${build_lib_env}")
 
 add_test(NAME example.checkForDataManagerOp
          COMMAND ${Python_EXECUTABLE} ${example_dir}/checkForDataManagerOp.py)
 set_tests_properties(example.checkForDataManagerOp PROPERTIES
-                     ENVIRONMENT "${example_env}"
+                     ENVIRONMENT_MODIFICATION "${example_env}"
                      PASS_REGULAR_EXPRESSION "FSClippedMesh is registered : *True"
                      LABELS "PythonExamples")
 
@@ -78,6 +86,6 @@ add_test(NAME example.howToComputeClippedMesh
          COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 6 ${Python_EXECUTABLE}
                  ${example_dir}/howToComputeClippedMesh.py)
 set_tests_properties(example.howToComputeClippedMesh PROPERTIES
-                     ENVIRONMENT "${example_env}"
+                     ENVIRONMENT_MODIFICATION "${example_env}"
                      FAIL_REGULAR_EXPRESSION "\\*\\*\\* ERROR \\*\\*\\*"
                      LABELS "PythonExamples")
