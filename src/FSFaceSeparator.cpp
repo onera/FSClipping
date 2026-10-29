@@ -152,7 +152,7 @@ void SeparateFaces(const FSMesh& fsmesh, const FSMeshFaceExtractor& faceExtracto
     const auto& face = faceExtractor.GetFaceConnectivity(i);
     assert(face.mOwner.mCellProcID == procID);
     assert(face.mOwner.mCell >= 0);
-    const FSCellPool* ownerCellPool = meshData.GetCellPool(face.mOwner.mCellType);
+    [[maybe_unused]] const FSCellPool* ownerCellPool = meshData.GetCellPool(face.mOwner.mCellType);
     assert(ownerCellPool);
     assert(ownerCellPool->IsOwned(face.mOwner.mCell));
 
