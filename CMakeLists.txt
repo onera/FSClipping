@@ -94,6 +94,9 @@ endif ()
 # --------------------------------------------------------------
 # Install a pkg‑config file so that other projects can link against us
 # --------------------------------------------------------------
+# Define linker flags for the pkg-config file
+set(LINK_FLAGS "-lfsclipping")
+
 configure_file(tools/fsclipping.pc.in
                ${CMAKE_CURRENT_BINARY_DIR}/fsclipping.pc @ONLY)
 
