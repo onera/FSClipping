@@ -7,11 +7,11 @@
 class RootOnlyPrinter : public ::testing::EmptyTestEventListener {
  public:
   explicit RootOnlyPrinter(bool is_root_process) :
-      _is_root_process{is_root_process},
       _printer{::testing::UnitTest::GetInstance()->listeners().Release(
           ::testing::UnitTest::GetInstance()->listeners().default_result_printer())},
       _xml_printer{::testing::UnitTest::GetInstance()->listeners().Release(
-          ::testing::UnitTest::GetInstance()->listeners().default_xml_generator())} {}
+          ::testing::UnitTest::GetInstance()->listeners().default_xml_generator())},
+      _is_root_process{is_root_process} {}
 
   ~RootOnlyPrinter() override {
     delete _printer;
