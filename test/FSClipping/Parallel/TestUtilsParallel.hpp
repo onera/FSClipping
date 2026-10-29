@@ -60,7 +60,6 @@ inline FS_intT AsymMeshID(FS_intT procId, FS_intT nMesh1)
 inline void exportMeshVTK(FSClac* clac, FSMeshData* meshDataPtr, const FSString& filenamePrefix,
                           bool filePerProcess = true)
 {
-  const FS_intT procID = FSCLAC_PROCID(clac);
   FSMeshExportFilterVTK exportFilterVTK(clac);
   FSMeshExportParamsVTK exportParamsVTK;
   exportParamsVTK.mMeshFilename = filenamePrefix + FSString(".vtk");
