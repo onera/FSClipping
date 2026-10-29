@@ -51,6 +51,7 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSBoundaryFace.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSFaceMatcher.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippingUtil.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSClippingFace.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSFace.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSFaceSeparator.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSBoundaryFaceProvider.h
