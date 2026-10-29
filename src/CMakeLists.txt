@@ -14,6 +14,7 @@ add_library(fsclipping SHARED   FSClippingUtil.cpp
                                 FSClippedMeshParams.cpp
                                 FSClippedMesh.cpp)
 add_library(fsclipping::fsclipping ALIAS fsclipping)
+fs_enable_warnings(fsclipping)
 
 target_include_directories(fsclipping
     PUBLIC
