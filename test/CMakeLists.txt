@@ -86,10 +86,16 @@ set_tests_properties(example.checkForDataManagerOp PROPERTIES
                      PASS_REGULAR_EXPRESSION "FSClippedMesh is registered : *True"
                      LABELS "PythonExamples")
 
+set(nproc 6)
 add_test(NAME example.howToComputeClippedMesh
-         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 6 ${Python_EXECUTABLE}
+         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${nproc} ${Python_EXECUTABLE}
                  ${example_dir}/howToComputeClippedMesh.py)
 set_tests_properties(example.howToComputeClippedMesh PROPERTIES
                      ENVIRONMENT "${example_env}"
                      FAIL_REGULAR_EXPRESSION "\\*\\*\\* ERROR \\*\\*\\*"
                      LABELS "PythonExamples")
+if(AVAILABLE_CORES AND AVAILABLE_CORES LESS nproc)
+  # Doc on DIASBLED https://cmake.org/cmake/help/latest/prop_test/DISABLED.html
+  message(STATUS "Disabling test example.howToComputeClippedMesh: requires ${nproc} cores but only ${AVAILABLE_CORES} available")
+  set_tests_properties(example.howToComputeClippedMesh PROPERTIES DISABLED TRUE)
+endif()
