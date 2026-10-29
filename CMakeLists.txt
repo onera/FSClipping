@@ -43,6 +43,13 @@ endif ()
 
 include(GNUInstallDirs)
 
+option(FSCLIPPING_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+# Warnings on our own targets only, not on gtest nor the SWIG-generated code
+function(fs_enable_warnings tgt)
+    target_compile_options(${tgt} PRIVATE -Wall -Wextra -Wpedantic
+                           $<$<BOOL:${FSCLIPPING_WARNINGS_AS_ERRORS}>:-Werror>)
+endfunction()
+
 add_subdirectory(src)
 add_subdirectory(py)
 

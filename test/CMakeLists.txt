@@ -1,6 +1,7 @@
 add_library(gtest_mpi_parallel_main SHARED)
 target_sources(gtest_mpi_parallel_main PRIVATE gtest_mpi_parallel_main.cpp)
 target_link_libraries(gtest_mpi_parallel_main PUBLIC GTest::gtest_mpi)
+fs_enable_warnings(gtest_mpi_parallel_main)
 add_library(GTest::gtest_mpi_main ALIAS gtest_mpi_parallel_main)
 
 include(GoogleTest)
@@ -32,6 +33,7 @@ add_executable(FSClippingTest FSClipping/FSClippingTestGeo.cpp
                               FSClipping/FSClippingTestCellAttributes.cpp)
 target_link_libraries(FSClippingTest PUBLIC GTest::gtest_mpi_main fsclipping::fsclipping)
 target_compile_definitions(FSClippingTest PRIVATE FS_TEST_DATA_DIR="${test_data_dir}")
+fs_enable_warnings(FSClippingTest)
 set_property(TARGET FSClippingTest PROPERTY CROSSCOMPILING_EMULATOR '${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 1')
 gtest_discover_tests(FSClippingTest DISCOVERY_TIMEOUT 20 PROPERTIES LABELS "CppUnitTests" ENVIRONMENT_MODIFICATION "${build_lib_env}")
 
@@ -41,6 +43,7 @@ function(add_parallel_test nproc)
   add_executable(${target} ${ARGN})
   target_link_libraries(${target} PUBLIC GTest::gtest_mpi_main fsclipping::fsclipping)
   target_compile_definitions(${target} PRIVATE FS_TEST_DATA_DIR="${test_data_dir}")
+  fs_enable_warnings(${target})
   target_include_directories(${target} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/FSClipping
                                               ${CMAKE_CURRENT_SOURCE_DIR}/FSClipping/Parallel)
   set_property(TARGET ${target}
