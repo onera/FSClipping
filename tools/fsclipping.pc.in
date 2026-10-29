@@ -9,4 +9,4 @@ Version: @PROJECT_VERSION@
 Cflags: -I${includedir}
 Libs: -L${libdir} @LINK_FLAGS@
 
-Requires: fsdm = @FSDM_VERSION@
+Requires: fsdm >= @FSDM_MIN_VERSION@

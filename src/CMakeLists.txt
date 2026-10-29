@@ -31,8 +31,6 @@ target_include_directories(fsclipping
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>   # for the installed package
-        ${FSDM_INCLUDE_DIRS}
-        ${Python_INCLUDE_DIRS}
 )
 
 # --------------------------------------------------------------
@@ -92,7 +90,21 @@ install(TARGETS fsclipping
 # (Optional) Export a CMake package configuration so other projects can
 # find this library with `find_package(fsclipping CONFIG)`
 # --------------------------------------------------------------
+set(config_install_dir ${CMAKE_INSTALL_LIBDIR}/cmake/fsclipping)
+
 install(EXPORT fsclippingTargets
         FILE fsclippingTargets.cmake
         NAMESPACE fsclipping::
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/fsclipping)
+        DESTINATION ${config_install_dir})
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(${PROJECT_SOURCE_DIR}/tools/fsclippingConfig.cmake.in
+                              ${CMAKE_CURRENT_BINARY_DIR}/fsclippingConfig.cmake
+                              INSTALL_DESTINATION ${config_install_dir})
+# 0.x: any minor bump may break the API
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/fsclippingConfigVersion.cmake
+                                 VERSION ${PROJECT_VERSION}
+                                 COMPATIBILITY SameMinorVersion)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fsclippingConfig.cmake
+              ${CMAKE_CURRENT_BINARY_DIR}/fsclippingConfigVersion.cmake
+        DESTINATION ${config_install_dir})
