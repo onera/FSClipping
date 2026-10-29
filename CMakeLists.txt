@@ -30,6 +30,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)          # no compiler‑specific extensions
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)   # for clang‑tidy, VSCode, etc.
 
+# Optimized with debug symbols unless the user chooses otherwise
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Build type" FORCE)
+endif()
+
 # --------------------------------------------------------------
 # External dependencies
 # --------------------------------------------------------------
