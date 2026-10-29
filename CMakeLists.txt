@@ -57,6 +57,12 @@ include(CTest)
 if (BUILD_TESTING)
     message(STATUS "Enabling building of C++ tests")
     add_subdirectory(thirdparty/gtest-gmock-1.14.0)
+    # Recent clang warns by default inside the vendored gtest, which we do not modify
+    include(CheckCXXCompilerFlag)
+    check_cxx_compiler_flag(-Wcharacter-conversion HAS_WCHARACTER_CONVERSION)
+    if(HAS_WCHARACTER_CONVERSION)
+        target_compile_options(gtest_mpi PRIVATE -Wno-character-conversion)
+    endif()
     add_subdirectory(test)
 endif ()
 

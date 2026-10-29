@@ -30,7 +30,7 @@ void FSTopologySink::AddPoly3D(const FSCellSource& src, FS_intT cell)
 {
   // Row seeded with the original one, so the local face indices are kept
   row_ = src.Row(cell);
-  const std::size_t nRow = row_.size();
+  [[maybe_unused]] const std::size_t nRow = row_.size();
 
   AppendPolyhedron(
     src.NFaces(cell), [&](FS_intT f) { return src.NFaceCorners(cell, f); },
