@@ -1,0 +1,11 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(MPI COMPONENTS CXX)
+find_dependency(PkgConfig)
+if(NOT TARGET PkgConfig::FSDM)
+    pkg_check_modules(FSDM REQUIRED IMPORTED_TARGET "fsdm >= @FSDM_MIN_VERSION@")
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/fsclippingTargets.cmake")
+check_required_components(fsclipping)

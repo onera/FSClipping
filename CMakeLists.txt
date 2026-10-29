@@ -35,7 +35,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)   # for clang‑tidy, VSCode, etc.
 # --------------------------------------------------------------
 # 1) FSDM ≥ 25.08 (pkg‑config)
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(FSDM REQUIRED IMPORTED_TARGET "fsdm >= 25.08")
+set(FSDM_MIN_VERSION 25.08)
+pkg_check_modules(FSDM REQUIRED IMPORTED_TARGET "fsdm >= ${FSDM_MIN_VERSION}")
 message(STATUS "Found FSDM v${FSDM_VERSION}")
 
 # 2) MPI (OpenMPI 4.0+)
