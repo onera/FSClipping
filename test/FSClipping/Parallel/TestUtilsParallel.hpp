@@ -90,6 +90,9 @@ inline void polyMeshRepartition(FSClac* clac, FSMeshData* meshDataPtr)
 inline void polyMeshExtractFaces(FSUnstructMeshData& unstructMeshData)
 {
   bool success;
+
+  unstructMeshData.CreateLocalNumbering();
+
   FSMeshFaceExtractor fex;
   // don't match remote faces, keep pseudo-cells
   success = fex.PrepareFaceConnectivity(unstructMeshData, false, false);

@@ -4,6 +4,8 @@
 #include "FSClipping/FSTopologyData.h"
 #include <FSMesh.h>
 #include <FSUnstructMeshData.h>
+#include <map>
+#include <set>
 
 
 _FS_BEGIN_NAMESPACE
@@ -32,8 +34,8 @@ private:
   void RemapToDistributedNumbering(FSTopologyData& topo, std::vector<FS_intT>& ownedLocalRows,
                                    FSIntArrayT& ownedGlobalNumbers);
 
-  // Numbers the Poly2D without global number (-1, original ones) after the match polygons 0..M-1, in rank order
-  void NumberOriginalPoly2D(FSTopologyData& topo);
+  // Union over the procs of the attribute names of each output cell type
+  void UniteAttributeNames(std::map<FSMeshEnums::CellType, std::set<FSString>>& namesOf);
 
   FSClac& clac_;
   FS_floatT tol_;

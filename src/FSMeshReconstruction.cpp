@@ -5,7 +5,30 @@
 #include <cassert>
 #include <map>
 #include <set>
+#include <sstream>
 #include <unordered_map>
+
+namespace {
+
+// A Poly cell may have parents of different types: resolve the parent type cell by cell
+FSMeshEnums::CellType ParentTypeOf(const FSTopologyData& topo, FSMeshEnums::CellType outType, FS_intT i)
+{
+  if(!FSMeshEnums::IsPolyCellType(outType))
+    return outType;
+  return FSMeshEnums::Int2CellType(topo.cellParentType.at(outType)[i]);
+}
+
+// FSDM rejects an empty values array: an empty pool gets its attribute from the fill overload
+void InitIntCellAttribute(FSUnstructMeshData& meshData, const FSString& name, FSMeshEnums::CellType t,
+                          FSIntArrayT& values)
+{
+  if(values.Size() == 0)
+    meshData.InitCellAttribute(name, t, 1, -1);
+  else
+    meshData.InitCellAttribute(name, t, values);
+}
+
+} // namespace
 
 FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData)
 {
@@ -78,11 +101,6 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
       }
     }
   }
-  // Poly2D global numbers come from the clipper's match numbering, original Poly2D follow
-  NumberOriginalPoly2D(topologyData);
-  if(!topologyData.poly2DGlobalNumbers.IsEmpty())
-    unstructMeshData.InitCellAttribute(globalNumberName, FSMeshEnums::CT_Poly2D, topologyData.poly2DGlobalNumbers);
-
   CopyCellAttributes(meshDataOriginal, topologyData, unstructMeshData);
 
   success = meshClipped.IsInitialized();
@@ -161,57 +179,51 @@ void FSMeshReconstruction::RemapToDistributedNumbering(FSTopologyData& topo, std
   }
 }
 
-void FSMeshReconstruction::NumberOriginalPoly2D(FSTopologyData& topo)
+void FSMeshReconstruction::UniteAttributeNames(std::map<FSMeshEnums::CellType, std::set<FSString>>& namesOf)
 {
-  FSIntArrayT& globalNumbers = topo.poly2DGlobalNumbers;
-
-  // Local number of matches (max id + 1) and of Poly2D to number
-  FS_int32T local[2] = {0, 0};
-  for(FS_intT i = 0; i < globalNumbers.Size(); ++i) {
-    if(globalNumbers[i] >= 0)
-      local[0] = std::max(local[0], static_cast<FS_int32T>(globalNumbers[i] + 1));
-    else
-      ++local[1];
-  }
-
   const FS_intT nProcs = clac_.GetNProcs();
-  std::vector<FS_int32T> all(2 * nProcs);
-  clac_.AllGather(local, 2, all.data(), 2);
+  if(nProcs == 1)
+    return;
 
-  // Matches take 0..M-1 on every proc, then each proc gets a contiguous range in rank order
-  FS_intT next = 0;
-  for(FS_intT p = 0; p < nProcs; ++p)
-    next = std::max(next, static_cast<FS_intT>(all[2 * p]));
-  for(FS_intT p = 0; p < clac_.GetProcID(); ++p)
-    next += all[2 * p + 1];
+  // One "type name" line per attribute, names hold no whitespace
+  std::string local;
+  for(const auto& [type, names] : namesOf)
+    for(const FSString& name : names)
+      local += std::to_string(static_cast<FS_intT>(type)) + ' ' + name + '\n';
 
-  for(FS_intT i = 0; i < globalNumbers.Size(); ++i)
-    if(globalNumbers[i] < 0)
-      globalNumbers[i] = next++;
+  FS_int32T localSize = static_cast<FS_int32T>(local.size());
+  std::vector<FS_int32T> sizes(nProcs);
+  clac_.AllGather(&localSize, 1, sizes.data(), 1);
+
+  for(FS_intT p = 0; p < nProcs; ++p) {
+    if(sizes[p] == 0)
+      continue;
+    std::string buf = (p == clac_.GetProcID()) ? local : std::string(sizes[p], '\0');
+    clac_.Broadcast(buf.data(), sizes[p], p);
+
+    std::istringstream in(buf);
+    FS_intT type;
+    std::string name;
+    while(in >> type >> name)
+      namesOf[FSMeshEnums::Int2CellType(type)].insert(FSString(name));
+  }
 }
 
 void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshDataOriginal, const FSTopologyData& topo,
                                               FSUnstructMeshData& meshDataNew)
 {
+  // Pool offset of each parent type present, per output type
+  std::map<FSMeshEnums::CellType, std::map<FSMeshEnums::CellType, FS_intT>> offsetsOf;
+  // Union of the attribute names of those parent types, per output type
+  std::map<FSMeshEnums::CellType, std::set<FSString>> attribNamesOf;
+
   for(const auto& [cellType, parentArray] : topo.cellParent) {
-    const FS_intT numCells = parentArray.Size();
+    const FSMeshEnums::CellType outType = FSMeshEnums::CellType(cellType);
+    auto& offsetOf = offsetsOf[outType];
+    auto& attribNames = attribNamesOf[outType];
 
-    if(numCells == 0)
-      continue;
-
-    // A Poly cell may have parents of different types: resolve the parent type cell by cell
-    const bool isPoly = FSMeshEnums::IsPolyCellType(cellType);
-    const FSIntArrayT* parentTypes = isPoly ? &topo.cellParentType.at(cellType) : nullptr;
-    assert(!isPoly || parentTypes->Size() == numCells);
-    auto parentTypeOf = [&](FS_intT i) {
-      return isPoly ? FSMeshEnums::Int2CellType((*parentTypes)[i]) : FSMeshEnums::CellType(cellType);
-    };
-
-    // Pool offset of each parent type present, and the union of their attribute names
-    std::map<FSMeshEnums::CellType, FS_intT> offsetOf;
-    std::set<FSString> attribNames;
-    for(FS_intT i = 0; i < numCells; ++i) {
-      const FSMeshEnums::CellType t = parentTypeOf(i);
+    for(FS_intT i = 0; i < parentArray.Size(); ++i) {
+      const FSMeshEnums::CellType t = ParentTypeOf(topo, outType, i);
       if(offsetOf.contains(t))
         continue;
       // Undefined parent type, or no pool of that type on this proc: nothing to read
@@ -223,14 +235,29 @@ void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshData
       for(FSStringArrayT::ConstIterator AI = names.BeginConst(); AI.IsValid(); ++AI)
         attribNames.insert(*AI);
     }
+  }
 
-    // Global numbers are set by the reconstruction, never inherited from the parent
+  // Same attributes on every proc, including those with no cell of a type
+  UniteAttributeNames(attribNamesOf);
+
+  static const FSIntArrayT noParent;
+  for(auto& [outType, attribNames] : attribNamesOf) {
+    // The type has no pool in the new mesh on this proc: nothing to carry the attribute
+    if(!meshDataNew.GetCellPool(outType))
+      continue;
+
+    const auto parentIt = topo.cellParent.find(outType);
+    const FSIntArrayT& parentArray = (parentIt != topo.cellParent.end()) ? parentIt->second : noParent;
+    const FS_intT numCells = parentArray.Size();
+    const auto& offsetOf = offsetsOf[outType];
+
+    // Never inherit the global number: several clipped cells may share one parent
     static const FSString attrGlobalNumberName = FSMeshEnums::AttributeTypeToString(FSMeshEnums::AT_GlobalNumber);
     attribNames.erase(attrGlobalNumberName);
 
     // A Poly2D born from a match on a volume/surface pair split by the partitioner has a parent owned by another proc
     static const FSString attrCADGroupIDName = FSEnums::AttributeTypeToString(FSEnums::AT_CADGroupID);
-    const bool isPoly2D = (FSMeshEnums::Int2CellType(cellType) == FSMeshEnums::CellType::CT_Poly2D);
+    const bool isPoly2D = (outType == FSMeshEnums::CellType::CT_Poly2D);
     const bool hasCarriedMarkers = isPoly2D && topo.poly2DMarkers.Size() == numCells;
 
     for(const FSString& name : attribNames) {
@@ -249,7 +276,7 @@ void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshData
           valuesNew[i] = topo.poly2DMarkers[i];
           continue;
         }
-        const auto it = valuesOf.find(parentTypeOf(i));
+        const auto it = valuesOf.find(ParentTypeOf(topo, outType, i));
         const FSIntArrayT* valuesOrig = (it != valuesOf.end()) ? it->second : nullptr;
         const FS_intT localId = valuesOrig ? parentArray[i] - offsetOf.at(it->first) : -1;
         // Parent owned by another proc, without local pool, or attribute missing on its type: no value to copy
@@ -260,7 +287,7 @@ void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshData
         valuesNew[i] = (*valuesOrig)[localId];
       }
 
-      meshDataNew.InitCellAttribute(name, cellType, valuesNew);
+      InitIntCellAttribute(meshDataNew, name, outType, valuesNew);
 
       if(meshDataOriginal.HasCellAttributeValueNames(name)) {
         meshDataNew.SetCellAttributeValueNames(name, meshDataOriginal.GetCellAttributeValueNames(name));

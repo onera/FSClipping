@@ -23,10 +23,9 @@ FSClac::sizeT FSFaceMatch::GetBufSize(FSClac& clac) const
   // clippedPoly3D_face2 (face2 frame): size + n * 3 coords
   s += clac.GetBufSizeInt32(1);
   s += clac.GetBufSizeFloat64(static_cast<FSClac::intT>(clippedPoly3D_face2.size()) * 3);
-  // nodeGlobalIds: size + n ints ; globalCellId: 1 int
+  // nodeGlobalIds: size + n ints
   s += clac.GetBufSizeInt32(1);
   s += clac.GetBufSizeInt32(static_cast<FSClac::intT>(nodeGlobalIds.size()));
-  s += clac.GetBufSizeInt32(1);
   return s;
 }
 
@@ -85,7 +84,6 @@ void FSFaceMatch::Pack(FSClac& clac)
   clac.Pack(&nIds);
   for(auto& id : nodeGlobalIds)
     clac.Pack(&id);
-  clac.Pack(&globalCellId);
 }
 
 void FSFaceMatch::Unpack(FSClac& clac)
@@ -154,7 +152,6 @@ void FSFaceMatch::Unpack(FSClac& clac)
   nodeGlobalIds.resize(nIds);
   for(auto& id : nodeGlobalIds)
     clac.Unpack(&id);
-  clac.Unpack(&globalCellId);
 }
 
 bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1, const FSClippingFace& f2, FSFaceMatch& out) const
@@ -316,7 +313,6 @@ FS_intT FSFaceMatcher::AssignGlobalNodeIds(std::vector<FSFaceMatch>& matches, FS
 
   for(std::size_t m = 0; m < matches.size(); ++m) {
     auto& match = matches[m];
-    match.globalCellId = static_cast<FS_intT>(m);
 
     match.nodeGlobalIds.resize(match.clippedPoly3D.size());
     for(std::size_t i = 0; i < match.clippedPoly3D.size(); ++i) {
