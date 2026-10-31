@@ -13,7 +13,7 @@ Given two meshes and one boundary marker on each, it computes the intersection o
 
 ## Requirements
 
-- CMake ≥ 3.20
+- CMake ≥ 3.22
 - A C++20 compiler
 - MPI (OpenMPI ≥ 4.0)
 - FSDM ≥ 25.08 (found through `pkg-config`)
