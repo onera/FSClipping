@@ -22,7 +22,6 @@ struct FSTopologyData {
 
   // Global numbering assigned by the clipper proc
   FSIntArrayT nodeGlobalNumbers;   // parallel to globalCoords
-  FSIntArrayT poly2DGlobalNumbers; // parallel to the Poly2D cells (match order)
 
   // CADGroupID of each Poly2D
   FSIntArrayT poly2DMarkers;

@@ -189,11 +189,10 @@ protected:
     be.surfaceCells.insert(Cell(FSMeshEnums::CT_Quad4));
   }
 
-  // Fields the clipper fills on each match: Poly2D global number, closed surface cell and its carried marker
+  // Fields the clipper fills on each match: closed surface cell and its carried marker
   void FillClipperFields(FS_intT marker)
   {
     for(size_t m = 0; m < matches.size(); m++) {
-      matches[m].globalCellId = FS_intT(m);
       matches[m].faceOwner1 = Cell(FSMeshEnums::CT_Quad4);
       matches[m].faceOwnerType1 = FSMeshEnums::CT_Quad4;
       matches[m].faceMarker1 = marker;
@@ -341,7 +340,7 @@ TEST_F(FSTopologySinkTest, AddPoly3DFromPolyCellMapsFacesThroughTheRow)
   EXPECT_EQ(ArrayValues(topo.cellParentType[FSMeshEnums::CT_Poly3D]), (std::vector<FS_intT>{t}));
 }
 
-TEST_F(FSTopologySinkTest, AddPoly2DStoresRowsParentsAndGlobalNumbers)
+TEST_F(FSTopologySinkTest, AddPoly2DStoresRowsParentsAndMarkers)
 {
   SplitHexaBottom();
   BuildRegistry();
@@ -349,7 +348,7 @@ TEST_F(FSTopologySinkTest, AddPoly2DStoresRowsParentsAndGlobalNumbers)
 
   FSTopologySink sink(*nodes);
   clipped->ForEachMatch([&](FS_intT m, const FSFaceMatch&) {
-    sink.AddPoly2D(quad, FSMeshEnums::CT_Quad4, nodes->Polygon(m), 40 + m, 70 + m);
+    sink.AddPoly2D(quad, FSMeshEnums::CT_Quad4, nodes->Polygon(m), 70 + m);
   });
   FSTopologyData topo = std::move(sink).Finalize();
 
@@ -363,7 +362,6 @@ TEST_F(FSTopologySinkTest, AddPoly2DStoresRowsParentsAndGlobalNumbers)
     ExpectNear(RowCoords(topo, RegisterRow(topo.cell2NodePoly2D, m)),
                RegistryCoords(std::vector<NodeId>(polygon.begin(), polygon.end())));
   }
-  EXPECT_EQ(ArrayValues(topo.poly2DGlobalNumbers), (std::vector<FS_intT>{40, 41}));
   EXPECT_EQ(ArrayValues(topo.poly2DMarkers), (std::vector<FS_intT>{70, 71}));
   EXPECT_EQ(ArrayValues(topo.cellParent[FSMeshEnums::CT_Poly2D]), (std::vector<FS_intT>{quad, quad}));
   EXPECT_EQ(ArrayValues(topo.cellParentType[FSMeshEnums::CT_Poly2D]),
@@ -377,7 +375,6 @@ TEST_F(FSTopologySinkTest, MixedMeshKeepsContainersAligned)
   BuildRegistry();
   FSTopologySink sink(*nodes);
 
-  FS_intT nPoly2DOrigin = 0;
   for(const auto& src : sources)
     src.ForEachOwnedCell([&](FS_intT c) {
       if(clipped->HasBoundaryFace(c))
@@ -387,12 +384,12 @@ TEST_F(FSTopologySinkTest, MixedMeshKeepsContainersAligned)
       else if(src.IsPoly3D())
         sink.AddPoly3D(src, c);
       else if(src.IsPoly2D())
-        sink.AddPoly2D(c, src.Type(), src.Row(c), nPoly2DOrigin++, -1);
+        sink.AddPoly2D(c, src.Type(), src.Row(c), -1);
       else
         sink.AddStandard(src, c);
     });
   clipped->ForEachMatch([&](FS_intT m, const FSFaceMatch&) {
-    sink.AddPoly2D(Cell(FSMeshEnums::CT_Quad4), FSMeshEnums::CT_Quad4, nodes->Polygon(m), nPoly2DOrigin + m, 70 + m);
+    sink.AddPoly2D(Cell(FSMeshEnums::CT_Quad4), FSMeshEnums::CT_Quad4, nodes->Polygon(m), 70 + m);
   });
   FSTopologyData topo = std::move(sink).Finalize();
 
@@ -408,7 +405,6 @@ TEST_F(FSTopologySinkTest, MixedMeshKeepsContainersAligned)
 
   // Original Poly2D first, then the two match polygons
   EXPECT_EQ(topo.cell2NodePoly2D.Size(), 3);
-  EXPECT_EQ(topo.poly2DGlobalNumbers.Size(), 3);
   EXPECT_EQ(ArrayValues(topo.poly2DMarkers), (std::vector<FS_intT>{-1, 70, 71}));
   EXPECT_EQ(ArrayValues(topo.cellParentType[FSMeshEnums::CT_Poly2D]),
             (std::vector<FS_intT>{FSMeshEnums::CT_Poly2D, FSMeshEnums::CT_Quad4, FSMeshEnums::CT_Quad4}));
@@ -436,30 +432,6 @@ TEST_F(FSTopologySinkTest, FSClippingEngine)
 
   WriteVTK(clac, *mesh.GetMeshData(), MeshPath("output/engine_mock_orig.vtk"));
   WriteVTK(clac, *meshClipped.GetMeshData(), MeshPath("output/engine_mock_clipped.vtk"));
-}
-
-// Original Poly2D and match polygons share one Poly2D numbering: it must be 0..N-1 without duplicates
-TEST_F(FSTopologySinkTest, Poly2DGlobalNumbersAreContiguous)
-{
-  const FS_floatT tol = 1e-8;
-  SplitHexaBottom();
-  FillClipperFields(-1);
-
-  FSClippingEngine engine(tol);
-  FSTopologyData topo = engine.BuildTopology(mesh, be, matches);
-  FSMesh meshClipped = engine.Reconstruct(clac, mesh, topo);
-
-  const FSString globalNumberName = FSMeshEnums::AttributeTypeToString(FSMeshEnums::AT_GlobalNumber);
-  const FSUnstructMeshData& um = meshClipped.GetMeshData()->GetUnstructCells();
-  ASSERT_TRUE(um.HasCellAttribute(globalNumberName, FSMeshEnums::CT_Poly2D));
-
-  // Original Poly2D first, then the two match polygons numbered 0 and 1 by the clipper
-  std::vector<FS_intT> gn = ArrayValues(um.GetCellAttribute(globalNumberName, FSMeshEnums::CT_Poly2D));
-  ASSERT_EQ(gn.size(), 3u);
-  EXPECT_EQ(gn[1], 0);
-  EXPECT_EQ(gn[2], 1);
-  std::sort(gn.begin(), gn.end());
-  EXPECT_EQ(gn, (std::vector<FS_intT>{0, 1, 2})) << "the original Poly2D must be numbered after the match polygons";
 }
 
 // CADGroupID: kept cells read their parent, match polygons take the marker carried by the clipper

@@ -54,8 +54,8 @@ public:
   explicit FSTopologySink(const FSNodeRegistry& nodes) : nodes_(nodes), used_(nodes.Size(), false) {}
 
   void AddStandard(const FSCellSource& src, FS_intT cell); // inner_[type] + parents_[type]
-  void AddPoly2D(FS_intT parent, FSMeshEnums::CellType parentType, std::span<const NodeId> row, FS_intT globalNumber,
-                 FS_intT marker); // poly2D_ + parents_[Poly2D] + poly2DGlobalNumbers_ + poly2DMarkers_
+  void AddPoly2D(FS_intT parent, FSMeshEnums::CellType parentType, std::span<const NodeId> row,
+                 FS_intT marker); // poly2D_ + parents_[Poly2D] + poly2DMarkers_
   void AddPoly3D(FS_intT parent, FSMeshEnums::CellType parentType,
                  const FSPolyCell&);                     // poly3D_ + faces_ + parents_[Poly3D]
   void AddPoly3D(const FSCellSource& src, FS_intT cell); // original Poly3D: row and faces copied
@@ -97,7 +97,6 @@ private:
   FSRaggedRows poly2D_, poly3D_;                          // cell2NodePoly2D, cell2NodePoly3D
   FSPolyFaceRows faces_;                                  // polyFaces
   std::map<FSMeshEnums::CellType, FSParentRows> parents_; // cellParent, cellParentType
-  std::vector<FS_intT> poly2DGlobalNumbers_;              // poly2DGlobalNumbers, aligned on poly2D_
   std::vector<FS_intT> poly2DMarkers_;                    // poly2DMarkers, aligned on poly2D_ (-1 = not carried)
   std::vector<NodeId> row_;                               // row of the cell being appended
 };

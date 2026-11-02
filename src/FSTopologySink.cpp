@@ -55,7 +55,7 @@ void FSTopologySink::AddPoly3D(FS_intT parent, FSMeshEnums::CellType parentType,
 }
 
 void FSTopologySink::AddPoly2D(FS_intT parent, FSMeshEnums::CellType parentType, std::span<const NodeId> row,
-                               FS_intT globalNumber, FS_intT marker)
+                               FS_intT marker)
 {
   assert(row.size() >= 3);
   poly2D_.counts.push_back(static_cast<FS_intT>(row.size()));
@@ -67,7 +67,6 @@ void FSTopologySink::AddPoly2D(FS_intT parent, FSMeshEnums::CellType parentType,
   auto& p = parents_[FSMeshEnums::CT_Poly2D];
   p.parent.push_back(parent);
   p.parentType.push_back(parentType);
-  poly2DGlobalNumbers_.push_back(globalNumber);
   poly2DMarkers_.push_back(marker);
 }
 
@@ -166,12 +165,10 @@ FSTopologyData FSTopologySink::Finalize() &&
   faces_.Build(topo.polyFaces);
   for(const auto& [type, rows] : parents_)
     rows.Build(topo.cellParent[type], topo.cellParentType[type]);
-  topo.poly2DGlobalNumbers = ToIntArray(poly2DGlobalNumbers_);
   topo.poly2DMarkers = ToIntArray(poly2DMarkers_);
 
   assert(topo.cell2NodePoly3D.Size() == topo.polyFaces.GetNumPolys());
-  assert(topo.cell2NodePoly2D.Size() == FS_intT(poly2DGlobalNumbers_.size()));
-  assert(poly2DMarkers_.size() == poly2DGlobalNumbers_.size());
+  assert(topo.cell2NodePoly2D.Size() == FS_intT(poly2DMarkers_.size()));
   return topo;
 }
 

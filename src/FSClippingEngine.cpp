@@ -36,14 +36,14 @@ FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtra
         return;
       else if(src.IsPoly3D())
         out.AddPoly3D(src, c);
-      else if(src.IsPoly2D()) // global number -1: numbered after the matches by FSMeshReconstruction
-        out.AddPoly2D(c, src.Type(), src.Row(c), -1, -1);
+      else if(src.IsPoly2D()) // marker -1: read back from the cell itself
+        out.AddPoly2D(c, src.Type(), src.Row(c), -1);
       else
         out.AddStandard(src, c);
     });
 
   clipped.ForEachMatch([&](FS_intT m, const FSFaceMatch& f) {
-    out.AddPoly2D(f.faceOwner1, f.faceOwnerType1, nodes.Polygon(m), f.globalCellId, f.faceMarker1);
+    out.AddPoly2D(f.faceOwner1, f.faceOwnerType1, nodes.Polygon(m), f.faceMarker1);
   });
 
   return std::move(out).Finalize();

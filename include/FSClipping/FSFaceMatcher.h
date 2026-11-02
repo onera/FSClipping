@@ -58,9 +58,6 @@ struct FSFaceMatch {
   // Global numbering of each node of a match
   std::vector<FS_intT> nodeGlobalIds;
 
-  // Global ID of the future Poly2D cell
-  FS_intT globalCellId = -1;
-
   FSClac::sizeT GetBufSize(FSClac& clac) const;
   void Pack(FSClac& clac);
   void Unpack(FSClac& clac);
@@ -94,7 +91,6 @@ public:
   /*
   Assigns a globally consistent numbering across one mesh side:
     - nodeGlobalIds: geometric deduplication (NodeKey, tol) of every point of every clippedPoly3D
-    - globalCellId: match index 0..n-1 (global ID of the future Poly2D cell)
   */
   static FS_intT AssignGlobalNodeIds(std::vector<FSFaceMatch>& matches, FS_floatT tol);
 

@@ -32,9 +32,6 @@ private:
   void RemapToDistributedNumbering(FSTopologyData& topo, std::vector<FS_intT>& ownedLocalRows,
                                    FSIntArrayT& ownedGlobalNumbers);
 
-  // Numbers the Poly2D without global number (-1, original ones) after the match polygons 0..M-1, in rank order
-  void NumberOriginalPoly2D(FSTopologyData& topo);
-
   FSClac& clac_;
   FS_floatT tol_;
 };
