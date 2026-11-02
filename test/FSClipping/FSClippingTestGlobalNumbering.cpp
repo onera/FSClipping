@@ -72,20 +72,6 @@ TEST(AssignGlobalNodeIds, ToleranceMergesClosePoints)
   EXPECT_EQ(matches[0].nodeGlobalIds[2], matches[1].nodeGlobalIds[2]);
 }
 
-TEST(AssignGlobalNodeIds, GlobalCellIdsAreMatchIndices)
-{
-  std::vector<FSFaceMatch> matches = {
-    MakeMatch({FSVec3(0, 0, 0), FSVec3(1, 0, 0), FSVec3(0, 1, 0)}),
-    MakeMatch({FSVec3(1, 0, 0), FSVec3(1, 1, 0), FSVec3(0, 1, 0)}),
-    MakeMatch({FSVec3(5, 5, 5), FSVec3(6, 5, 5), FSVec3(5, 6, 5)}),
-  };
-
-  FSFaceMatcher::AssignGlobalNodeIds(matches, 1e-12);
-
-  for(std::size_t m = 0; m < matches.size(); ++m)
-    EXPECT_EQ(matches[m].globalCellId, static_cast<FS_intT>(m));
-}
-
 TEST(AssignGlobalNodeIds, NotCoveredMatchIsNumbered)
 {
   FSFaceMatch notCovered;

@@ -27,14 +27,12 @@ BoundaryExtraction FSBoundaryFaceProvider::Extract(FSMesh& mesh, FSMeshFaceExtra
 
     result.faces.emplace_back(f, faceIndex, faceCoordinates);
 
-    result.volumeCells[f._faceFSDM->mOwner.mCellType].insert(f._faceFSDM->mOwner.mCell);
-
     auto [it, inserted] = result.cell2BoundaryFaces.try_emplace(f._faceFSDM->mOwner.mCell);
     it->second.push_back(f._faceFSDM->mOwner.mFaceIndex);
 
     // Only a local surface cell may be listed here
     if(f._faceFSDM->mNeighbor.mCellProcID == procID)
-      result.surfaceCells[f._faceFSDM->mNeighbor.mCellType].insert(f._faceFSDM->mNeighbor.mCell);
+      result.surfaceCells.insert(f._faceFSDM->mNeighbor.mCell);
   }
 
   return result;

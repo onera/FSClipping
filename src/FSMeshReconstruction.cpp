@@ -78,11 +78,6 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
       }
     }
   }
-  // Poly2D global numbers come from the clipper's match numbering, original Poly2D follow
-  NumberOriginalPoly2D(topologyData);
-  if(!topologyData.poly2DGlobalNumbers.IsEmpty())
-    unstructMeshData.InitCellAttribute(globalNumberName, FSMeshEnums::CT_Poly2D, topologyData.poly2DGlobalNumbers);
-
   CopyCellAttributes(meshDataOriginal, topologyData, unstructMeshData);
 
   success = meshClipped.IsInitialized();
@@ -159,35 +154,6 @@ void FSMeshReconstruction::RemapToDistributedNumbering(FSTopologyData& topo, std
       for(FS_intT n = 0; n < cell2Node.Size(1); ++n)
         cell2Node(c, n) = localToDistributed(cell2Node(c, n));
   }
-}
-
-void FSMeshReconstruction::NumberOriginalPoly2D(FSTopologyData& topo)
-{
-  FSIntArrayT& globalNumbers = topo.poly2DGlobalNumbers;
-
-  // Local number of matches (max id + 1) and of Poly2D to number
-  FS_int32T local[2] = {0, 0};
-  for(FS_intT i = 0; i < globalNumbers.Size(); ++i) {
-    if(globalNumbers[i] >= 0)
-      local[0] = std::max(local[0], static_cast<FS_int32T>(globalNumbers[i] + 1));
-    else
-      ++local[1];
-  }
-
-  const FS_intT nProcs = clac_.GetNProcs();
-  std::vector<FS_int32T> all(2 * nProcs);
-  clac_.AllGather(local, 2, all.data(), 2);
-
-  // Matches take 0..M-1 on every proc, then each proc gets a contiguous range in rank order
-  FS_intT next = 0;
-  for(FS_intT p = 0; p < nProcs; ++p)
-    next = std::max(next, static_cast<FS_intT>(all[2 * p]));
-  for(FS_intT p = 0; p < clac_.GetProcID(); ++p)
-    next += all[2 * p + 1];
-
-  for(FS_intT i = 0; i < globalNumbers.Size(); ++i)
-    if(globalNumbers[i] < 0)
-      globalNumbers[i] = next++;
 }
 
 void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshDataOriginal, const FSTopologyData& topo,
