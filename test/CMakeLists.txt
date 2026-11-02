@@ -63,7 +63,8 @@ function(add_parallel_test nproc)
 endfunction()
 
 add_parallel_test(3 FSClipping/Parallel/FSClippingTestMatchesSendReceive.cpp)
-add_parallel_test(4 FSClipping/Parallel/FSClippingTestBoundaryExtractionPar.cpp)
+add_parallel_test(4 FSClipping/Parallel/FSClippingTestBoundaryExtractionPar.cpp
+                    FSClipping/Parallel/FSClippingTestEmptyPoly2DPoolPar.cpp)
 add_parallel_test(5 FSClipping/Parallel/FSClippingTestInterfaceSym.cpp
                     FSClipping/Parallel/FSClippingTestMatchRouting.cpp)
 add_parallel_test(9 FSClipping/Parallel/FSClippingTestPoly2DAttributesPar.cpp)
