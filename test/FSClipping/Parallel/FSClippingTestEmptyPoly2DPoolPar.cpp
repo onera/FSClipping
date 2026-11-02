@@ -1,8 +1,8 @@
 /*
 Clipped mesh whose procs do not hold the same cell types, run at exactly 4 MPI procs: 1 clipper, cube_hexa_coarse on
 2 procs, cube_hexa_fine on 1 proc. With the default RCB, one proc of the coarse cube owns no Poly2D and no Hexa8, only
-boundary Quad4. The reconstruction must still give it the same pools as the other proc: a missing Hexa8 pool shifts
-the collective pool inits (deadlock).
+boundary Quad4. The reconstruction must still give it the same pools and attributes as the other proc: a missing
+Hexa8 pool shifts the collective pool inits (deadlock), a missing CADGroupID makes the parallel HDF5 export abort.
 */
 
 #include "FSClipping/FSClippedMesh.h"
@@ -80,7 +80,7 @@ protected:
 
 } // namespace
 
-TEST_F(FSClippingTestEmptyPoly2DPoolPar, EveryProcHasTheSamePools)
+TEST_F(FSClippingTestEmptyPoly2DPoolPar, EveryProcHasTheSamePoolsAndAttributes)
 {
   if(!RunClipping())
     GTEST_SKIP() << "requires exactly 4 MPI procs";
@@ -93,7 +93,30 @@ TEST_F(FSClippingTestEmptyPoly2DPoolPar, EveryProcHasTheSamePools)
     FS_int32T hasPool = um.GetCellPool(t) ? 1 : 0, nWithPool = 0;
     clac.Sum(&hasPool, &nWithPool, 1);
     EXPECT_EQ(nWithPool, clac.GetNProcs()) << FSMeshEnums::CellTypeToString(t) << " pool missing on a proc";
+
+    FS_int32T nAttribs = hasPool ? static_cast<FS_int32T>(um.GetCellAttributes(t).Size()) : 0, nMin = 0, nMax = 0;
+    clac.GetMin(&nAttribs, &nMin, 1);
+    clac.GetMax(&nAttribs, &nMax, 1);
+    EXPECT_EQ(nMin, nMax) << FSMeshEnums::CellTypeToString(t) << " attributes differ between procs";
   }
+
+  static const FSString attrCADGroupIDName = FSEnums::AttributeTypeToString(FSEnums::AT_CADGroupID);
+  FS_int32T hasMarker = um.HasCellAttribute(attrCADGroupIDName, FSMeshEnums::CT_Poly2D) ? 1 : 0, nWithMarker = 0;
+  clac.Sum(&hasMarker, &nWithMarker, 1);
+  EXPECT_EQ(nWithMarker, clac.GetNProcs());
+}
+
+TEST_F(FSClippingTestEmptyPoly2DPoolPar, ExportImportHDF5)
+{
+  if(!RunClipping())
+    GTEST_SKIP() << "requires exactly 4 MPI procs";
+  if(meshID != 1)
+    return;
+  ExpectAsymmetricSplit();
+
+  // An empty pool lacking CADGroupID made the parallel HDF5 export abort in MPI_Unpack
+  polyMeshExportImport(&clac, data->GetMesh("clippedMesh1", &clac)->GetMeshData(), MeshPath("output/emptyPoly2DPool"),
+                       1, false);
 }
 
 _FS_END_NAMESPACE

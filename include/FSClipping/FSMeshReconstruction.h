@@ -20,6 +20,7 @@ public:
 
   FSMesh Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData);
 
+  // Local shape only: for a single proc, or when the caller built every pool itself
   void CopyCellAttributes(const FSUnstructMeshData& meshData, const FSTopologyData& topo,
                           FSUnstructMeshData& meshDataNew);
 
@@ -42,6 +43,9 @@ private:
 
   // Union of the schema over the procs: every proc then runs the same collective pool and attribute init
   void AgreeOnSchema(FSOutputSchema& schema);
+
+  void CopyCellAttributes(const FSUnstructMeshData& meshData, const FSTopologyData& topo,
+                          const FSOutputSchema& schema, FSUnstructMeshData& meshDataNew);
 
   FSClac& clac_;
   FS_floatT tol_;
