@@ -18,7 +18,9 @@ BoundaryExtraction FSBoundaryFaceProvider::Extract(FSMesh& mesh, FSMeshFaceExtra
   ex.PrepareFaceNodeCoordinates(FSQuantityDescArrayT());
 
   std::vector<FSBoundaryFace> bdryFaces;
-  FSFaceSeparator::SeparateFaces(mesh, ex, bdryFaces, boundaryMarker);
+  std::vector<FS_intT> separatedSurfaceCells;
+  FSFaceSeparator::SeparateFaces(mesh, ex, bdryFaces, separatedSurfaceCells, boundaryMarker);
+  result.surfaceCells.insert(separatedSurfaceCells.begin(), separatedSurfaceCells.end());
 
   FSFloatArrayT faceCoordinates;
   for(const auto& f : bdryFaces) {
