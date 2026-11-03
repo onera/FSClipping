@@ -6,7 +6,6 @@
 #include <cassert>
 #include <map>
 #include <set>
-#include <sstream>
 #include <unordered_map>
 
 namespace {
@@ -19,23 +18,21 @@ FSMeshEnums::CellType ParentTypeOf(const FSTopologyData& topo, FSMeshEnums::Cell
   return FSMeshEnums::Int2CellType(topo.cellParentType.at(outType)[i]);
 }
 
-// Pool offset of each parent type of `outType` cells that has a pool on this proc
-std::map<FSMeshEnums::CellType, FS_intT> ParentOffsets(const FSUnstructMeshData& meshData, const FSTopologyData& topo,
-                                                       FSMeshEnums::CellType outType)
+// Distinct parent types of `outType` cells that have a pool on this proc
+std::set<FSMeshEnums::CellType> ParentTypes(const FSUnstructMeshData& meshData, const FSTopologyData& topo,
+                                            FSMeshEnums::CellType outType)
 {
-  std::map<FSMeshEnums::CellType, FS_intT> offsetOf;
+  std::set<FSMeshEnums::CellType> types;
   const auto parentIt = topo.cellParent.find(outType);
   if(parentIt == topo.cellParent.end())
-    return offsetOf;
+    return types;
   for(FS_intT i = 0; i < parentIt->second.Size(); ++i) {
     const FSMeshEnums::CellType t = ParentTypeOf(topo, outType, i);
-    if(offsetOf.contains(t))
-      continue;
     // Undefined parent type, or no pool of that type on this proc: nothing to read
-    if(const FSCellPool* pool = meshData.GetCellPool(t))
-      offsetOf.emplace(t, pool->GetOffset());
+    if(!types.contains(t) && meshData.GetCellPool(t))
+      types.insert(t);
   }
-  return offsetOf;
+  return types;
 }
 
 // FSDM rejects an empty values array: an empty pool gets its attribute from the fill overload
@@ -61,8 +58,7 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
   auto& polyFaces = topologyData.polyFaces;
 
   // Same pools and attributes on every proc, fixed before any collective init
-  FSOutputSchema schema = LocalSchema(meshDataOriginal, topologyData);
-  AgreeOnSchema(schema);
+  const FSPoolLayout layout = PoolLayout(meshDataOriginal);
 
   // Remap the global numbering of the node if distributed
   const bool distributed = clac_.GetNProcs() > 1;
@@ -84,8 +80,8 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
   FSUnstructMeshData& unstructMeshData = meshDataClippedPtr->GetUnstructCells();
 
   meshClipped.InitUnstructNodes(nOwned);
-  // InitUnstructCells is collective: loop over the shared schema, never over the local types
-  for(const auto& [type, names] : schema) {
+  // InitUnstructCells is collective: loop over the shared layout, never over the local types
+  for(const auto& [type, names] : layout) {
     if(FSMeshEnums::IsPolyCellType(type))
       continue;
     FSIntArrayT& cell2Node = cell2NodeInner[type];
@@ -131,7 +127,7 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
       }
     }
   }
-  CopyCellAttributes(meshDataOriginal, topologyData, schema, unstructMeshData);
+  CopyCellAttributes(meshDataOriginal, topologyData, layout, unstructMeshData);
 
   success = meshClipped.IsInitialized();
   if(!success)
@@ -209,89 +205,43 @@ void FSMeshReconstruction::RemapToDistributedNumbering(FSTopologyData& topo, std
   }
 }
 
-FSOutputSchema FSMeshReconstruction::LocalSchema(const FSUnstructMeshData& meshData, const FSTopologyData& topo)
+FSPoolLayout FSMeshReconstruction::PoolLayout(const FSUnstructMeshData& meshData)
 {
-  FSOutputSchema schema;
-  // Standard types kept unclipped: the pool exists even if no parent carries an attribute
-  for(const auto& [type, cell2Node] : topo.cell2NodeInner)
-    schema[FSMeshEnums::CellType(type)];
-
-  for(const auto& [type, parentArray] : topo.cellParent) {
-    const FSMeshEnums::CellType outType = FSMeshEnums::CellType(type);
-    auto& names = schema[outType];
-    for(const auto& [t, offset] : ParentOffsets(meshData, topo, outType)) {
-      const FSStringArrayT parentNames = meshData.GetCellAttributes(t);
-      for(FSStringArrayT::ConstIterator AI = parentNames.BeginConst(); AI.IsValid(); ++AI)
-        names.insert(*AI);
-    }
-    // Never inherit the global number: several clipped cells may share one parent
-    static const FSString attrGlobalNumberName = FSMeshEnums::AttributeTypeToString(FSMeshEnums::AT_GlobalNumber);
-    names.erase(attrGlobalNumberName);
-  }
-  return schema;
-}
-
-void FSMeshReconstruction::AgreeOnSchema(FSOutputSchema& schema)
-{
-  const FS_intT nProcs = clac_.GetNProcs();
-  if(nProcs == 1)
-    return;
-
-  // One "type" line per pool, then one "type name" line per attribute; names hold no whitespace
-  std::string local;
-  for(const auto& [type, names] : schema) {
-    const std::string typeStr = std::to_string(static_cast<FS_intT>(type));
-    local += typeStr + '\n';
-    for(const FSString& name : names)
-      local += typeStr + ' ' + name + '\n';
-  }
-
-  FS_int32T localSize = static_cast<FS_int32T>(local.size());
-  std::vector<FS_int32T> sizes(nProcs);
-  clac_.AllGather(&localSize, 1, sizes.data(), 1);
-
-  for(FS_intT p = 0; p < nProcs; ++p) {
-    if(sizes[p] == 0)
+  static const FSString attrGlobalNumberName = FSMeshEnums::AttributeTypeToString(FSMeshEnums::AT_GlobalNumber);
+  FSPoolLayout layout;
+  // Poly pools always exist: a clipped cell may come from any proc
+  auto& poly2DNames = layout[FSMeshEnums::CT_Poly2D];
+  auto& poly3DNames = layout[FSMeshEnums::CT_Poly3D];
+  for(const FSMeshEnums::CellType t : meshData.GetCellTypes()) {
+    if(t == FSMeshEnums::CT_Node)
       continue;
-    std::string buf = (p == clac_.GetProcID()) ? local : std::string(sizes[p], '\0');
-    clac_.Broadcast(buf.data(), sizes[p], p);
-
-    std::istringstream in(buf);
-    std::string line;
-    while(std::getline(in, line)) {
-      std::istringstream fields(line);
-      FS_intT type;
-      std::string name;
-      fields >> type;
-      auto& names = schema[FSMeshEnums::Int2CellType(type)];
-      if(fields >> name)
-        names.insert(FSString(name));
+    auto& names = layout[t];
+    const FSStringArrayT parentNames = meshData.GetCellAttributes(t);
+    for(FSStringArrayT::ConstIterator AI = parentNames.BeginConst(); AI.IsValid(); ++AI) {
+      // Never inherit the global number: several clipped cells may share one parent
+      if(*AI == attrGlobalNumberName)
+        continue;
+      names.insert(*AI);
+      // A Poly2D may have the volume cell owning its face as parent
+      poly2DNames.insert(*AI);
+      if(FSMeshEnums::IsUnstructVolumeCellType(t))
+        poly3DNames.insert(*AI);
     }
   }
-
-#ifndef NDEBUG
-  // A schema differing between procs would pair the next collectives wrongly: fail here instead of hanging
-  FS_int32T size = 0;
-  for(const auto& [type, names] : schema)
-    size += 1 + static_cast<FS_int32T>(names.size());
-  FS_int32T minSize = 0, maxSize = 0;
-  clac_.GetMin(&size, &minSize, 1);
-  clac_.GetMax(&size, &maxSize, 1);
-  assert(minSize == maxSize);
-#endif
+  return layout;
 }
 
 void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshDataOriginal, const FSTopologyData& topo,
                                               FSUnstructMeshData& meshDataNew)
 {
-  CopyCellAttributes(meshDataOriginal, topo, LocalSchema(meshDataOriginal, topo), meshDataNew);
+  CopyCellAttributes(meshDataOriginal, topo, PoolLayout(meshDataOriginal), meshDataNew);
 }
 
 void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshDataOriginal, const FSTopologyData& topo,
-                                              const FSOutputSchema& schema, FSUnstructMeshData& meshDataNew)
+                                              const FSPoolLayout& layout, FSUnstructMeshData& meshDataNew)
 {
   static const FSIntArrayT noParent;
-  for(const auto& [outType, attribNames] : schema) {
+  for(const auto& [outType, attribNames] : layout) {
     // The type has no pool in the new mesh: nothing to carry the attribute
     if(!meshDataNew.GetCellPool(outType))
       continue;
@@ -299,7 +249,9 @@ void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshData
     const auto parentIt = topo.cellParent.find(outType);
     const FSIntArrayT& parentArray = (parentIt != topo.cellParent.end()) ? parentIt->second : noParent;
     const FS_intT numCells = parentArray.Size();
-    const auto offsetOf = ParentOffsets(meshDataOriginal, topo, outType);
+    std::map<FSMeshEnums::CellType, FS_intT> offsetOf;
+    for(const FSMeshEnums::CellType t : ParentTypes(meshDataOriginal, topo, outType))
+      offsetOf[t] = meshDataOriginal.GetCellPool(t)->GetOffset();
 
     // A Poly2D born from a match on a volume/surface pair split by the partitioner has a parent owned by another proc
     static const FSString attrCADGroupIDName = FSEnums::AttributeTypeToString(FSEnums::AT_CADGroupID);

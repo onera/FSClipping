@@ -11,7 +11,7 @@
 _FS_BEGIN_NAMESPACE
 
 // Shape of the clipped mesh: key = cell pool to create, value = its attribute names
-using FSOutputSchema = std::map<FSMeshEnums::CellType, std::set<FSString>>;
+using FSPoolLayout = std::map<FSMeshEnums::CellType, std::set<FSString>>;
 
 class FSMeshReconstruction
 {
@@ -20,7 +20,7 @@ public:
 
   FSMesh Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData);
 
-  // Local shape only: for a single proc, or when the caller built every pool itself
+  // Attributes over the layout of the original mesh; types without a pool in the new mesh are skipped
   void CopyCellAttributes(const FSUnstructMeshData& meshData, const FSTopologyData& topo,
                           FSUnstructMeshData& meshDataNew);
 
@@ -38,14 +38,11 @@ private:
   void RemapToDistributedNumbering(FSTopologyData& topo, std::vector<FS_intT>& ownedLocalRows,
                                    FSIntArrayT& ownedGlobalNumbers);
 
-  // Pools and attribute names seen on this proc, from the cells kept and their parents
-  static FSOutputSchema LocalSchema(const FSUnstructMeshData& meshData, const FSTopologyData& topo);
-
-  // Union of the schema over the procs: every proc then runs the same collective pool and attribute init
-  void AgreeOnSchema(FSOutputSchema& schema);
+  // Read from the original mesh, whose pools and attributes are the same on every proc: no communication needed
+  static FSPoolLayout PoolLayout(const FSUnstructMeshData& meshData);
 
   void CopyCellAttributes(const FSUnstructMeshData& meshData, const FSTopologyData& topo,
-                          const FSOutputSchema& schema, FSUnstructMeshData& meshDataNew);
+                          const FSPoolLayout& layout, FSUnstructMeshData& meshDataNew);
 
   FSClac& clac_;
   FS_floatT tol_;
