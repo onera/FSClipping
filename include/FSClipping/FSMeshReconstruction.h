@@ -20,7 +20,7 @@ public:
 
   FSMesh Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData);
 
-  // Attributes over the layout of the original mesh; types without a pool in the new mesh are skipped
+  // Same attribute names on every proc, from the layout of the original mesh
   void CopyCellAttributes(const FSUnstructMeshData& meshData, const FSTopologyData& topo,
                           FSUnstructMeshData& meshDataNew);
 
@@ -40,9 +40,6 @@ private:
 
   // Read from the original mesh, whose pools and attributes are the same on every proc: no communication needed
   static FSPoolLayout PoolLayout(const FSUnstructMeshData& meshData);
-
-  void CopyCellAttributes(const FSUnstructMeshData& meshData, const FSTopologyData& topo,
-                          const FSPoolLayout& layout, FSUnstructMeshData& meshDataNew);
 
   FSClac& clac_;
   FS_floatT tol_;
