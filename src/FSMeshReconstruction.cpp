@@ -1,11 +1,53 @@
 #include "FSClipping/FSMeshReconstruction.h"
 #include "FSClipping/FSNodeKey.h"
+#include <FSCellInfo.h>
 #include <FSMeshData.h>
 
 #include <cassert>
 #include <map>
 #include <set>
 #include <unordered_map>
+
+namespace {
+
+// A Poly cell may have parents of different types: resolve the parent type cell by cell
+FSMeshEnums::CellType ParentTypeOf(const FSTopologyData& topo, FSMeshEnums::CellType outType, FS_intT i)
+{
+  if(!FSMeshEnums::IsPolyCellType(outType))
+    return outType;
+  return FSMeshEnums::Int2CellType(topo.cellParentType.at(outType)[i]);
+}
+
+// Pool offset of each parent type of `outType` cells that has a pool on this proc
+std::map<FSMeshEnums::CellType, FS_intT> ParentOffsets(const FSUnstructMeshData& meshData, const FSTopologyData& topo,
+                                                       FSMeshEnums::CellType outType)
+{
+  std::map<FSMeshEnums::CellType, FS_intT> offsetOf;
+  const auto parentIt = topo.cellParent.find(outType);
+  if(parentIt == topo.cellParent.end())
+    return offsetOf;
+  for(FS_intT i = 0; i < parentIt->second.Size(); ++i) {
+    const FSMeshEnums::CellType t = ParentTypeOf(topo, outType, i);
+    if(offsetOf.contains(t))
+      continue;
+    // Undefined parent type, or no pool of that type on this proc: nothing to read
+    if(const FSCellPool* pool = meshData.GetCellPool(t))
+      offsetOf.emplace(t, pool->GetOffset());
+  }
+  return offsetOf;
+}
+
+// FSDM rejects an empty values array: an empty pool gets its attribute from the fill overload
+void InitIntCellAttribute(FSUnstructMeshData& meshData, const FSString& name, FSMeshEnums::CellType t,
+                          FSIntArrayT& values)
+{
+  if(values.Size() == 0)
+    meshData.InitCellAttribute(name, t, 1, -1);
+  else
+    meshData.InitCellAttribute(name, t, values);
+}
+
+} // namespace
 
 FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData)
 {
@@ -16,6 +58,9 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
   auto& cell2NodePoly3D = topologyData.cell2NodePoly3D;
   auto& cell2NodeInner = topologyData.cell2NodeInner;
   auto& polyFaces = topologyData.polyFaces;
+
+  // Same pools and attributes on every proc, fixed before any collective init
+  const FSPoolLayout layout = PoolLayout(meshDataOriginal);
 
   // Remap the global numbering of the node if distributed
   const bool distributed = clac_.GetNProcs() > 1;
@@ -37,9 +82,15 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
   FSUnstructMeshData& unstructMeshData = meshDataClippedPtr->GetUnstructCells();
 
   meshClipped.InitUnstructNodes(nOwned);
-  if(!cell2NodeInner.IsEmpty()) {
-    for(auto& [type, cell2Node] : topologyData.cell2NodeInner)
-      meshClipped.InitUnstructCells(type, cell2Node);
+  // InitUnstructCells is collective: loop over the shared layout, never over the local types
+  for(const auto& [type, names] : layout) {
+    if(FSMeshEnums::IsPolyCellType(type))
+      continue;
+    FSIntArrayT& cell2Node = cell2NodeInner[type];
+    // FSDM wants a 0 x nNodes connectivity for a pool empty on this proc
+    if(!cell2Node.IsInitialized())
+      cell2Node.Resize(0, FSNNodes(type));
+    meshClipped.InitUnstructCells(type, cell2Node);
   }
 
   meshDataClippedPtr->InitUnstructCells(FSMeshEnums::CT_Poly2D, cell2NodePoly2D);
@@ -64,19 +115,13 @@ FSMesh FSMeshReconstruction::Build(const FSUnstructMeshData& meshDataOriginal, F
   if(!success)
     FSError.SetAndPrintAndExit("FSMeshReconstruction : Error while set coordinates");
 
+  // Node global numbers only if the original mesh has them
   const FSString globalNumberName = FSMeshEnums::AttributeTypeToString(FSMeshEnums::AT_GlobalNumber);
-
-  if(distributed)
-    unstructMeshData.InitCellAttribute(globalNumberName, FSMeshEnums::CT_Node, ownedGlobalNumbers);
-  else {
-    FS_intT currentOffset = 0;
-    FSIntArrayT cellTypeArray_2 = meshDataClippedPtr->GetUnstructCells().GetCellTypesArray();
-    for(FSIntArrayT::ConstIterator cellType = cellTypeArray_2.BeginConst(); cellType.IsValid(); cellType.Next()) {
-      if(*cellType == FSMeshEnums::CellType::CT_Node) {
-        meshDataClippedPtr->GetUnstructCells().InitGlobalCellNumber((FSMeshEnums::CellType)*cellType, currentOffset);
-        currentOffset += meshDataClippedPtr->GetUnstructCells().GetNCells((FSMeshEnums::CellType)*cellType);
-      }
-    }
+  if(meshDataOriginal.HasCellAttribute(globalNumberName, FSMeshEnums::CT_Node)) {
+    if(distributed)
+      unstructMeshData.InitCellAttribute(globalNumberName, FSMeshEnums::CT_Node, ownedGlobalNumbers);
+    else
+      unstructMeshData.InitGlobalCellNumber(FSMeshEnums::CT_Node, 0);
   }
   CopyCellAttributes(meshDataOriginal, topologyData, unstructMeshData);
 
@@ -156,47 +201,50 @@ void FSMeshReconstruction::RemapToDistributedNumbering(FSTopologyData& topo, std
   }
 }
 
+FSPoolLayout FSMeshReconstruction::PoolLayout(const FSUnstructMeshData& meshData)
+{
+  static const FSString attrGlobalNumberName = FSMeshEnums::AttributeTypeToString(FSMeshEnums::AT_GlobalNumber);
+  FSPoolLayout layout;
+  // Poly pools always exist: a clipped cell may come from any proc
+  auto& poly2DNames = layout[FSMeshEnums::CT_Poly2D];
+  auto& poly3DNames = layout[FSMeshEnums::CT_Poly3D];
+  for(const FSMeshEnums::CellType t : meshData.GetCellTypes()) {
+    if(t == FSMeshEnums::CT_Node)
+      continue;
+    auto& names = layout[t];
+    const FSStringArrayT parentNames = meshData.GetCellAttributes(t);
+    for(FSStringArrayT::ConstIterator AI = parentNames.BeginConst(); AI.IsValid(); ++AI) {
+      // Never inherit the global number: several clipped cells may share one parent
+      if(*AI == attrGlobalNumberName)
+        continue;
+      names.insert(*AI);
+      // A clipped cell inherits from a parent of the same dimension
+      if(FSMeshEnums::IsUnstructSurfaceCellType(t))
+        poly2DNames.insert(*AI);
+      else if(FSMeshEnums::IsUnstructVolumeCellType(t))
+        poly3DNames.insert(*AI);
+    }
+  }
+  return layout;
+}
+
 void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshDataOriginal, const FSTopologyData& topo,
                                               FSUnstructMeshData& meshDataNew)
 {
-  for(const auto& [cellType, parentArray] : topo.cellParent) {
-    const FS_intT numCells = parentArray.Size();
-
-    if(numCells == 0)
+  static const FSIntArrayT noParent;
+  for(const auto& [outType, attribNames] : PoolLayout(meshDataOriginal)) {
+    // The type has no pool in the new mesh: nothing to carry the attribute
+    if(!meshDataNew.GetCellPool(outType))
       continue;
 
-    // A Poly cell may have parents of different types: resolve the parent type cell by cell
-    const bool isPoly = FSMeshEnums::IsPolyCellType(cellType);
-    const FSIntArrayT* parentTypes = isPoly ? &topo.cellParentType.at(cellType) : nullptr;
-    assert(!isPoly || parentTypes->Size() == numCells);
-    auto parentTypeOf = [&](FS_intT i) {
-      return isPoly ? FSMeshEnums::Int2CellType((*parentTypes)[i]) : FSMeshEnums::CellType(cellType);
-    };
-
-    // Pool offset of each parent type present, and the union of their attribute names
-    std::map<FSMeshEnums::CellType, FS_intT> offsetOf;
-    std::set<FSString> attribNames;
-    for(FS_intT i = 0; i < numCells; ++i) {
-      const FSMeshEnums::CellType t = parentTypeOf(i);
-      if(offsetOf.contains(t))
-        continue;
-      // Undefined parent type, or no pool of that type on this proc: nothing to read
-      const FSCellPool* pool = meshDataOriginal.GetCellPool(t);
-      if(!pool)
-        continue;
-      offsetOf.emplace(t, pool->GetOffset());
-      const FSStringArrayT names = meshDataOriginal.GetCellAttributes(t);
-      for(FSStringArrayT::ConstIterator AI = names.BeginConst(); AI.IsValid(); ++AI)
-        attribNames.insert(*AI);
-    }
-
-    // Global numbers are set by the reconstruction, never inherited from the parent
-    static const FSString attrGlobalNumberName = FSMeshEnums::AttributeTypeToString(FSMeshEnums::AT_GlobalNumber);
-    attribNames.erase(attrGlobalNumberName);
+    const auto parentIt = topo.cellParent.find(outType);
+    const FSIntArrayT& parentArray = (parentIt != topo.cellParent.end()) ? parentIt->second : noParent;
+    const FS_intT numCells = parentArray.Size();
+    const auto offsetOf = ParentOffsets(meshDataOriginal, topo, outType);
 
     // A Poly2D born from a match on a volume/surface pair split by the partitioner has a parent owned by another proc
     static const FSString attrCADGroupIDName = FSEnums::AttributeTypeToString(FSEnums::AT_CADGroupID);
-    const bool isPoly2D = (FSMeshEnums::Int2CellType(cellType) == FSMeshEnums::CellType::CT_Poly2D);
+    const bool isPoly2D = (outType == FSMeshEnums::CellType::CT_Poly2D);
     const bool hasCarriedMarkers = isPoly2D && topo.poly2DMarkers.Size() == numCells;
 
     for(const FSString& name : attribNames) {
@@ -215,7 +263,7 @@ void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshData
           valuesNew[i] = topo.poly2DMarkers[i];
           continue;
         }
-        const auto it = valuesOf.find(parentTypeOf(i));
+        const auto it = valuesOf.find(ParentTypeOf(topo, outType, i));
         const FSIntArrayT* valuesOrig = (it != valuesOf.end()) ? it->second : nullptr;
         const FS_intT localId = valuesOrig ? parentArray[i] - offsetOf.at(it->first) : -1;
         // Parent owned by another proc, without local pool, or attribute missing on its type: no value to copy
@@ -226,7 +274,7 @@ void FSMeshReconstruction::CopyCellAttributes(const FSUnstructMeshData& meshData
         valuesNew[i] = (*valuesOrig)[localId];
       }
 
-      meshDataNew.InitCellAttribute(name, cellType, valuesNew);
+      InitIntCellAttribute(meshDataNew, name, outType, valuesNew);
 
       if(meshDataOriginal.HasCellAttributeValueNames(name)) {
         meshDataNew.SetCellAttributeValueNames(name, meshDataOriginal.GetCellAttributeValueNames(name));

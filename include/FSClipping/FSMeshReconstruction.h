@@ -4,9 +4,14 @@
 #include "FSClipping/FSTopologyData.h"
 #include <FSMesh.h>
 #include <FSUnstructMeshData.h>
+#include <map>
+#include <set>
 
 
 _FS_BEGIN_NAMESPACE
+
+// Shape of the clipped mesh: key = cell pool to create, value = its attribute names
+using FSPoolLayout = std::map<FSMeshEnums::CellType, std::set<FSString>>;
 
 class FSMeshReconstruction
 {
@@ -15,6 +20,7 @@ public:
 
   FSMesh Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData);
 
+  // Same attribute names on every proc, from the layout of the original mesh
   void CopyCellAttributes(const FSUnstructMeshData& meshData, const FSTopologyData& topo,
                           FSUnstructMeshData& meshDataNew);
 
@@ -31,6 +37,9 @@ private:
   */
   void RemapToDistributedNumbering(FSTopologyData& topo, std::vector<FS_intT>& ownedLocalRows,
                                    FSIntArrayT& ownedGlobalNumbers);
+
+  // Read from the original mesh, whose pools and attributes are the same on every proc: no communication needed
+  static FSPoolLayout PoolLayout(const FSUnstructMeshData& meshData);
 
   FSClac& clac_;
   FS_floatT tol_;
