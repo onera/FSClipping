@@ -128,9 +128,11 @@ void ExchangeSeparatedBdryFaces(FSClac& clac, const std::vector<FSBoundaryFace>&
 } // namespace
 
 void SeparateFaces(const FSMesh& fsmesh, const FSMeshFaceExtractor& faceExtractor,
-                   std::vector<FSBoundaryFace>& bdryFaces, const FS_intT markerBoundaryClipped)
+                   std::vector<FSBoundaryFace>& bdryFaces, std::vector<FS_intT>& separatedSurfaceCells,
+                   const FS_intT markerBoundaryClipped)
 {
   assert(bdryFaces.empty());
+  assert(separatedSurfaceCells.empty());
 
   FS_intT procID = fsmesh.GetClac()->GetProcID();
   const FS_intT numAllFaces = faceExtractor.GetNLocalFaces();
@@ -176,6 +178,9 @@ void SeparateFaces(const FSMesh& fsmesh, const FSMeshFaceExtractor& faceExtracto
       const SurfaceCellAttributes attributes =
         ReadSurfaceCellAttributes(meshData, face.mOwner.mCellType, face.mOwner.mCell);
       sepBdryFaces.emplace_back(face, attributes.marker, attributes.fsdmGlobalNumber);
+      // Its face is clipped on the volume side, so this surface cell must be dropped here
+      if(attributes.marker == markerBoundaryClipped)
+        separatedSurfaceCells.push_back(face.mOwner.mCell);
     }
   }
 

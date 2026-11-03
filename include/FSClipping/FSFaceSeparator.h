@@ -22,8 +22,10 @@ _FS_BEGIN_NAMESPACE
 
 namespace FSFaceSeparator {
 
+// separatedSurfaceCells: local surface cells carrying the marker whose volume cell is on another proc
 void SeparateFaces(const FSMesh& fsmesh, const FSMeshFaceExtractor& faceExtractor,
-                   std::vector<FSBoundaryFace>& bdryFaces, const FS_intT markerBoundaryClipped);
+                   std::vector<FSBoundaryFace>& bdryFaces, std::vector<FS_intT>& separatedSurfaceCells,
+                   const FS_intT markerBoundaryClipped);
 } // namespace FSFaceSeparator
 _FS_END_NAMESPACE
 
