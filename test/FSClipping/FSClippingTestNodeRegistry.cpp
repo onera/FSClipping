@@ -88,6 +88,17 @@ TEST_F(FSNodeRegistryTest, EdgeVerticesBecomeNewNodes)
   EXPECT_EQ(reg.ClipperId(kNOld + 1), 101);
 }
 
+// Old nodes keep their global number, new vertices follow all old nodes, keyed by their clipper id
+TEST_F(FSNodeRegistryTest, GlobalIdKeepsOldNumbersThenClipperIds)
+{
+  AddSplitBottomFace();
+  const auto& reg = Build();
+  for(NodeId n = 0; n < kNOld; n++)
+    EXPECT_EQ(reg.GlobalId(n), n) << "node " << n;
+  EXPECT_EQ(reg.GlobalId(kNOld), kNOld + 100);
+  EXPECT_EQ(reg.GlobalId(kNOld + 1), kNOld + 101);
+}
+
 TEST_F(FSNodeRegistryTest, SharedClipperIdResolvedOnce)
 {
   AddSplitBottomFace();

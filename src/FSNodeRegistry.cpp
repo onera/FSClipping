@@ -19,6 +19,10 @@ FSNodeRegistry::FSNodeRegistry(FSMesh& mesh, const std::vector<FSCellSource>& so
     FSError.SetAndPrintAndExit("FSNodeRegistry: local node numbering expected (nodeOffset == 0).");
 
   nOld_ = oldCoords.Size(0);
+  nodePool_ = mesh.GetMeshData()->GetUnstructCells().GetCellPool(FSMeshEnums::CT_Node);
+  if(!nodePool_)
+    FSError.SetAndPrintAndExit("FSNodeRegistry: the mesh has no node pool.");
+  nOldGlobal_ = nodePool_->GetNGlobalCells();
   coords_.reserve(nOld_);
   for(FS_intT n = 0; n < nOld_; n++)
     coords_.emplace_back(oldCoords(n, 0), oldCoords(n, 1), oldCoords(n, 2));
@@ -101,6 +105,15 @@ const FSVec3& FSNodeRegistry::Coord(NodeId n) const
     FSError.SetAndPrintAndExit(msg.c_str());
   }
   return coords_[n];
+}
+
+FS_intT FSNodeRegistry::GlobalId(NodeId n) const
+{
+  if(n >= nOld_)
+    return nOldGlobal_ + ClipperId(n);
+  if(nodePool_->GetNumbering() == FSMeshEnums::CN_Local)
+    return nodePool_->Local2GlobalNumber(n);
+  return n; // global numbering with nodeOffset == 0: the local number is the global one
 }
 
 FS_intT FSNodeRegistry::ClipperId(NodeId n) const

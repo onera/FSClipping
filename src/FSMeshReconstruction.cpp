@@ -1,5 +1,4 @@
 #include "FSClipping/FSMeshReconstruction.h"
-#include "FSClipping/FSNodeKey.h"
 #include <FSCellInfo.h>
 #include <FSMeshData.h>
 
@@ -138,7 +137,7 @@ void FSMeshReconstruction::RemapToDistributedNumbering(FSTopologyData& topo, std
   const FS_intT nProcs = clac_.GetNProcs();
   const FS_intT nLocal = static_cast<FS_intT>(topo.globalCoords.size());
 
-  // 1 - Exchange every proc's node list as coordinates quantized by tol_
+  // 1 - Exchange every proc's node identities: exact, so no tolerance and one integer per node
   std::vector<FS_int32T> counts(nProcs);
   FS_int32T nLocal32 = static_cast<FS_int32T>(nLocal);
   clac_.AllGather(&nLocal32, 1, counts.data(), 1);
@@ -147,30 +146,24 @@ void FSMeshReconstruction::RemapToDistributedNumbering(FSTopologyData& topo, std
   for(const auto c : counts)
     maxCount = std::max(maxCount, c);
 
-  std::vector<FS_int32T> sendKeys(static_cast<std::size_t>(maxCount) * 3, 0);
-  for(FS_intT i = 0; i < nLocal; ++i) {
-    const NodeKey k(topo.globalCoords[i], tol_);
-    sendKeys[3 * i] = k.ix;
-    sendKeys[3 * i + 1] = k.iy;
-    sendKeys[3 * i + 2] = k.iz;
-  }
-  std::vector<FS_int32T> allKeys(static_cast<std::size_t>(maxCount) * 3 * nProcs);
-  clac_.AllGather(sendKeys.data(), 3 * maxCount, allKeys.data(), 3 * maxCount);
+  const FSIntArrayT& ids = topo.nodeGlobalNumbers;
+  assert(ids.Size() == nLocal);
+  std::vector<FS_intT> sendIds(maxCount, -1);
+  for(FS_intT i = 0; i < nLocal; ++i)
+    sendIds[i] = ids[i];
+  std::vector<FS_intT> allIds(static_cast<std::size_t>(maxCount) * nProcs);
+  clac_.AllGather(sendIds.data(), maxCount, allIds.data(), maxCount);
 
-  // 2 - Numbering in scan order yields contiguous per-proc ranges, as FSDM requires
-  std::unordered_map<NodeKey, FS_intT> keyToDistributed;
-  keyToDistributed.reserve(static_cast<std::size_t>(maxCount) * nProcs);
+  // 2 - The first proc that holds a node owns it; scan order yields contiguous per-proc ranges, as FSDM requires
+  std::unordered_map<FS_intT, FS_intT> idToDistributed;
+  idToDistributed.reserve(static_cast<std::size_t>(maxCount) * nProcs);
   const FS_intT myRank = clac_.GetProcID();
 
   ownedLocalRows.clear();
   for(FS_intT p = 0; p < nProcs; ++p) {
     for(FS_int32T k = 0; k < counts[p]; ++k) {
-      const std::size_t base = (static_cast<std::size_t>(p) * maxCount + k) * 3;
-      NodeKey key(FSVec3(0, 0, 0), 1.0);
-      key.ix = allKeys[base];
-      key.iy = allKeys[base + 1];
-      key.iz = allKeys[base + 2];
-      const auto [it, inserted] = keyToDistributed.try_emplace(key, static_cast<FS_intT>(keyToDistributed.size()));
+      const FS_intT id = allIds[static_cast<std::size_t>(p) * maxCount + k];
+      const auto [it, inserted] = idToDistributed.try_emplace(id, static_cast<FS_intT>(idToDistributed.size()));
       if(inserted && p == myRank)
         ownedLocalRows.push_back(k); // local row k is owned by this proc
     }
@@ -179,13 +172,10 @@ void FSMeshReconstruction::RemapToDistributedNumbering(FSTopologyData& topo, std
   // 3 - Distributing numbers consecutive within each proc's range by construction
   ownedGlobalNumbers.Resize(static_cast<FS_intT>(ownedLocalRows.size()));
   for(std::size_t i = 0; i < ownedLocalRows.size(); ++i)
-    ownedGlobalNumbers[static_cast<FS_intT>(i)] =
-      keyToDistributed.at(NodeKey(topo.globalCoords[ownedLocalRows[i]], tol_));
+    ownedGlobalNumbers[static_cast<FS_intT>(i)] = idToDistributed.at(ids[ownedLocalRows[i]]);
 
   // 4 - Remap the connectivity in place: local row index → distributed number
-  auto localToDistributed = [&](FS_intT localRow) {
-    return keyToDistributed.at(NodeKey(topo.globalCoords[localRow], tol_));
-  };
+  auto localToDistributed = [&](FS_intT localRow) { return idToDistributed.at(ids[localRow]); };
   auto remapRegister = [&](FSIntRegisterT& reg) {
     for(FS_intT i = 0; i < reg.Size(); ++i)
       for(FS_intT j = 0; j < reg.GetNItems(i); ++j)

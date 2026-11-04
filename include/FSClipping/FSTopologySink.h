@@ -43,9 +43,9 @@ struct FSParentRows {
   void Build(FSIntArrayT& parentOut, FSIntArrayT& parentTypeOut) const;
 };
 
-// Keeps the used nodes in registry order, fills coords and clipperIds, returns NodeId -> new index
+// Keeps the used nodes in registry order, fills coords and global ids, returns NodeId -> new index
 FSRenumber CompactNodes(const std::vector<bool>& used, const FSNodeRegistry& nodes, std::vector<FSVec3>& coords,
-                        FSIntArrayT& clipperIds);
+                        FSIntArrayT& globalIds);
 
 // Receives each output cell once, in NodeId; Finalize compacts the nodes and writes FSTopologyData
 class FSTopologySink

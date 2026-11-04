@@ -241,12 +241,13 @@ TEST_F(FSTopologySinkTest, CompactNodesKeepsUsedNodesInOrder)
     used[n] = true;
 
   std::vector<FSVec3> coords;
-  FSIntArrayT clipperIds;
-  const FSRenumber r = CompactNodes(used, *nodes, coords, clipperIds);
+  FSIntArrayT globalIds;
+  const FSRenumber r = CompactNodes(used, *nodes, coords, globalIds);
 
   EXPECT_EQ(r.newId, (std::vector<FS_intT>{-1, 0, -1, 1, 2, -1, -1, -1, -1, -1, 3, -1}));
   ExpectNear(coords, RegistryCoords({1, 3, 4, 10}));
-  EXPECT_EQ(ArrayValues(clipperIds), (std::vector<FS_intT>{11, 13, -1, 100}));
+  // Old nodes keep their number, the new vertex is nOldGlobal + ClipperId = 10 + 100
+  EXPECT_EQ(ArrayValues(globalIds), (std::vector<FS_intT>{1, 3, 4, 110}));
 }
 
 TEST_F(FSTopologySinkTest, CompactNodesNothingUsed)
@@ -270,7 +271,7 @@ TEST_F(FSTopologySinkTest, AddStandardDropsUnusedNodes)
 
   // Only the tetra nodes {5, 6, 8, 9} are kept, in registry order
   ExpectNear(topo.globalCoords, RegistryCoords({5, 6, 8, 9}));
-  EXPECT_EQ(ArrayValues(topo.nodeGlobalNumbers), (std::vector<FS_intT>{-1, -1, -1, -1}));
+  EXPECT_EQ(ArrayValues(topo.nodeGlobalNumbers), (std::vector<FS_intT>{5, 6, 8, 9}));
 
   const FSIntArrayT& tetra = topo.cell2NodeInner[FSMeshEnums::CT_Tetra4];
   ASSERT_EQ(tetra.Size(0), 1);
@@ -354,7 +355,7 @@ TEST_F(FSTopologySinkTest, AddPoly2DStoresRowsParentsAndMarkers)
 
   // Nodes 0..3 of the bottom face, then P and R
   ExpectNear(topo.globalCoords, RegistryCoords({0, 1, 2, 3, 10, 11}));
-  EXPECT_EQ(ArrayValues(topo.nodeGlobalNumbers), (std::vector<FS_intT>{10, 11, 12, 13, 100, 101}));
+  EXPECT_EQ(ArrayValues(topo.nodeGlobalNumbers), (std::vector<FS_intT>{0, 1, 2, 3, 110, 111}));
 
   ASSERT_EQ(topo.cell2NodePoly2D.Size(), 2);
   for(FS_intT m = 0; m < 2; m++) {
