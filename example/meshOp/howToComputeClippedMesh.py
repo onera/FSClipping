@@ -36,7 +36,7 @@ dm = FSDataManager(globalClac)
 # --- load meshes on their respective processes
 if meshID == 1:
     fsmeshOrig1 = dm.GetMesh("original1", clac)
-    meshOps = (("ImportMeshTAU", {"MeshFilename": os.path.join(inputDir, "mesh_cylinder_1.grid")}),
+    meshOps = (("ImportMeshHDF5", {"MeshFilename": os.path.join(inputDir, "mesh_1_debug.h5")}),
                "RepartitionMeshRCB",
                "CreateLocalNumbering",
                "PrintInfo",
@@ -46,7 +46,7 @@ if meshID == 1:
 
 if meshID == 2:
     fsmeshOrig2 = dm.GetMesh("original2", clac)
-    meshOps = (("ImportMeshTAU", {"MeshFilename": os.path.join(inputDir, "mesh_cylinder_2.grid")}),
+    meshOps = (("ImportMeshHDF5", {"MeshFilename": os.path.join(inputDir, "mesh_2_debug.h5")}),
                "RepartitionMeshRCB",
                "CreateLocalNumbering",
                "PrintInfo",
