@@ -56,7 +56,7 @@ FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtra
 
 FSMesh FSClippingEngine::Reconstruct(FSClac& clac, FSMesh& meshOriginal, FSTopologyData& topo, bool copyAttributes)
 {
-  FSMeshReconstruction meshReconstruction(clac, tol_);
+  FSMeshReconstruction meshReconstruction(clac);
   FSMesh clippedMesh = meshReconstruction.Build(meshOriginal.GetMeshData()->GetUnstructCells(), topo);
   if(copyAttributes)
     meshReconstruction.CopyAttributes(meshOriginal, clippedMesh);

@@ -20,8 +20,8 @@ struct FSTopologyData {
   FSCellType2IntArrayT cellParent;
   FSCellType2IntArrayT cellParentType;
 
-  // Global numbering assigned by the clipper proc
-  FSIntArrayT nodeGlobalNumbers;   // parallel to globalCoords
+  // Exact node identity shared by every proc (FSNodeRegistry::GlobalId), key of the distributed numbering
+  FSIntArrayT nodeGlobalNumbers; // parallel to globalCoords
 
   // CADGroupID of each Poly2D
   FSIntArrayT poly2DMarkers;

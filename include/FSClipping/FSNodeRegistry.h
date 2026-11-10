@@ -20,6 +20,8 @@ public:
   std::span<const NodeId> Polygon(FS_intT match) const;
   const FSVec3& Coord(NodeId n) const;
   FS_intT ClipperId(NodeId n) const;
+  // Exact identity shared by every proc: global number of an old node, nOldGlobal + ClipperId for a new vertex
+  FS_intT GlobalId(NodeId n) const;
   FS_intT Size() const noexcept { return FS_intT(coords_.size()); }
 
 private:
@@ -28,7 +30,9 @@ private:
   std::vector<NodeId> polyNodes_;    // vertices of all the matches, flat
   std::vector<FS_intT> polyOffsets_; // match m -> [polyOffsets_[m], polyOffsets_[m+1]) in polyNodes_
 
+  const FSCellPool* nodePool_ = nullptr; // old nodes, owned then ghost
   FS_intT nOld_ = 0;
+  FS_intT nOldGlobal_ = 0;
 };
 
 _FS_END_NAMESPACE

@@ -71,7 +71,7 @@ void FSTopologySink::AddPoly2D(FS_intT parent, FSMeshEnums::CellType parentType,
 }
 
 FSRenumber CompactNodes(const std::vector<bool>& used, const FSNodeRegistry& nodes, std::vector<FSVec3>& coords,
-                        FSIntArrayT& clipperIds)
+                        FSIntArrayT& globalIds)
 {
   assert(FS_intT(used.size()) == nodes.Size());
   const FS_intT nUsed = FS_intT(std::count(used.begin(), used.end(), true));
@@ -79,7 +79,7 @@ FSRenumber CompactNodes(const std::vector<bool>& used, const FSNodeRegistry& nod
   FSRenumber renumber{std::vector<FS_intT>(used.size(), -1)};
   coords.clear();
   coords.reserve(nUsed);
-  clipperIds = FSIntArrayT(nUsed);
+  globalIds = FSIntArrayT(nUsed);
 
   for(NodeId n = 0; n < nodes.Size(); ++n) {
     if(!used[n])
@@ -87,7 +87,7 @@ FSRenumber CompactNodes(const std::vector<bool>& used, const FSNodeRegistry& nod
     const FS_intT k = FS_intT(coords.size());
     renumber.newId[n] = k;
     coords.push_back(nodes.Coord(n));
-    clipperIds[k] = nodes.ClipperId(n);
+    globalIds[k] = nodes.GlobalId(n);
   }
   return renumber;
 }

@@ -16,7 +16,7 @@ using FSPoolLayout = std::map<FSMeshEnums::CellType, std::set<FSString>>;
 class FSMeshReconstruction
 {
 public:
-  explicit FSMeshReconstruction(FSClac& clac, FS_floatT tol = 1e-12) : clac_(clac), tol_(tol){};
+  explicit FSMeshReconstruction(FSClac& clac) : clac_(clac){};
 
   FSMesh Build(const FSUnstructMeshData& meshDataOriginal, FSTopologyData& topologyData);
 
@@ -29,7 +29,7 @@ public:
 private:
   /*
     Parallel assembly of the distributed node numbering :
-      1 - Decide ownership of nodes shared across procs
+      1 - Decide ownership of nodes shared across procs, keyed by their exact identity (nodeGlobalNumbers)
       2 - Compute the contiguous distributed numbering
       3 - Remap cell2NodePoly2D/Poly3D/cell2NodeInner in place.
     We do the remapping because each node is owned by exactly one proc (contiguous ranges per proc) and cell2node
@@ -42,7 +42,6 @@ private:
   static FSPoolLayout PoolLayout(const FSUnstructMeshData& meshData);
 
   FSClac& clac_;
-  FS_floatT tol_;
 };
 
 
