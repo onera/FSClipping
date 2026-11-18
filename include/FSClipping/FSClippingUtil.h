@@ -61,7 +61,7 @@ inline FSVec2 ComputeIntersection(const FSVec2& P1, const FSVec2& P2, const FSVe
   FSVec2 V = B - A;   // direction of clipping edge
 
   FS_floatT denom = U[0] * V[1] - U[1] * V[0];
-  if(std::abs(denom) < static_cast<FS_floatT>(1e-12))
+  if(std::abs(denom) < static_cast<FS_floatT>(1e-12) * U.Norm() * V.Norm()) // sine of the angle
     return P1; // Parallel – return one endpoint as fallback
 
   FSVec2 AP = A - P1;

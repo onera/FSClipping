@@ -7,6 +7,10 @@
 #include <unordered_set>
 
 _FS_BEGIN_NAMESPACE
+
+// Degeneracy threshold of a clipped piece, relative to the perimeter of the subject face
+static constexpr FS_floatT kDegenerateRelTol = 1e-12;
+
 FSClac::sizeT FSFaceMatch::GetBufSize(FSClac& clac) const
 {
   FSClac::sizeT s = 0;
@@ -170,8 +174,11 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1, const FSClippingFace&
 
   FSClippingUtil::EnsureSameOrientation(poly2, FSClippingUtil::PolygonSignedArea(poly1));
 
+  // Thin pieces are kept, a dropped or widened piece leaves a hole or an overlap: only machine-level
+  // degeneracy is tolerated in the clipping and the rejection, tol_ stays for duplicates and inclusion
+  const FS_floatT degenerateLen = kDegenerateRelTol * FSClippingUtil::PolygonPerimeter(poly1);
   std::vector<FSVec2> clip;
-  if(!FSClippingUtil::ClipConvexPolygon(poly1, poly2, clip, tol_))
+  if(!FSClippingUtil::ClipConvexPolygon(poly1, poly2, clip, degenerateLen))
     return false;
 
   const FS_floatT areaClip = std::abs(FSClippingUtil::PolygonSignedArea(clip));
@@ -181,11 +188,11 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1, const FSClippingFace&
   if(clip.size() < 3)
     return false;
 
-  if(FSClippingUtil::ArePointsColinear2D(clip, tol_))
+  if(FSClippingUtil::ArePointsColinear2D(clip, degenerateLen))
     return false;
 
   const FS_floatT perimClip = FSClippingUtil::PolygonPerimeter(clip);
-  if(2.0 * areaClip < tol_ * perimClip)
+  if(2.0 * areaClip < degenerateLen * perimClip)
     return false;
 
   // 3 - Inclusion detection
