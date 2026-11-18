@@ -8,8 +8,11 @@
 
 _FS_BEGIN_NAMESPACE
 
-// Degeneracy threshold of a clipped piece, relative to the perimeter of the subject face
-static constexpr FS_floatT kDegenerateRelTol = 1e-12;
+// Rounding-level length of a face: below it an area is zero; tol_ only identifies points, never drops an area
+static FS_floatT DegenerateLength(const std::vector<FSVec2>& poly)
+{
+  return 1e-12 * FSClippingUtil::PolygonPerimeter(poly);
+}
 
 FSClac::sizeT FSFaceMatch::GetBufSize(FSClac& clac) const
 {
@@ -176,7 +179,7 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1, const FSClippingFace&
 
   // Thin pieces are kept, a dropped or widened piece leaves a hole or an overlap: only machine-level
   // degeneracy is tolerated in the clipping and the rejection, tol_ stays for duplicates and inclusion
-  const FS_floatT degenerateLen = kDegenerateRelTol * FSClippingUtil::PolygonPerimeter(poly1);
+  const FS_floatT degenerateLen = DegenerateLength(poly1);
   std::vector<FSVec2> clip;
   if(!FSClippingUtil::ClipConvexPolygon(poly1, poly2, clip, degenerateLen))
     return false;
@@ -279,8 +282,9 @@ void FSFaceMatcher::PreserveUncoveredFaces(std::vector<FSFaceMatch>& matches,
     const auto it = coveredArea.find(face.faceIndex());
     const FS_floatT covered = (it == coveredArea.end()) ? 0.0 : it->second;
 
+    // Any uncovered area becomes a hole once the face is replaced by its pieces: the face stays whole then
     const FS_floatT perimeter = FSClippingUtil::PolygonPerimeter(face.projected2D());
-    if(std::abs(covered - faceArea) > tol_ * 0.5 * perimeter)
+    if(std::abs(covered - faceArea) > DegenerateLength(face.projected2D()) * 0.5 * perimeter)
       uncovered.insert(face.faceIndex());
   }
 
