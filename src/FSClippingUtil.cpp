@@ -55,7 +55,7 @@ bool ClipConvexPolygon(const std::vector<FSVec2>& subject, const std::vector<FSV
 
     // Deduplicate: skip the new vertex if it coincides with the previous one.
     auto push_unique = [&](const FSVec2& pt) {
-      if(output.empty() || (pt - output.back()).Norm() > tol * tol)
+      if(output.empty() || (pt - output.back()).Norm() > tol)
         output.push_back(pt);
     };
 

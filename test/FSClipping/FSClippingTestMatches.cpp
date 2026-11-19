@@ -231,4 +231,67 @@ TEST(FSClippingTestMatches, InvertedMatches)
   }
 }
 
+// Test 5: a corner of the clipped mesh dips by h, with h of the order of tol, into a thin subject strip
+// (stator case: b = 1.548e-5, h = 2.637e-8); the sliver it cuts must be kept, otherwise the cell has a hole
+static FS_floatT CoveredArea(const std::vector<FSFaceMatch>& matches, FS_intT face)
+{
+  FS_floatT area = 0.0;
+  for(const auto& m : matches)
+    if(m.face1 == face && m.type != FSFaceMatch::NOT_COVERED)
+      area += m.intersectedArea;
+  return area;
+}
+
+TEST(FSClippingTestMatches, SliverNearSubjectEdgeIsKept)
+{
+  const FS_floatT L = 5.57e-3, W = 5.7e-6;  // subject strip [0,L]x[-W,0], long edge A-B on y = 0
+  const FS_floatT b = 1.548e-5, h = 2.637e-8; // the chain crosses y = 0 over b, its corner lies h below
+  const FS_floatT xm = 0.5 * L, s = 3e-3, H = 1e-4;
+  const FS_floatT d = h * (2.0 * s / b - 1.0); // the chain reaches x = xm +- s at y = d
+
+  for(const FS_floatT tol : {1e-9, 1e-8, 2e-8, 1e-7, 1e-6}) {
+    FSClac dummyClac;
+    std::vector<FSClippingFace> subject, clipped;
+    subject.emplace_back(FSClippingFace(std::vector<FSVec3>{{0, -W, 0}, {L, -W, 0}, {L, 0, 0}, {0, 0, 0}}));
+    const FSVec3 C(xm, -h, 0), P(xm - s, d, 0), Q(xm + s, d, 0);
+    clipped.emplace_back(FSClippingFace(std::vector<FSVec3>{C, Q, {xm + s, H, 0}, {xm - s, H, 0}, P})); // f2' above the chain
+    clipped.emplace_back(FSClippingFace(std::vector<FSVec3>{{xm - s, -H, 0}, {xm, -H, 0}, C, P}));      // below, left
+    clipped.emplace_back(FSClippingFace(std::vector<FSVec3>{{xm, -H, 0}, {xm + s, -H, 0}, Q, C}));      // below, right
+
+    FSFaceMatcher matcher(dummyClac, subject, clipped, tol);
+    std::vector<FSFaceMatch> matches;
+    matcher.ComputeMatches(matches);
+
+    const FS_floatT covered = CoveredArea(matches, subject[0].faceIndex());
+    EXPECT_NEAR(covered, L * W, 1e-14 * L * W) << "tol = " << tol << ", hole = " << L * W - covered;
+  }
+}
+
+// Test 6: the outline of the clipped patch dips by h into a subject face at the patch border (stator case:
+// rotor corner 2043092); the uncovered triangle would be a hole, so the face must stay whole
+TEST(FSClippingTestMatches, FacePartlyOutsidePatchStaysWhole)
+{
+  const FS_floatT L = 5.57e-3, W = 5.7e-6;
+  const FS_floatT b = 1.548e-5, h = 2.637e-8;
+  const FS_floatT xm = 0.5 * L, s = 3e-3, H = 1e-4;
+  const FS_floatT d = h * (2.0 * s / b - 1.0);
+
+  for(const FS_floatT tol : {1e-10, 1e-8}) {
+    FSClac dummyClac;
+    std::vector<FSClippingFace> subject, clipped;
+    subject.emplace_back(FSClippingFace(std::vector<FSVec3>{{0, -W, 0}, {L, -W, 0}, {L, 0, 0}, {0, 0, 0}}));
+    const FSVec3 C(xm, -h, 0), P(xm - s, d, 0), Q(xm + s, d, 0);
+    clipped.emplace_back(FSClippingFace(std::vector<FSVec3>{{xm - s, -H, 0}, {xm, -H, 0}, C, P})); // below the outline
+    clipped.emplace_back(FSClippingFace(std::vector<FSVec3>{{xm, -H, 0}, {xm + s, -H, 0}, Q, C}));
+
+    FSFaceMatcher matcher(dummyClac, subject, clipped, tol);
+    std::vector<FSFaceMatch> matches;
+    matcher.ComputeMatches(matches);
+
+    ASSERT_EQ(matches.size(), 1u) << "tol = " << tol;
+    EXPECT_EQ(matches[0].type, FSFaceMatch::NOT_COVERED) << "tol = " << tol;
+    EXPECT_EQ(matches[0].clippedPoly3D.size(), 4u);
+  }
+}
+
 _FS_END_NAMESPACE

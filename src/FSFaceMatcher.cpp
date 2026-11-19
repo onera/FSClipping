@@ -7,6 +7,13 @@
 #include <unordered_set>
 
 _FS_BEGIN_NAMESPACE
+
+// Rounding-level length of a face: below it an area is zero; tol_ only identifies points, never drops an area
+static FS_floatT DegenerateLength(const std::vector<FSVec2>& poly)
+{
+  return 1e-12 * FSClippingUtil::PolygonPerimeter(poly);
+}
+
 FSClac::sizeT FSFaceMatch::GetBufSize(FSClac& clac) const
 {
   FSClac::sizeT s = 0;
@@ -170,8 +177,11 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1, const FSClippingFace&
 
   FSClippingUtil::EnsureSameOrientation(poly2, FSClippingUtil::PolygonSignedArea(poly1));
 
+  // Thin pieces are kept, a dropped or widened piece leaves a hole or an overlap: only machine-level
+  // degeneracy is tolerated in the clipping and the rejection, tol_ stays for duplicates and inclusion
+  const FS_floatT degenerateLen = DegenerateLength(poly1);
   std::vector<FSVec2> clip;
-  if(!FSClippingUtil::ClipConvexPolygon(poly1, poly2, clip, tol_))
+  if(!FSClippingUtil::ClipConvexPolygon(poly1, poly2, clip, degenerateLen))
     return false;
 
   const FS_floatT areaClip = std::abs(FSClippingUtil::PolygonSignedArea(clip));
@@ -181,11 +191,11 @@ bool FSFaceMatcher::ComputeMatch(const FSClippingFace& f1, const FSClippingFace&
   if(clip.size() < 3)
     return false;
 
-  if(FSClippingUtil::ArePointsColinear2D(clip, tol_))
+  if(FSClippingUtil::ArePointsColinear2D(clip, degenerateLen))
     return false;
 
   const FS_floatT perimClip = FSClippingUtil::PolygonPerimeter(clip);
-  if(2.0 * areaClip < tol_ * perimClip)
+  if(2.0 * areaClip < degenerateLen * perimClip)
     return false;
 
   // 3 - Inclusion detection
@@ -272,8 +282,9 @@ void FSFaceMatcher::PreserveUncoveredFaces(std::vector<FSFaceMatch>& matches,
     const auto it = coveredArea.find(face.faceIndex());
     const FS_floatT covered = (it == coveredArea.end()) ? 0.0 : it->second;
 
+    // Any uncovered area becomes a hole once the face is replaced by its pieces: the face stays whole then
     const FS_floatT perimeter = FSClippingUtil::PolygonPerimeter(face.projected2D());
-    if(std::abs(covered - faceArea) > tol_ * 0.5 * perimeter)
+    if(std::abs(covered - faceArea) > DegenerateLength(face.projected2D()) * 0.5 * perimeter)
       uncovered.insert(face.faceIndex());
   }
 
