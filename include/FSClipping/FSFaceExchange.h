@@ -3,6 +3,7 @@
 
 #include "FSClipping/FSClippingFace.h"
 #include "FSClipping/FSFaceMatcher.h"
+#include "FSClipping/FSNodeSnap.h"
 #include <FSClac.h>
 #include <FSHashableFace.h>
 #include <vector>
@@ -38,11 +39,14 @@ AllGatheredFaces GatherReceiveAll(FSClac& clac);
 
 namespace FSMatchExchange {
 
-void Send(FSClac& clac, FS_intT destProc, const std::vector<FSFaceMatch>& matches);
+// The node moves travel with the matches; every proc of the side receives all of them
+void Send(FSClac& clac, FS_intT destProc, const std::vector<FSFaceMatch>& matches,
+          const std::vector<FSNodeMove>& moves = {});
 
-void ScatterSend(FSClac& clac, const std::vector<FSFaceMatch>& matches, const FSFaceExchange::GatheredFaces& gatheredA);
+void ScatterSend(FSClac& clac, const std::vector<FSFaceMatch>& matches, const FSFaceExchange::GatheredFaces& gatheredA,
+                 const std::vector<FSNodeMove>& moves = {});
 
-std::vector<FSFaceMatch> ScatterReceive(FSClac& clac, FS_intT clipperProc);
+std::vector<FSFaceMatch> ScatterReceive(FSClac& clac, FS_intT clipperProc, std::vector<FSNodeMove>* moves = nullptr);
 
 } // namespace FSMatchExchange
 

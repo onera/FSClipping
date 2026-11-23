@@ -6,7 +6,7 @@
 _FS_BEGIN_NAMESPACE
 
 FSNodeRegistry::FSNodeRegistry(FSMesh& mesh, const std::vector<FSCellSource>& sources, const FSCellClipped& clipped,
-                               FS_floatT tol)
+                               FS_floatT tol, const std::vector<FSNodeMove>& moves)
 {
   // 1 - Add the old coordinates
   FSFloatArrayT oldCoords;
@@ -26,6 +26,8 @@ FSNodeRegistry::FSNodeRegistry(FSMesh& mesh, const std::vector<FSCellSource>& so
   coords_.reserve(nOld_);
   for(FS_intT n = 0; n < nOld_; n++)
     coords_.emplace_back(oldCoords(n, 0), oldCoords(n, 1), oldCoords(n, 2));
+  // Ghost copies share the owner's exact coordinates, so every proc moves the node alike
+  FSNodeSnap::Apply(moves, coords_);
   clipperId_.assign(nOld_, -1);
 
   // 2 - Groupe the cell source by type

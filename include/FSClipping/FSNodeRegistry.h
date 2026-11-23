@@ -3,6 +3,7 @@
 
 #include "FSClipping/FSCellClipped.h"
 #include "FSClipping/FSCellSource.h"
+#include "FSClipping/FSNodeSnap.h"
 #include <FSVec3.h>
 #include <span>
 #include <vector>
@@ -14,7 +15,8 @@ using NodeId = FS_intT; // [0, nOld) : old node, same number ; [nOld, ...) : new
 class FSNodeRegistry
 {
 public:
-  FSNodeRegistry(FSMesh& mesh, const std::vector<FSCellSource>& sources, const FSCellClipped& clipped, FS_floatT tol);
+  FSNodeRegistry(FSMesh& mesh, const std::vector<FSCellSource>& sources, const FSCellClipped& clipped, FS_floatT tol,
+                 const std::vector<FSNodeMove>& moves = {});
 
   NodeId Old(FS_intT oldNode) const noexcept { return oldNode; } // identity, no tolerance
   std::span<const NodeId> Polygon(FS_intT match) const;

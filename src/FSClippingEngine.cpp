@@ -16,14 +16,15 @@ _FS_BEGIN_NAMESPACE
 //
 
 FSTopologyData FSClippingEngine::BuildTopology(FSMesh& mesh, const BoundaryExtraction& be,
-                                               const std::vector<FSFaceMatch>& matches)
+                                               const std::vector<FSFaceMatch>& matches,
+                                               const std::vector<FSNodeMove>& moves)
 {
   // 1 - Build the input cells
   const std::vector<FSCellSource> sources = BuildCellSources(mesh);
   const FSCellClipped clipped(matches, be);
 
   // 2 - Build the nodes
-  const FSNodeRegistry nodes(mesh, sources, clipped, tol_);
+  const FSNodeRegistry nodes(mesh, sources, clipped, tol_, moves);
 
   // 3 - Build the topology
   FSTopologySink out(nodes);
@@ -68,11 +69,22 @@ FSMesh FSClippingEngine::Reconstruct(FSClac& clac, FSMesh& meshOriginal, FSTopol
 //  RunMatcherProc
 //
 
-bool FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_floatT tol)
+bool FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_floatT tol, FS_floatT snapTol)
 {
   auto allGathered = FSFaceExchange::GatherReceiveAll(globalClac);
   if(allGathered.meshA.faces.faces.empty() || allGathered.meshB.faces.faces.empty())
     return false;
+
+  // Mesh B interface nodes nearly coincident with mesh A ones are moved onto them before the clipping
+  const std::vector<FSNodeMove> moves =
+    FSNodeSnap::Compute(allGathered.meshA.faces.faces, allGathered.meshB.faces.faces, snapTol);
+  FSNodeSnap::Apply(moves, allGathered.meshB.faces.faces);
+  if(!moves.empty()) {
+    FSString msg = "FSClippingEngine: ";
+    msg.Add(FS_intT(moves.size()));
+    msg += " interface nodes of mesh 2 snapped onto mesh 1\n";
+    FSLog(&localClac, 0, msg.c_str(), 0);
+  }
 
   FSFaceMatcher matcher(localClac, allGathered.meshA.faces.faces, allGathered.meshB.faces.faces, tol);
   std::vector<FSFaceMatch> matches;
@@ -88,7 +100,7 @@ bool FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_
 
   matcher.ComputeInvertedMatches(matches);
   FSFaceMatcher::AssignGlobalNodeIds(matches, tol);
-  FSMatchExchange::ScatterSend(globalClac, matches, allGathered.meshB);
+  FSMatchExchange::ScatterSend(globalClac, matches, allGathered.meshB, moves);
   return true;
 }
 

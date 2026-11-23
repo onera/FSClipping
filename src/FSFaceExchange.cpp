@@ -143,11 +143,13 @@ AllGatheredFaces GatherReceiveAll(FSClac& globalClac)
 
 namespace FSMatchExchange {
 
-void Send(FSClac& clac, FS_intT destProc, const std::vector<FSFaceMatch>& matches)
+void Send(FSClac& clac, FS_intT destProc, const std::vector<FSFaceMatch>& matches,
+          const std::vector<FSNodeMove>& moves)
 {
-  FSClac::sizeT bufSize = clac.GetBufSizeInt32(1); // n_matches
+  FSClac::sizeT bufSize = clac.GetBufSizeInt32(2); // n_matches, n_moves
   for(const auto& m : matches)
     bufSize += m.GetBufSize(clac);
+  bufSize += clac.GetBufSizeFloat64(static_cast<FSClac::intT>(moves.size()) * 6);
 
   clac.SelectSendBuffer(destProc);
   clac.InitSendBuffer(bufSize);
@@ -159,10 +161,18 @@ void Send(FSClac& clac, FS_intT destProc, const std::vector<FSFaceMatch>& matche
     fm.Pack(clac);
   }
 
+  FS_intT nMoves = static_cast<FS_intT>(moves.size());
+  clac.Pack(&nMoves, 1);
+  for(const auto& mv : moves) {
+    FS_float64T xyz[6] = {mv.from[0], mv.from[1], mv.from[2], mv.to[0], mv.to[1], mv.to[2]};
+    clac.Pack(xyz, 6);
+  }
+
   clac.SendBuffer(destProc);
 }
 
-void ScatterSend(FSClac& clac, const std::vector<FSFaceMatch>& matches, const FSFaceExchange::GatheredFaces& gathered)
+void ScatterSend(FSClac& clac, const std::vector<FSFaceMatch>& matches, const FSFaceExchange::GatheredFaces& gathered,
+                 const std::vector<FSNodeMove>& moves)
 {
   std::map<FS_intT, std::vector<FSFaceMatch> > forAOrB;
   for(const auto& [local, global] : gathered.localToGlobal)
@@ -172,10 +182,10 @@ void ScatterSend(FSClac& clac, const std::vector<FSFaceMatch>& matches, const FS
     forAOrB.at(gathered.cellToGlobalProc.at({m.ownerProc1, m.elemOwner1})).push_back(m);
 
   for(auto& [globalProc, subset] : forAOrB)
-    Send(clac, globalProc, subset);
+    Send(clac, globalProc, subset, moves);
 }
 
-std::vector<FSFaceMatch> ScatterReceive(FSClac& clac, FS_intT clipperProc)
+std::vector<FSFaceMatch> ScatterReceive(FSClac& clac, FS_intT clipperProc, std::vector<FSNodeMove>* moves)
 {
 
   clac.ReceiveBuffer(clipperProc);
@@ -189,6 +199,18 @@ std::vector<FSFaceMatch> ScatterReceive(FSClac& clac, FS_intT clipperProc)
     match.Unpack(clac);
     matches[m] = match;
   }
+
+  FS_intT nMoves = 0;
+  clac.Unpack(&nMoves, 1);
+  std::vector<FSNodeMove> received(nMoves);
+  for(auto& mv : received) {
+    FS_float64T xyz[6];
+    clac.Unpack(xyz, 6);
+    mv.from = FSVec3(xyz[0], xyz[1], xyz[2]);
+    mv.to = FSVec3(xyz[3], xyz[4], xyz[5]);
+  }
+  if(moves)
+    *moves = std::move(received);
   return matches;
 }
 

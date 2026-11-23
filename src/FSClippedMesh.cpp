@@ -140,11 +140,12 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
 
     // 2 - Send the faces extrated and compute the matches
     FSFaceExchange::GatherSend(*mClac, clipperProc, meshId, be.faces);
-    const std::vector<FSFaceMatch> matches = FSMatchExchange::ScatterReceive(*mClac, clipperProc);
+    std::vector<FSNodeMove> moves; // snapped interface nodes, mesh 2 only
+    const std::vector<FSFaceMatch> matches = FSMatchExchange::ScatterReceive(*mClac, clipperProc, &moves);
 
     // 4 - Reconstruct the topologie of the entire mesh in parrallel
     FSClippingEngine engine(mParams.mTol);
-    FSTopologyData meshClippedTopo = engine.BuildTopology(*mesh, be, matches);
+    FSTopologyData meshClippedTopo = engine.BuildTopology(*mesh, be, matches, moves);
 
     // 5 - Construct the new clipped mesh
     *meshClipped = engine.Reconstruct(*mesh->GetClac(), *mesh, meshClippedTopo, true);
@@ -159,7 +160,7 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
   } else {
     // 3 - Clipper proc (meshID = 0) receive the extrated faces and compute the matches
     FSClac selfClac(FSClac::sSelfComm);
-    bool ok = FSClippingEngine::RunMatcherProc(*mClac, selfClac, mParams.mTol);
+    bool ok = FSClippingEngine::RunMatcherProc(*mClac, selfClac, mParams.mTol, mParams.mSnapTol);
     if(!ok) {
       FSError("FSClippedMesh: They were an error with the clipper proc, any matches was computed, check your marker or "
               "the tolerance.");
