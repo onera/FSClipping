@@ -100,6 +100,7 @@ public:
 
   // Pieces dropped by the snapping on side 0 (ComputeMatches) or 1 (ComputeInvertedMatches)
   FS_intT SnapDropped(FS_intT side) const { return snapDropped_[side]; }
+  FS_intT SnapRefused() const { return snap_ ? snap_->NRefused() : 0; }
 
 private:
   const std::vector<FSClippingFace>& subjectFaces_;

@@ -95,7 +95,9 @@ bool FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_
     msg.Add(matcher.SnapDropped(0));
     msg += " pieces on mesh 1 and ";
     msg.Add(matcher.SnapDropped(1));
-    msg += " on mesh 2\n";
+    msg += " on mesh 2, ";
+    msg.Add(matcher.SnapRefused());
+    msg += " merges refused\n";
     FSLog(&localClac, 0, msg.c_str(), 0);
   }
   return true;

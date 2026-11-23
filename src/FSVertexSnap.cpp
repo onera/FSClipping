@@ -137,10 +137,13 @@ FSVertexSnap::FSVertexSnap(const std::vector<FSClippingFace>& faces1, const std:
     addPiece(1, m.face2, m.clippedPoly3D_face2);
   }
 
-  // 2 - Groups: transitive closure of the pairs closer than snapTol
+  // 2 - Candidate pairs closer than snapTol
   const FS_intT n = FS_intT(points_.size());
-  std::vector<FS_intT> parent(n);
-  std::iota(parent.begin(), parent.end(), 0);
+  struct Pair {
+    FS_floatT d;
+    FS_intT i, j;
+  };
+  std::vector<Pair> pairs;
   std::unordered_map<CellKey, std::vector<FS_intT>, CellKeyHash> grid;
   for(FS_intT i = 0; i < n; ++i) {
     const CellKey c = CellOf(points_[i], snapTol);
@@ -150,11 +153,54 @@ FSVertexSnap::FSVertexSnap(const std::vector<FSClippingFace>& faces1, const std:
           const auto it = grid.find({c[0] + dx, c[1] + dy, c[2] + dz});
           if(it == grid.end())
             continue;
-          for(const FS_intT j : it->second)
-            if(points_[i].Distance(points_[j]) <= snapTol)
-              parent[Root(parent, i)] = Root(parent, j);
+          for(const FS_intT j : it->second) {
+            const FS_floatT d = points_[i].Distance(points_[j]);
+            if(d <= snapTol)
+              pairs.push_back({d, i, j});
+          }
         }
     grid[c].push_back(i);
+  }
+
+  // 3 - Greedy merge by increasing distance, so each node first takes its nearest partner. A merge is refused
+  // when it would join two nodes of one mesh (an edge collapse) or widen the group beyond snapTol
+  std::stable_sort(pairs.begin(), pairs.end(), [](const Pair& a, const Pair& b) { return a.d < b.d; });
+  std::vector<FS_intT> parent(n);
+  std::iota(parent.begin(), parent.end(), 0);
+  std::vector<std::vector<FS_intT>> members(n);
+  std::array<std::vector<bool>, 2> hasOriginal = isOriginal_;
+  for(FS_intT i = 0; i < n; ++i)
+    members[i] = {i};
+
+  for(const Pair& p : pairs) {
+    FS_intT a = Root(parent, p.i), b = Root(parent, p.j);
+    if(a == b)
+      continue;
+    if((hasOriginal[0][a] && hasOriginal[0][b]) || (hasOriginal[1][a] && hasOriginal[1][b])) {
+      ++nRefused_;
+      continue;
+    }
+    bool tooWide = false;
+    for(const FS_intT u : members[a]) {
+      for(const FS_intT v : members[b])
+        if(points_[u].Distance(points_[v]) > snapTol) {
+          tooWide = true;
+          break;
+        }
+      if(tooWide)
+        break;
+    }
+    if(tooWide) {
+      ++nRefused_;
+      continue;
+    }
+    if(members[a].size() < members[b].size())
+      std::swap(a, b);
+    parent[b] = a;
+    members[a].insert(members[a].end(), members[b].begin(), members[b].end());
+    members[b].clear();
+    for(FS_intT s = 0; s < 2; ++s)
+      hasOriginal[s][a] = hasOriginal[s][a] || hasOriginal[s][b];
   }
 
   group_.assign(n, -1);
@@ -162,7 +208,8 @@ FSVertexSnap::FSVertexSnap(const std::vector<FSClippingFace>& faces1, const std:
   for(FS_intT i = 0; i < n; ++i)
     group_[i] = groupOfRoot.try_emplace(Root(parent, i), FS_intT(groupOfRoot.size())).first->second;
 
-  // 3 - One representative per side: its original node, else the point nearest to its face outline
+  // 4 - One representative per side: its original node (at most one by construction), else the point nearest to
+  // its face outline
   const FS_intT nGroups = FS_intT(groupOfRoot.size());
   for(FS_intT s = 0; s < 2; ++s) {
     rep_[s].assign(nGroups, -1);
@@ -171,9 +218,6 @@ FSVertexSnap::FSVertexSnap(const std::vector<FSClippingFace>& faces1, const std:
       const FS_intT g = group_[i];
       FS_intT& r = rep_[s][g];
       if(isOriginal_[s][i]) {
-        // Merging two nodes of one mesh would collapse one of its edges
-        if(repIsOriginal[g])
-          Fail("two nodes of the same mesh closer than the snap tolerance", points_[i]);
         r = i;
         repIsOriginal[g] = true;
       } else if(!repIsOriginal[g] && outlineDist_[s][i] < kInf && (r < 0 || outlineDist_[s][i] < outlineDist_[s][r]))

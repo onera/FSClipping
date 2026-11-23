@@ -19,12 +19,16 @@ struct FSFaceMatch; // FSFaceMatcher.h owns the snapper
 class FSVertexSnap
 {
 public:
-  // Groups are built once, on the raw matches (both frames) and the vertices of both face sets
+  // Groups are built once, on the raw matches (both frames) and the vertices of both face sets; a group never
+  // holds two nodes of one mesh and its diameter stays below snapTol
   FSVertexSnap(const std::vector<FSClippingFace>& faces1, const std::vector<FSClippingFace>& faces2,
                const std::vector<FSFaceMatch>& rawMatches, FS_floatT snapTol);
 
   // side 0: clippedPoly3D in the frame of faces1, side 1: in the frame of faces2; returns the dropped pieces
   FS_intT Apply(std::vector<FSFaceMatch>& matches, FS_intT side) const;
+
+  // Merges refused because they would join two nodes of one mesh or widen a group beyond snapTol
+  FS_intT NRefused() const noexcept { return nRefused_; }
 
 private:
   using ExactKey = std::array<std::uint64_t, 3>;
@@ -38,6 +42,7 @@ private:
   std::array<std::vector<FS_floatT>, 2> outlineDist_; // distance to the outline of its face, +inf if not on that side
   std::vector<FS_intT> group_;                        // point -> group
   std::array<std::vector<FS_intT>, 2> rep_;           // group -> representative point of each side, -1 if none
+  FS_intT nRefused_ = 0;
 
   FS_intT AddPoint(const FSVec3& p);
   FS_intT Find(const FSVec3& p) const;

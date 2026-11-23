@@ -118,4 +118,35 @@ TEST(FSVertexSnap, NodeNearEdgeMergesOnTheEdge)
   EXPECT_TRUE(clippedSeesR);
 }
 
+// Refined zone (rotor/stator case, edges of 2e-6): each rotor node of a thin strip is 2e-7 off its stator node,
+// the two rotor nodes are 1.6e-6 apart, below snapTol: each pairs with its own stator node, never with the other
+TEST(FSVertexSnap, ThinStripKeepsOneNodePerGroup)
+{
+  const FS_floatT w = 2e-6, off = 2e-7;
+  auto strips = [](FS_floatT a, FS_floatT b) {
+    std::vector<FSClippingFace> faces;
+    faces.emplace_back(std::vector<FSVec3>{{-1, -1, 0}, {a, -1, 0}, {a, 1, 0}, {-1, 1, 0}});
+    faces.emplace_back(std::vector<FSVec3>{{a, -1, 0}, {b, -1, 0}, {b, 1, 0}, {a, 1, 0}});
+    faces.emplace_back(std::vector<FSVec3>{{b, -1, 0}, {1, -1, 0}, {1, 1, 0}, {b, 1, 0}});
+    return faces;
+  };
+  const auto subject = strips(0.0, w), clipped = strips(off, w - off);
+
+  FSClac dummyClac;
+  FSFaceMatcher matcher(dummyClac, subject, clipped, 1e-10, 1.7e-6);
+  std::vector<FSFaceMatch> matches, inverted;
+  matcher.ComputeMatches(matches);
+  matcher.ComputeInvertedMatches(inverted);
+
+  ASSERT_EQ(matches.size(), 3u);
+  ASSERT_EQ(inverted.size(), 3u);
+  for(const auto& m : matches)
+    for(const auto& p : m.clippedPoly3D)
+      EXPECT_TRUE(IsVertexOf(p, subject));
+  for(const auto& m : inverted)
+    for(const auto& p : m.clippedPoly3D)
+      EXPECT_TRUE(IsVertexOf(p, clipped));
+  EXPECT_GT(matcher.SnapRefused(), 0);
+}
+
 _FS_END_NAMESPACE
