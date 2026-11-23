@@ -149,4 +149,39 @@ TEST(FSVertexSnap, ThinStripKeepsOneNodePerGroup)
   EXPECT_GT(matcher.SnapRefused(), 0);
 }
 
+// snapTol wider than a strip (rotor/stator case: 2e-6 strips, snapTol 2e-6): points of opposite strip edges must not
+// merge, the pieces of each original face still tile it exactly
+TEST(FSVertexSnap, SnapWiderThanStripLeavesNoHole)
+{
+  const FS_floatT w = 2e-6;
+  auto strips = [](FS_floatT a, FS_floatT b, FS_floatT tilt) {
+    std::vector<FSClippingFace> faces;
+    faces.emplace_back(std::vector<FSVec3>{{-1, -1, 0}, {a, -1, 0}, {a + tilt, 1, 0}, {-1, 1, 0}});
+    faces.emplace_back(std::vector<FSVec3>{{a, -1, 0}, {b, -1, 0}, {b + tilt, 1, 0}, {a + tilt, 1, 0}});
+    faces.emplace_back(std::vector<FSVec3>{{b, -1, 0}, {1, -1, 0}, {1, 1, 0}, {b + tilt, 1, 0}});
+    return faces;
+  };
+  const auto subject = strips(0.0, w, 0.0), clipped = strips(3e-7, w + 3e-7, -6e-7);
+
+  FSClac dummyClac;
+  FSFaceMatcher matcher(dummyClac, subject, clipped, 1e-10, 2.5e-6);
+  std::vector<FSFaceMatch> matches, inverted;
+  matcher.ComputeMatches(matches);
+  matcher.ComputeInvertedMatches(inverted);
+
+  auto checkTiling = [](const std::vector<FSFaceMatch>& ms, const std::vector<FSClippingFace>& faces) {
+    for(const auto& f : faces) {
+      FS_floatT sum = 0.0;
+      for(const auto& m : ms)
+        if(m.face1 == f.faceIndex()) {
+          EXPECT_GT(AreaXY(m.clippedPoly3D), 0.0);
+          sum += AreaXY(m.clippedPoly3D);
+        }
+      EXPECT_NEAR(sum, AreaXY(f.vertices()), 1e-12 * AreaXY(f.vertices()));
+    }
+  };
+  checkTiling(matches, subject);
+  checkTiling(inverted, clipped);
+}
+
 _FS_END_NAMESPACE

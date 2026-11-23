@@ -270,7 +270,7 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
 
   // After the coverage check, which must see the exact pieces
   if(snapTol_ > 0.0) {
-    snap_.emplace(subjectFaces_, clippedFaces_, rawMatches_, snapTol_);
+    snap_.emplace(subjectFaces_, clippedFaces_, rawMatches_, tol_, snapTol_);
     snapDropped_[0] = snap_->Apply(outMatches, 0);
   }
 }
