@@ -47,6 +47,7 @@ void FSClippedMeshParams::Copy(const FSClippedMeshParams& other)
   mMarker1 = other.mMarker1;
   mMarker2 = other.mMarker2;
   mTol = other.mTol;
+  mSnapTol = other.mSnapTol;
 }
 
 //-----------------------------------------------------------------------------
@@ -115,6 +116,7 @@ bool FSClippedMeshParams::InitFromXML(xmlDocPtr doc, xmlNodePtr node)
   bool marker1Parsed = false;
   bool marker2Parsed = false;
   bool tolParsed = false;
+  bool snapTolParsed = false;
   bool meshKeyOrig1Parsed = false;
   bool meshKeyOrig2Parsed = false;
 
@@ -237,6 +239,22 @@ bool FSClippedMeshParams::InitFromXML(xmlDocPtr doc, xmlNodePtr node)
         if(!FSXMLUtil::ParseFloat(doc, cur, mTol)) {
           return false;
         }
+      }
+      // --- check for 'snap tolerance' ---
+      else if(xmlStrcasecmp(cur->name, (const xmlChar*)"SnapTolerance") == 0 ||
+              xmlStrcasecmp(cur->name, (const xmlChar*)"Snap tolerance") == 0) {
+        if(snapTolParsed) {
+          FSString msg = "Error during parsing XML node '";
+          msg += FSString::UTF8TOISOLAT1(cur->name);
+          msg += "'";
+          msg += ", SnapTolerance already processed.";
+          FSError.Set(msg.c_str());
+          return false;
+        }
+        snapTolParsed = true;
+        if(!FSXMLUtil::ParseFloat(doc, cur, mSnapTol)) {
+          return false;
+        }
       } else {
         // ... ignore ...
       }
@@ -312,6 +330,7 @@ FSClippedMeshParams::sizeT FSClippedMeshParams::GetBufSize(FSClac& clac) const
   bufSize += clac.GetBufSize<FS_intT>();   // mMarker1
   bufSize += clac.GetBufSize<FS_intT>();   // mMarker2
   bufSize += clac.GetBufSize<FS_floatT>(); // /Tol
+  bufSize += clac.GetBufSize<FS_floatT>(); // mSnapTol
   bufSize += mMeshKeyOriginal1.GetBufSize(clac);
   bufSize += mMeshKeyOriginal2.GetBufSize(clac);
   bufSize += mMeshKeyClipped1.GetBufSize(clac);
@@ -334,6 +353,7 @@ void FSClippedMeshParams::Pack(FSClac& clac)
   clac.Pack(&mMarker1);
   clac.Pack(&mMarker2);
   clac.Pack(&mTol);
+  clac.Pack(&mSnapTol);
   mMeshKeyOriginal1.Pack(clac);
   mMeshKeyOriginal2.Pack(clac);
   mMeshKeyClipped1.Pack(clac);
@@ -355,6 +375,7 @@ void FSClippedMeshParams::Unpack(FSClac& clac)
   clac.Unpack(&mMarker1);
   clac.Unpack(&mMarker2);
   clac.Unpack(&mTol);
+  clac.Unpack(&mSnapTol);
   mMeshKeyOriginal1.Unpack(clac);
   mMeshKeyOriginal2.Unpack(clac);
   mMeshKeyClipped1.Unpack(clac);

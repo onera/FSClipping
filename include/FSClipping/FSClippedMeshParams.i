@@ -71,6 +71,12 @@
               paramsXML += "<%s>%s</%s>\n" % (key, str(params[key]), key)
               del params[key]
 
+      for key in ("Snap tolerance",
+                  "SnapTolerance"):
+          if key in params:
+              paramsXML += "<%s>%s</%s>\n" % (key, str(params[key]), key)
+              del params[key]
+
       return paramsXML
   %}
 };

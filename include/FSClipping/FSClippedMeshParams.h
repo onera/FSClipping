@@ -20,6 +20,9 @@ public:
   //! Geometric tolerance for the clipping algorithm.
   FS_floatT mTol;
 
+  //! Distance below which nearly coincident interface vertices are snapped together, 0 disables it.
+  FS_floatT mSnapTol = 0.0;
+
   //! Mesh key of the original mesh 1.
   FSString mMeshKeyOriginal1;
 
