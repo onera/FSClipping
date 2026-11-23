@@ -159,7 +159,7 @@ bool FSClippedMesh::GenerateClippedMesh(FS_intT meshId)
   } else {
     // 3 - Clipper proc (meshID = 0) receive the extrated faces and compute the matches
     FSClac selfClac(FSClac::sSelfComm);
-    bool ok = FSClippingEngine::RunMatcherProc(*mClac, selfClac, mParams.mTol);
+    bool ok = FSClippingEngine::RunMatcherProc(*mClac, selfClac, mParams.mTol, mParams.mSnapTol);
     if(!ok) {
       FSError("FSClippedMesh: They were an error with the clipper proc, any matches was computed, check your marker or "
               "the tolerance.");

@@ -267,6 +267,12 @@ void FSFaceMatcher::ComputeMatches(std::vector<FSFaceMatch>& outMatches)
   }
 
   PreserveUncoveredFaces(outMatches, subjectFaces_);
+
+  // After the coverage check, which must see the exact pieces
+  if(snapTol_ > 0.0) {
+    snap_.emplace(subjectFaces_, clippedFaces_, rawMatches_, snapTol_);
+    snapDropped_[0] = snap_->Apply(outMatches, 0);
+  }
 }
 
 void FSFaceMatcher::PreserveUncoveredFaces(std::vector<FSFaceMatch>& matches,
@@ -354,6 +360,9 @@ void FSFaceMatcher::ComputeInvertedMatches(std::vector<FSFaceMatch>& outMatches)
   }
 
   PreserveUncoveredFaces(outMatches, clippedFaces_);
+
+  if(snap_)
+    snapDropped_[1] = snap_->Apply(outMatches, 1);
 }
 
 _FS_END_NAMESPACE

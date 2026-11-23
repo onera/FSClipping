@@ -18,7 +18,8 @@ public:
 
   FSMesh Reconstruct(FSClac& clac, FSMesh& meshOriginal, FSTopologyData& topo, bool copyAttributes = false);
 
-  static bool RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_floatT tol);
+  // snapTol > 0: match vertices closer than snapTol are merged, one representative per mesh
+  static bool RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_floatT tol, FS_floatT snapTol = 0.0);
 
 private:
   FS_floatT tol_;

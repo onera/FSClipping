@@ -5,6 +5,9 @@
 #include "FSBoundingBoxUtil.h"
 
 #include "FSClipping/FSClippingFace.h"
+#include "FSClipping/FSVertexSnap.h"
+
+#include <optional>
 
 _FS_BEGIN_NAMESPACE
 
@@ -66,9 +69,10 @@ struct FSFaceMatch {
 class FSFaceMatcher
 {
 public:
+  // snapTol > 0: match vertices closer than snapTol are merged, after the coverage check
   FSFaceMatcher(FSClac& clacClipped, const std::vector<FSClippingFace>& subjectFaces,
-                const std::vector<FSClippingFace>& clippedFaces, FS_floatT tol = 1e-12)
-    : subjectFaces_(subjectFaces), clippedFaces_(clippedFaces), tol_(tol)
+                const std::vector<FSClippingFace>& clippedFaces, FS_floatT tol = 1e-12, FS_floatT snapTol = 0.0)
+    : subjectFaces_(subjectFaces), clippedFaces_(clippedFaces), tol_(tol), snapTol_(snapTol)
   {
 
     FS_sizeT size = static_cast<FS_sizeT>(clippedFaces.size());
@@ -94,15 +98,23 @@ public:
   */
   static FS_intT AssignGlobalNodeIds(std::vector<FSFaceMatch>& matches, FS_floatT tol);
 
+  // Pieces dropped by the snapping on side 0 (ComputeMatches) or 1 (ComputeInvertedMatches)
+  FS_intT SnapDropped(FS_intT side) const { return snapDropped_[side]; }
+
 private:
   const std::vector<FSClippingFace>& subjectFaces_;
   const std::vector<FSClippingFace>& clippedFaces_;
 
   FSBVHTree bvhClipped_;
   FS_floatT tol_;
+  FS_floatT snapTol_;
 
   // All face-pair intersections, before any coverage filtering.
   std::vector<FSFaceMatch> rawMatches_;
+
+  // Built once on rawMatches_, so both sides drop the same pieces
+  std::optional<FSVertexSnap> snap_;
+  mutable std::array<FS_intT, 2> snapDropped_{0, 0};
 
   bool ComputeMatch(const FSClippingFace& f1, const FSClippingFace& f2, FSFaceMatch& out) const;
 

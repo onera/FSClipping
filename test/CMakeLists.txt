@@ -28,6 +28,7 @@ add_executable(FSClippingTest FSClipping/FSClippingTestGeo.cpp
                               FSClipping/FSClippingTestCellClipped.cpp
                               FSClipping/FSClippingTestCellSource.cpp
                               FSClipping/FSClippingTestNodeRegistry.cpp
+                              FSClipping/FSClippingTestVertexSnap.cpp
                               FSClipping/FSClippingTestPolyCell.cpp
                               FSClipping/FSClippingTestTopologySink.cpp
                               FSClipping/FSClippingTestCellAttributes.cpp)

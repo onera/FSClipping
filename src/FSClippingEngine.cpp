@@ -68,13 +68,13 @@ FSMesh FSClippingEngine::Reconstruct(FSClac& clac, FSMesh& meshOriginal, FSTopol
 //  RunMatcherProc
 //
 
-bool FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_floatT tol)
+bool FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_floatT tol, FS_floatT snapTol)
 {
   auto allGathered = FSFaceExchange::GatherReceiveAll(globalClac);
   if(allGathered.meshA.faces.faces.empty() || allGathered.meshB.faces.faces.empty())
     return false;
 
-  FSFaceMatcher matcher(localClac, allGathered.meshA.faces.faces, allGathered.meshB.faces.faces, tol);
+  FSFaceMatcher matcher(localClac, allGathered.meshA.faces.faces, allGathered.meshB.faces.faces, tol, snapTol);
   std::vector<FSFaceMatch> matches;
   matcher.ComputeMatches(matches);
 
@@ -89,6 +89,15 @@ bool FSClippingEngine::RunMatcherProc(FSClac& globalClac, FSClac& localClac, FS_
   matcher.ComputeInvertedMatches(matches);
   FSFaceMatcher::AssignGlobalNodeIds(matches, tol);
   FSMatchExchange::ScatterSend(globalClac, matches, allGathered.meshB);
+
+  if(snapTol > 0.0) {
+    FSString msg = "FSClippingEngine: snapping dropped ";
+    msg.Add(matcher.SnapDropped(0));
+    msg += " pieces on mesh 1 and ";
+    msg.Add(matcher.SnapDropped(1));
+    msg += " on mesh 2\n";
+    FSLog(&localClac, 0, msg.c_str(), 0);
+  }
   return true;
 }
 

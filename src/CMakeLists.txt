@@ -9,6 +9,7 @@ add_library(fsclipping SHARED   FSClippingUtil.cpp
                                 FSCellSource.cpp
                                 FSCellClipped.cpp
                                 FSNodeRegistry.cpp
+                                FSVertexSnap.cpp
                                 FSPolyCell.cpp
                                 FSTopologySink.cpp
                                 FSClippedMeshParams.cpp
@@ -44,6 +45,7 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSCellSource.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSCellClipped.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSNodeRegistry.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSVertexSnap.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSPolyCell.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSTopologySink.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/FSClipping/FSTopologyData.h
